@@ -32,12 +32,10 @@ from slafw.functions.files import ch_mode_owner, get_all_supported_files
 from slafw.functions.system import FactoryMountedRW, reset_hostname, \
     compute_uvpwm, get_configured_printer_model
 from slafw.hardware.base.hardware import BaseHardware
-from slafw.hardware.sl1.tower import TowerProfile
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType, SyncCheck, DangerousCheck
 from slafw.wizard.wizards.self_test import SelfTestWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
-from slafw.hardware.sl1.tilt import TiltProfile
 
 
 class ResetCheck(SyncCheck):
@@ -217,8 +215,8 @@ class ResetHomingProfiles(ResetCheck):
         self._hw = hw
 
     def reset_task_run(self, actions: UserActionBroker):
-        self._hw.set_stepper_sensitivity(self._hw.tower, 0)
-        self._hw.set_stepper_sensitivity(self._hw.tilt, 0)
+        self._hw.tower.set_stepper_sensitivity(0)
+        self._hw.tilt.set_stepper_sensitivity(0)
 
 
 class DisableFactory(SyncCheck):
@@ -313,12 +311,12 @@ class InitiatePackingMoves(DangerousCheck):
         await gather(self._hw.tower.verify_async(), self._hw.tilt.verify_async())
 
         # move tilt and tower to packing position
-        self._hw.tilt.profile_id = TiltProfile.homingFast
+        self._hw.tilt.actual_profile = self._hw.tilt.profiles.homingFast
         self._hw.tilt.move(self._hw.config.tiltHeight)
         while self._hw.tilt.moving:
             await sleep(0.25)
 
-        self._hw.tower.profile_id = TowerProfile.homingFast
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
         # TODO: Constant in code !!!
         await self._hw.tower.move_ensure_async(self._hw.config.tower_height_nm - Nm(74_000_000))
 

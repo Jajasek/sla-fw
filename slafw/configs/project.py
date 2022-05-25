@@ -6,12 +6,12 @@
 # TODO: Fix following pylint problems
 # pylint: disable=too-many-instance-attributes
 
-from slafw.configs.ini import Config
+from slafw.configs.ini import IniConfig
 from slafw.configs.value import FloatValue, IntValue, TextValue, BoolValue, FloatListValue
 from slafw import defines
 
 
-class ProjectConfig(Config):
+class ProjectConfig(IniConfig):
     """
     Project configuration is read from config.ini located in the project zip file. Currently the content is parsed using
     a Toml parser with preprocessor that adjusts older custom configuration format if necessary. Members describe

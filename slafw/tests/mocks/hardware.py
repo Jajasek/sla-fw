@@ -3,14 +3,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
-from typing import List
 from unittest.mock import Mock
 
 from PySignal import Signal
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
-from slafw.hardware.axis import Axis
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.mocks.axis import MockTower, MockTilt
@@ -106,15 +104,6 @@ class HardwareMock(BaseHardware):
 
     def beep(self, frequency_hz: int, length_s: float):
         pass
-
-    @staticmethod
-    def _get_profiles_with_sensitivity(
-        axis: Axis, profiles: List[List[int]] = None, sens: int = None
-    ) -> List[List[int]]:
-        return []
-
-    def set_stepper_sensitivity(self, axis: Axis, sens: int) -> None:
-        self.logger.info("%s profiles changed to sensitivity: %d", axis.name, sens)
 
     def getResinSensorState(self) -> bool:
         return True

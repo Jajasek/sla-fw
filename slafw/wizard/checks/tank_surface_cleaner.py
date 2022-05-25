@@ -1,6 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2020-2021 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
+
 import asyncio
 from asyncio import sleep
 from time import time
@@ -8,7 +9,8 @@ from enum import Enum, unique
 
 from slafw.configs.unit import Nm
 from slafw.hardware.base.hardware import BaseHardware
-from slafw.hardware.sl1.tower import TowerProfile
+from slafw.hardware.base.profiles import SingleProfile
+from slafw.hardware.tower import MovingProfilesTower
 from slafw.image.exposure_image import ExposureImage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, DangerousCheck, Check
@@ -27,17 +29,15 @@ class GentlyUpProfile(Enum):
     SPEED2 = 2
     SPEED3 = 3
 
-    def map_to_tower_profile_name(self) -> TowerProfile:
+    def map_to_tower_profile(self, profiles: MovingProfilesTower) -> SingleProfile:
         """Transform the value passed from the frontend via configuration into a name of an actual tower profile"""
-        if self == GentlyUpProfile.SPEED0:  # pylint: disable=no-else-return
-            return TowerProfile.moveSlow
-        elif self == GentlyUpProfile.SPEED1:
-            return TowerProfile.superSlow
-        elif self == GentlyUpProfile.SPEED2:
-            return TowerProfile.homingSlow
-        elif self == GentlyUpProfile.SPEED3:
-            return TowerProfile.resinSensor
-        return TowerProfile.moveSlow
+        if self == GentlyUpProfile.SPEED1:
+            return profiles.superSlow
+        if self == GentlyUpProfile.SPEED2:
+            return profiles.homingSlow
+        if self == GentlyUpProfile.SPEED3:
+            return profiles.resinSensor
+        return profiles.moveSlow    # default and SPEED0
 
 
 class HomeTower(DangerousCheck):
@@ -97,7 +97,7 @@ class TowerSafeDistance(DangerousCheck):
         self._hw = hw
 
     async def async_task_run(self, actions: UserActionBroker):
-        self._hw.tower.profile_id = TowerProfile.homingFast
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
         await self._hw.tower.move_ensure_async(self._hw.tower.resin_start_pos_nm)
 
 
@@ -111,7 +111,7 @@ class TouchDown(DangerousCheck):
         self._hw = hw
 
     async def async_task_run(self, actions: UserActionBroker):
-        self._hw.tower.profile_id = TowerProfile.resinSensor
+        self._hw.tower.actual_profile = self._hw.tower.profiles.resinSensor
         # Note: Do not use towerMoveAbsoluteWaitAsync here. It's periodically calling isTowerOnPosition which
         # is causing the printer to try to fix the tower position
 
@@ -121,7 +121,7 @@ class TouchDown(DangerousCheck):
             await sleep(0.25)
         if target_position_nm == self._hw.tower.position:
             # Did you forget to put a cleaning adapter pin on corner of the platform?
-            self._hw.tower.profile_id = TowerProfile.homingFast
+            self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
             await self._hw.tower.move_ensure_async(self._hw.config.tower_height_nm)
             self._hw.motors_release()
             # Error: The cleaning adaptor is not present, the platform moved to the exposure display without hitting it.
@@ -177,8 +177,9 @@ class GentlyUp(Check):
 
     async def async_task_run(self, actions: UserActionBroker):
         up_profile = GentlyUpProfile(self._hw.config.tankCleaningGentlyUpProfile)
-        self._logger.info("GentlyUp with %s -> %s", up_profile.name, up_profile.map_to_tower_profile_name())
-        self._hw.tower.profile_id = up_profile.map_to_tower_profile_name()
+        tower_profile = up_profile.map_to_tower_profile(self._hw.tower.profiles)
+        self._logger.info("GentlyUp with %s -> %s", up_profile.name, tower_profile.idx)
+        self._hw.tower.actual_profile = tower_profile
 
         await self._hw.tilt.layer_down_wait_async(slowMove=True)
         # TODO: constant in code !!!

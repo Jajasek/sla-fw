@@ -59,7 +59,6 @@ from slafw.exposure.persistance import ExposurePickler, ExposureUnpickler
 from slafw.functions.system import shut_down
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.power_led_action import WarningAction, ErrorAction
-from slafw.hardware.sl1.tower import TowerProfile
 from slafw.image.exposure_image import ExposureImage
 from slafw.project.functions import check_ready_to_print
 from slafw.project.project import Project, ExposureUserProfile
@@ -250,7 +249,7 @@ class StartPositionsCheck(ExposureCheckRunner):
         # tilt is handled by StirringCheck
 
         self.logger.info("Tower to print start position")
-        self.expo.hw.tower.profile_id = TowerProfile.homingFast
+        self.expo.hw.tower.actual_profile = self.expo.hw.tower.profiles.homingFast
         try:
             # TODO: Constant in code, seems important
             await self.expo.hw.tower.move_ensure_async(Nm(0.25 * 1_000_000), retries=2)
@@ -258,7 +257,7 @@ class StartPositionsCheck(ExposureCheckRunner):
         except TowerMoveFailed as e:
             exception = e
             self.expo.exception = exception
-            self.expo.hw.tower.profile_id = TowerProfile.homingFast
+            self.expo.hw.tower.actual_profile = self.expo.hw.tower.profiles.homingFast
             await self.expo.hw.tower.move_ensure_async(self.expo.hw.config.tower_height_nm)
             raise TowerMoveFailed from exception
         while self.expo.hw.tilt.moving:
@@ -416,7 +415,7 @@ class Exposure:
 
     def prepare(self):
         self.exposure_image.preload_image(0)
-        self.hw.tower.profile_id = TowerProfile.layer
+        self.hw.tower.actual_profile = self.hw.tower.profiles.layer
         self.hw.tower.move_ensure(self.hw.tower.minimal_position)  # first layer will move up
 
         self.exposure_image.blank_screen()
@@ -657,7 +656,7 @@ class Exposure:
                 self.hw.uv_led.on()
 
             self.state = ExposureState.GOING_UP
-            self.hw.tower.profile_id = TowerProfile.homingFast
+            self.hw.tower.actual_profile = self.hw.tower.profiles.homingFast
             self.hw.tower.move_ensure(self.hw.config.tower_height_nm)
 
             self.state = ExposureState.WAITING
@@ -680,7 +679,7 @@ class Exposure:
             if position_nm < 0:
                 position_nm = 0
             self.hw.tower.move_ensure(position_nm)
-            self.hw.tower.profile_id = TowerProfile.layer
+            self.hw.tower.actual_profile = self.hw.tower.profiles.layer
 
             self.state = ExposureState.PRINTING
 
@@ -1046,7 +1045,7 @@ class Exposure:
     def _final_go_up(self):
         self.state = ExposureState.GOING_UP
         self.hw.motors_stop()
-        self.hw.tower.profile_id = TowerProfile.homingFast
+        self.hw.tower.actual_profile = self.hw.tower.profiles.homingFast
         self.hw.tower.move_ensure(self.hw.config.tower_height_nm)
 
     def _print_end_hw_off(self):

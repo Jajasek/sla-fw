@@ -12,7 +12,7 @@ from unittest.mock import Mock, MagicMock
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Nm, Ustep
-from slafw.configs.ini import Config
+from slafw.configs.ini import IniConfig
 from slafw.configs.project import ProjectConfig
 from slafw.configs.value import FloatValue, IntListValue, IntValue, BoolValue, FloatListValue, TextValue
 from slafw.configs.writer import ConfigWriter
@@ -21,7 +21,7 @@ from slafw.tests.base import SlafwTestCase
 
 class TestConfigValues(SlafwTestCase):
     def test_int(self):
-        class IntConfig(Config):
+        class IntConfig(IniConfig):
             a = IntValue(4)
             b = IntValue(8, minimum=5, maximum=10)
             c = IntValue(-5, minimum=-10, maximum=1)
@@ -53,7 +53,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertEqual(c.a * c.b, c.ab)
 
     def test_float(self):
-        class FloatConfig(Config):
+        class FloatConfig(IniConfig):
             a = FloatValue(4)
             b = FloatValue(8, minimum=5, maximum=10.1)
             c = FloatValue(-5, minimum=-10, maximum=1)
@@ -85,7 +85,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertEqual(c.a * c.b, c.ab)
 
     def test_bool(self):
-        class BoolConfig(Config):
+        class BoolConfig(IniConfig):
             a = BoolValue(False)
             b = BoolValue(True)
             t0 = BoolValue(True)
@@ -116,7 +116,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertFalse(c.t2)
 
     def test_string(self):
-        class StringConfig(Config):
+        class StringConfig(IniConfig):
             a = TextValue("def")
             b = TextValue()
             c = TextValue()
@@ -135,7 +135,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertEqual("123 numbers test 123", c.c)
 
     def test_lists(self):
-        class ListConfig(Config):
+        class ListConfig(IniConfig):
             i0 = IntListValue([1, 2, 3], length=3)
             i1 = IntListValue([1, 2, 3], length=3)
             f0 = FloatListValue([0.1, 0.2, 0.3], length=3)
@@ -164,7 +164,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertEqual([12840, 14115, 15640], c.i2)
 
     def test_dictionary(self):
-        class SimpleConfig(Config):
+        class SimpleConfig(IniConfig):
             a = IntValue(5)
 
         s = SimpleConfig()
@@ -175,7 +175,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertNotIn("a", s.as_dictionary(nondefault=False))
 
     def test_value_reset(self):
-        class SimpleConfig(Config):
+        class SimpleConfig(IniConfig):
             a = IntValue(5)
 
         s = SimpleConfig()
@@ -186,7 +186,7 @@ class TestConfigValues(SlafwTestCase):
         self.assertEqual(5, s.a)
 
     def test_alternated(self):
-        class SimpleConfig(Config):
+        class SimpleConfig(IniConfig):
             a = IntValue(5, minimum=4, maximum=6)
 
         # No alternated values
@@ -255,13 +255,13 @@ class TestHardwareConfig(SlafwTestCase):
 
         print(hw_config)
         hw_config.write(self.writetest_config_path)
-        self.assertEqual('uvPwm = 222\ntower_height_nm = 1024\n', self.get_config_content(self.writetest_config_path),
+        self.assertEqual('tower_height_nm = 1024\nuvPwm = 222\n', self.get_config_content(self.writetest_config_path),
                          "Check file lines append",)
 
         del hw_config.MCBoardVersion
         hw_config.write(self.test_config_path)
         print(self.get_config_content(self.writetest_config_path))
-        self.assertEqual('uvPwm = 222\ntower_height_nm = 1024\n', self.get_config_content(self.test_config_path),
+        self.assertEqual('tower_height_nm = 1024\nuvPwm = 222\n', self.get_config_content(self.test_config_path),
                          "Check file lines delete",)
 
     def test_uvledpwm1(self):

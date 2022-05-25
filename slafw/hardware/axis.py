@@ -17,6 +17,7 @@ from slafw.configs.unit import Unit
 from slafw.errors.errors import MotionControllerException
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.power_led_action import WarningAction
+from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 
 
 def parse_axis(text: str, axis: str) -> int:
@@ -34,10 +35,6 @@ def parse_axis(text: str, axis: str) -> int:
 
 def format_axis(position_nm: int) -> str:
     return f"{position_nm // 1000000}.{position_nm % 1000000}"
-
-
-class AxisProfileBase(Enum):  # pylint: disable = too-few-public-methods
-    """Base for axis profile enums. Important for type checking"""
 
 
 @unique
@@ -63,7 +60,6 @@ class Axis(ABC):
     # pylint: disable=too-many-instance-attributes
     _target_position: Unit = Unit(0)
     _last_position: Unit = Unit(0)  # used by move_api
-    _current_profile: AxisProfileBase
     _sensitivity: Dict[str, List[List[int]]]
 
     def __init__(self, config: HwConfig, power_led: PowerLed):
@@ -153,9 +149,9 @@ class Axis(ABC):
                     self._target_position,
                     type(self._target_position)
                 )
-                profile_backup = self._current_profile
+                profile_backup = self.actual_profile
                 await self.sync_ensure_async()
-                self.profile_id = profile_backup
+                self.actual_profile = profile_backup
                 self.move(self._target_position)
                 while self.moving:
                     await asyncio.sleep(0.1)
@@ -203,7 +199,7 @@ class Axis(ABC):
         :return: True on success, False otherwise
         """
         if not self.moving and speed != 0:
-            self.profile_id = self._move_api_get_profile(speed)
+            self.actual_profile = self._move_api_get_profile(speed)
 
         if speed != 0:
             self._last_position = self.position
@@ -232,7 +228,7 @@ class Axis(ABC):
         """nonblocking move to the highest position"""
 
     @abstractmethod
-    def _move_api_get_profile(self, speed: int) -> AxisProfileBase:
+    def _move_api_get_profile(self, speed: int) -> SingleProfile:
         """returns slow/fast profile for high level movement"""
 
     @abstractmethod
@@ -318,38 +314,26 @@ class Axis(ABC):
 
     @property
     @abstractmethod
-    def profile_names(self) -> List[str]:
-        """list of all profile names of given axis"""
+    def profiles(self) -> ProfileSet:
+        """all axis profiles"""
 
     @property
     @abstractmethod
-    def profile_id(self) -> AxisProfileBase:
+    def actual_profile(self) -> SingleProfile:
         """return selected profile"""
 
-    @profile_id.setter
+    @actual_profile.setter
     @abstractmethod
-    def profile_id(self, profile_id: AxisProfileBase):
+    def actual_profile(self, profile: SingleProfile):
         """select profile"""
 
-    @property
     @abstractmethod
-    def profile(self) -> List[int]:
-        """get values of currently selected profile in MC"""
-
-    @profile.setter
-    @abstractmethod
-    def profile(self, profile: List[int]):
+    def apply_profile(self):
         """update values of currently selected profile in MC"""
 
-    @property
     @abstractmethod
-    def profiles(self) -> List[List[int]]:
-        """get all profiles from MC"""
-
-    @profiles.setter
-    @abstractmethod
-    def profiles(self, profiles: List[List[int]]):
-        """save all profiles to MC"""
+    def apply_all_profiles(self):
+        """write all profiles to MC"""
 
     @cached_property
     @abstractmethod
@@ -360,6 +344,10 @@ class Axis(ABC):
     def sensitivity_dict(self) -> Dict[str, List[List[int]]]:
         """return dict with axis sensitivity values"""
         return self._sensitivity
+
+    @abstractmethod
+    def set_stepper_sensitivity(self, sensitivity: int):
+        """set the sensitivity of the axis"""
 
     @staticmethod
     def _check_units(value: Any, unit: Unit) -> None:

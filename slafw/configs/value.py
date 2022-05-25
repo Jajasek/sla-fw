@@ -23,6 +23,8 @@ from slafw import test_runtime
 
 
 class BaseConfig(ABC):
+    # pylint: disable=too-many-instance-attributes
+
     """
     Base class of the configuration
 
@@ -38,6 +40,7 @@ class BaseConfig(ABC):
         self._data_values: Dict[str, Any] = {}
         self._data_raw_values: Dict[str, Any] = {}
         self._data_factory_values: Dict[str, Any] = {}
+        self._data_default_values: Dict[str, Any] = {}
 
     @property
     def lock(self) -> rwlock.RWLockRead:
@@ -54,6 +57,10 @@ class BaseConfig(ABC):
     @property
     def data_factory_values(self) -> Dict[str, Any]:
         return self._data_factory_values
+
+    @property
+    def data_default_values(self) -> Dict[str, Any]:
+        return self._data_default_values
 
     def lower_to_normal_map(self, key: str) -> Optional[str]:
         """
@@ -85,7 +92,7 @@ class Value(property, ABC):
     """
 
     @abstractmethod
-    def __init__(self, value_type: List[Type], default, key=None, factory=False, doc="", unit: type = None):
+    def __init__(self, value_type: List[Type], default=None, key=None, factory=False, doc="", unit: type=None):
         """
         Config value constructor
 
@@ -121,9 +128,7 @@ class Value(property, ABC):
         self.default = default
         self.factory = factory
         self.default_doc = doc
-        self.unit: Optional[type] = value_type[0]
-        if unit is not None:
-            self.unit = unit
+        self.unit: Optional[type] = unit
 
     def base_doc(self) -> str:
         """
@@ -148,12 +153,13 @@ class Value(property, ABC):
         Check value to match config file specification.
 
         This is called after value adaptation. This method is supposed to raise exceptions when value is not as
-        requested. Default implementation is fine with any value.
+        requested.
 
         :param val: Value to check
         """
-        if not isinstance(val, self.unit):
-            raise ValueError(f"Value \"{val}\" not compatible with \"{self.unit}\"")
+        t = self.unit if self.unit else tuple(self.type)
+        if not isinstance(val, t):
+            raise ValueError(f"Value \"{val}\" not compatible with \"{t}\"")
 
     @staticmethod
     def adapt(val):
@@ -178,7 +184,7 @@ class Value(property, ABC):
         :return: Value
         """
         value = config.data_values[self.name]
-        if value is None:
+        if value is None or self.unit is None:
             return value
         return self.unit(value)
 
@@ -195,7 +201,7 @@ class Value(property, ABC):
         :return: Value
         """
         value = config.data_raw_values[self.name]
-        if value is None:
+        if value is None or self.unit is None:
             return value
         return self.unit(value)
 
@@ -219,9 +225,13 @@ class Value(property, ABC):
     def get_default_value(self, config: BaseConfig) -> Any:
         if not any(isinstance(self.default, t) for t in self.type) and callable(self.default) and config:
             return self.default(config)
-        if self.default is None:
-            return self.default
-        return self.unit(self.default)
+        default = config.data_default_values.get(self.name, self.default)
+        if default is None or self.unit is None:
+            return default
+        return self.unit(default)
+
+    def set_default_value(self, config: BaseConfig, value: Any) -> None:
+        config.data_default_values[self.name] = value
 
     def setup(self, config: BaseConfig, name: str) -> None:
         """
@@ -238,7 +248,8 @@ class Value(property, ABC):
         self.set_factory_value(config, None)
 
     def value_setter(
-        self, config: BaseConfig, val, write_override: bool = False, factory: bool = False, dry_run=False
+        self, config: BaseConfig, val, write_override: bool = False, factory: bool = False, defaults: bool = False,
+        dry_run = False
     ) -> None:
         """
         Config item value setter
@@ -248,6 +259,7 @@ class Value(property, ABC):
         :param write_override: Set value even when config is read-only (!is_master) Used internally while reading config
          data from file.
         :param factory: Whenever to set factory value instead of normal value. Defaults to normal value
+        :param defaults: Whenever to set default value instead of normal value. Defaults to normal value
         :param dry_run: If set to true the value is not actually set. Used to check value consistency.
         """
         if test_runtime.testing:
@@ -267,7 +279,9 @@ class Value(property, ABC):
             if dry_run:
                 return
 
-            if factory:
+            if defaults:
+                self.set_default_value(config, val)
+            elif factory:
                 self.set_factory_value(config, adapted)
             else:
                 self.set_value(config, adapted)
@@ -440,6 +454,22 @@ class FloatListValue(ListValue):
         super().__init__([float, int], *args, **kwargs)
 
 
+class DictOfConfigs(Value):
+    """
+    Dict configuration value
+
+    Add recursion to value properties.
+    """
+
+    def __init__(self, value_type: Type, *args, **kwargs):
+        """
+        List configuration value constructor
+
+        :param value_type: acceptable inner value type
+        """
+        super().__init__([value_type], *args, **kwargs)
+
+
 class TextValue(Value):
     """
     Text list configuration value
@@ -477,9 +507,16 @@ class ValueConfig(BaseConfig):
         self._on_change: Set[Callable[[str, Any], None]] = set()
         self._stored_callbacks: Queue[Callable[[], None]] = Queue()
         self._values: Dict[str, Value] = {}
+        for var in dir(self.__class__):
+            obj = getattr(self.__class__, var)
+            if isinstance(obj, Value):
+                obj.setup(self, var)
+                self._values[var] = obj
+                if not var.islower():
+                    self._lower_to_normal_map[var.lower()] = var
 
     @abstractmethod
-    def write(self, file_path: Optional[Path] = None):
+    def write(self, file_path: Optional[Path] = None, factory: bool = False) -> None:
         ...
 
     def schedule_on_change(self, key: str, value: Any) -> None:

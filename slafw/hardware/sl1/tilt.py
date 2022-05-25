@@ -3,50 +3,60 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
-from enum import unique
 from time import sleep
+from pathlib import Path
 from typing import List
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Ustep
-from slafw.errors.errors import MotionControllerException, TiltPositionFailed
-from slafw.hardware.axis import AxisProfileBase, HomingStatus
+from slafw.configs.value import DictOfConfigs
+from slafw.errors.errors import TiltPositionFailed
+from slafw.hardware.printer_model import PrinterModel
+from slafw.hardware.axis import HomingStatus
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.sl1.tower import TowerSL1
-from slafw.hardware.tilt import Tilt
+from slafw.hardware.sl1.axis import SingleProfileSL1, AxisSL1
+from slafw.hardware.tilt import MovingProfilesTilt, Tilt
 from slafw.motion_controller.controller import MotionController
 
 
+TILT_CFG_LOCAL = defines.configDir / "profiles_tilt.json"
 
-@unique
-class TiltProfile(AxisProfileBase):
-    temp = -1
-    homingFast = 0
-    homingSlow = 1
-    moveFast = 2
-    moveSlow = 3
-    layerMoveSlow = 4
-    layerRelease = 5
-    layerMoveFast = 6
-    reserved2 = 7
+class MovingProfilesTiltSL1(MovingProfilesTilt):
+    # pylint: disable=too-many-ancestors
+    homingFast = DictOfConfigs(SingleProfileSL1)      # type: ignore
+    homingSlow = DictOfConfigs(SingleProfileSL1)      # type: ignore
+    moveFast = DictOfConfigs(SingleProfileSL1)        # type: ignore
+    moveSlow = DictOfConfigs(SingleProfileSL1)        # type: ignore
+    layerMoveSlow = DictOfConfigs(SingleProfileSL1)   # type: ignore
+    layerRelease = DictOfConfigs(SingleProfileSL1)    # type: ignore
+    layerMoveFast = DictOfConfigs(SingleProfileSL1)   # type: ignore
+    reserved = DictOfConfigs(SingleProfileSL1)        # type: ignore
+    __definition_order__ = tuple(locals())
 
 
-class TiltSL1(Tilt):
+class TiltSL1(Tilt, AxisSL1):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-arguments
 
     def __init__(self, mcc: MotionController, config: HwConfig,
-                 power_led: PowerLed, tower: TowerSL1):
+                 power_led: PowerLed, tower: TowerSL1, printer_model: PrinterModel):
         super().__init__(config, power_led)
         self._mcc = mcc
         self._tower = tower
-        self._current_profile = TiltProfile.homingFast
+        defaults = Path(defines.dataPath) / printer_model.name / f"default_profiles_{self.name}.json" # type: ignore[attr-defined]
+        self._profiles = MovingProfilesTiltSL1(factory_file_path=TILT_CFG_LOCAL, default_file_path=defaults)
         self._sensitivity = {
             #                -2       -1        0        +1       +2
             "homingFast": [[20, 5], [20, 6], [20, 7], [21, 9], [22, 12]],
             "homingSlow": [[16, 3], [16, 5], [16, 7], [16, 9], [16, 11]],
         }
+
+    def start(self):
+        self.actual_profile = self._profiles.homingFast    # type: ignore
+        self.set_stepper_sensitivity(self.sensitivity)
 
     @property
     def position(self) -> Ustep:
@@ -74,11 +84,6 @@ class TiltSL1(Tilt):
         self._logger.debug("Move initiated. Target position: %d ustep",
                            self._target_position)
 
-    def _move_api_get_profile(self, speed) -> TiltProfile:
-        if abs(speed) < 2:
-            return TiltProfile.moveSlow
-        return TiltProfile.homingFast
-
     def stop(self):
         axis_moving = self._mcc.doGetInt("?mot")
         self._mcc.do("!mot", axis_moving & ~2)
@@ -92,14 +97,14 @@ class TiltSL1(Tilt):
     async def layer_down_wait_async(self, slowMove: bool = False) -> None:
         profile = self._config.tuneTilt[0] if slowMove else self._config.tuneTilt[1]
         # initial release movement with optional sleep at the end
-        self.profile_id = TiltProfile(profile[0])
+        self.actual_profile = self._profiles[profile[0]]
         if profile[1] > 0:
             self.move(self.position - Ustep(profile[1]))
             while self.moving:
                 await asyncio.sleep(0.1)
         await asyncio.sleep(profile[2] / 1000.0)
         # next movement may be splited
-        self.profile_id = TiltProfile(profile[3])
+        self.actual_profile = self._profiles[profile[3]]
         movePerCycle = self.position // profile[4]
         for _ in range(profile[4]):
             self.move(self.position - movePerCycle)
@@ -118,7 +123,7 @@ class TiltSL1(Tilt):
             return
         # unstuck
         self._logger.warning("Tilt unstucking")
-        self.profile_id = TiltProfile.layerRelease
+        self.actual_profile = self._profiles.layerRelease   # type: ignore
         count = Ustep(0)
         step = Ustep(128)
         while count < self._config.tiltMax and not self._mcc.checkState("endstop"):
@@ -136,12 +141,12 @@ class TiltSL1(Tilt):
             _tiltHeight = tiltHeight
         profile = self._config.tuneTilt[2] if slowMove else self._config.tuneTilt[3]
 
-        self.profile_id = TiltProfile(profile[0])
+        self.actual_profile = self._profiles[profile[0]]
         self.move(_tiltHeight - Ustep(profile[1]))
         while self.moving:
             sleep(0.1)
         sleep(profile[2] / 1000.0)
-        self.profile_id = TiltProfile(profile[3])
+        self.actual_profile = self._profiles[profile[3]]
 
         # finish move may be also splited in multiple sections
         movePerCycle = (_tiltHeight - self.position) // profile[4]
@@ -157,7 +162,7 @@ class TiltSL1(Tilt):
 
     async def stir_resin_async(self) -> None:
         for _ in range(self._config.stirringMoves):
-            self.profile_id = TiltProfile.homingFast
+            self.actual_profile = self._profiles.homingFast # type: ignore
             # do not verify end positions
             self.move(self._config.tiltHeight)
             while self.moving:
@@ -185,58 +190,21 @@ class TiltSL1(Tilt):
             while self._tower.moving:
                 await asyncio.sleep(0.25)
             await self.sync_ensure_async()
-        self.profile_id = TiltProfile.moveFast
+        self.actual_profile = self._profiles.moveFast   # type: ignore
         await self.move_ensure_async(self._config.tiltHeight)
 
     @property
-    def profile_id(self) -> TiltProfile:
-        """return selected profile"""
-        return TiltProfile(self._mcc.doGetInt("?tics"))
+    def profiles(self) -> MovingProfilesTiltSL1:
+        return self._profiles
 
-    @profile_id.setter
-    def profile_id(self, profile_id: TiltProfile):
-        """select profile"""
-        if self.moving:
-            raise MotionControllerException(
-                "Cannot change profiles while tilt is moving.", None
-            )
-        self._mcc.do("!tics", profile_id.value)
-        self._current_profile = profile_id
-        self._logger.debug("Profile set to: %s", self._current_profile)
+    def _read_profile_id(self) -> int:
+        return self._mcc.doGetInt("?tics")
 
-    @property
-    def profile(self) -> List[int]:
-        """get values of currently selected profile in MC"""
+    def _read_profile_data(self) -> List[int]:
         return self._mcc.doGetIntList("?ticf")
 
-    @profile.setter
-    def profile(self, profile: List[int]):
-        """update values of currently selected profile in MC"""
-        if self.moving:
-            raise MotionControllerException(
-                "Cannot edit profile while tilt is moving.", None
-            )
-        self._mcc.do("!ticf", *profile)
+    def _write_profile_id(self, profile_id: int):
+        self._mcc.do("!tics", profile_id)
 
-    @property
-    def profiles(self) -> List[List[int]]:
-        """get all profiles from MC"""
-        profiles = list()
-        for profile_id in range(8):
-            profiles.append(self._mcc.doGetIntList("?ticf %d" % profile_id))
-        return profiles
-
-    @profiles.setter
-    def profiles(self, profiles: List[List[int]]):
-        """save all profiles to MC"""
-        if len(profiles) != 8:
-            raise MotionControllerException("Wrong number of profiles passed", None)
-        currentProfile = self.profile_id
-        for profile_id in range(8):
-            self.profile_id = TiltProfile(profile_id)
-            self.profile = profiles[profile_id]
-        self.profile_id = currentProfile
-
-    @property
-    def profile_names(self) -> List[str]:
-        return [profile.name for profile in TiltProfile]
+    def _write_profile_data(self):
+        self._mcc.do("!ticf", *self._actual_profile.dump())

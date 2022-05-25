@@ -17,7 +17,6 @@ from slafw.admin.menus.dialogs import Info, Wait, Error
 from slafw.errors.errors import DisplayTransmittanceNotValid, CalculatedUVPWMNotInRange
 from slafw.functions.system import compute_uvpwm
 from slafw.functions import generate
-from slafw.hardware.sl1.tilt import TiltProfile
 from slafw.libUvLedMeterMulti import UvLedMeterMulti
 from slafw.hardware.power_led_action import WarningAction
 
@@ -107,9 +106,9 @@ class DirectPwmSetMenu(SafeAdminMenu):
     def _do_prepare(self, status: AdminLabel):
         with WarningAction(self._printer.hw.power_led):
             status.set("<b>Tilt is going to level<b>")
-            self._printer.hw.tilt.profile_id = TiltProfile.homingFast
+            self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.homingFast
             self._printer.hw.tilt.sync_ensure()
-            self._printer.hw.tilt.profile_id = TiltProfile.moveFast
+            self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.moveFast
             self._printer.hw.tilt.move_ensure(self._printer.hw.config.tiltHeight)  # move to level
 
         status.set("<b>Tilt leveled<b>")

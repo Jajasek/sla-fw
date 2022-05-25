@@ -8,11 +8,9 @@ from typing import Dict, Any
 from slafw.configs.unit import Nm
 from slafw.errors.errors import TowerBelowSurface, TowerAxisCheckFailed, TowerHomeFailed, TowerEndstopNotReached
 from slafw.hardware.base.hardware import BaseHardware
-from slafw.hardware.sl1.tower import TowerProfile
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, DangerousCheck
 from slafw.wizard.setup import Configuration, Resource, TankSetup, PlatformSetup
-from slafw.hardware.sl1.tilt import TiltProfile
 from slafw.configs.writer import ConfigWriter
 
 
@@ -24,7 +22,7 @@ class TowerHomeTest(DangerousCheck):
         self.config_writer = config_writer
 
     async def async_task_run(self, actions: UserActionBroker):
-        for sens in range(4):
+        for sensitivity in range(4):
             sensitivity_failed = False
             for _ in range(3):
                 try:
@@ -32,10 +30,10 @@ class TowerHomeTest(DangerousCheck):
                 except (TowerHomeFailed, TowerEndstopNotReached) as e:
                     sensitivity_failed = True
                     self._logger.exception(e)
-                    if sens == 3:
+                    if sensitivity == 3:
                         raise e
-                    self._hw.set_stepper_sensitivity(self._hw.tower, sens=sens)
-                    self.config_writer.towerSensitivity = sens
+                    self._hw.tower.set_stepper_sensitivity(sensitivity)
+                    self.config_writer.towerSensitivity = sensitivity   # FIXME this should only be done upon success
                     break
             if sensitivity_failed is False:
                 break
@@ -58,14 +56,14 @@ class TowerRangeTest(DangerousCheck):
         await gather(self._hw.tower.verify_async(), self._hw.tilt.verify_async())
         self._hw.tower.position = self._hw.tower.end_nm
 
-        self._hw.tower.profile_id = TowerProfile.homingFast
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
         await self._hw.tower.move_ensure_async(Nm(0))
 
         if self._hw.tower.position == Nm(0):
             # stop 10 mm before end-stop to change sensitive profile
             await self._hw.tower.move_ensure_async(self._hw.tower.end_nm - Nm(10_000_000))
 
-            self._hw.tower.profile_id = TowerProfile.homingSlow
+            self._hw.tower.actual_profile = self._hw.tower.profiles.homingSlow
             self._hw.tower.move(self._hw.tower.max_nm)
             while self._hw.tower.moving:
                 asyncio.sleep(0.25)
@@ -93,9 +91,9 @@ class TowerAlignTest(DangerousCheck):
     async def async_task_run(self, actions: UserActionBroker):
         await self.wait_cover_closed()
         self._logger.info("Starting platform calibration")
-        self._hw.tilt.profile_id = TiltProfile.layerMoveSlow # set higher current
+        self._hw.tilt.actual_profile = self._hw.tilt.profiles.layerMoveSlow # set higher current
         self._hw.tower.position = Nm(0)
-        self._hw.tower.profile_id = TowerProfile.homingFast
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
 
         self._logger.info("Moving platform to above position")
         self._hw.tower.move(self._hw.tower.above_surface_nm)
@@ -114,7 +112,7 @@ class TowerAlignTest(DangerousCheck):
             raise TowerBelowSurface(self._hw.tower.position)
 
         self._logger.info("Moving platform to min position")
-        self._hw.tower.profile_id = TowerProfile.homingSlow
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingSlow
         self._hw.tower.move(self._hw.tower.min_nm)
         while self._hw.tower.moving:
             await asyncio.sleep(0.25)
@@ -147,7 +145,7 @@ class TowerAlignTest(DangerousCheck):
         self._logger.info("tower position: %d nm", tower_position_nm)
         self._config_writer.tower_height_nm = -tower_position_nm
 
-        self._hw.tower.profile_id = TowerProfile.homingFast
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
         # TODO: Allow to repeat align step on exception
 
     def get_result_data(self) -> Dict[str, Any]:

@@ -6,6 +6,7 @@ from time import sleep
 from slafw.admin.control import AdminControl
 from slafw.admin.items import AdminAction, AdminLabel
 from slafw.admin.menus.dialogs import Wait, Error
+from slafw.admin.menus.hardware.profiles import ProfilesList
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.libPrinter import Printer
 from slafw.errors.errors import TiltHomeFailed, TowerHomeFailed
@@ -26,8 +27,11 @@ class AxisMenu(SafeAdminMenu):
                 AdminAction(f"Home {axis.name}", self.home, "home_small_white"),
                 AdminAction(f"Move {axis.name} to calibrated position", self.config_position, "finish_white"),
                 AdminAction(f"Manual {axis.name} move", self.manual_move, "control_color"),
-# TODO
-#                AdminAction("Tilt/Tower profiles", self.tilt_profiles, "steppers_color"),
+                AdminAction(
+                    f"{axis.name.capitalize()} profiles",
+                    lambda: self.enter(ProfilesList(self._control, axis.profiles)),
+                    "steppers_color"
+                 ),
 #                AdminAction("Tune tilt", self.tune_tilt, "tilt_sensivity_color"),
 
                 AdminAction("Home calibration", self.home_calib, "calibration_color"),
@@ -38,7 +42,7 @@ class AxisMenu(SafeAdminMenu):
     def _move_to_home(self, status: AdminLabel):
         if self._axis.synced:
             status.set(f"Moving {self._axis.name} to home position")
-            # TODO switch to move fast profile
+            self._axis.actual_profile = self._axis.profiles.homingFast    # type: ignore
             self._axis.move_ensure(self._axis.home_position)
         else:
             status.set(f"Homing {self._axis.name}")
@@ -51,7 +55,7 @@ class AxisMenu(SafeAdminMenu):
         return True
 
     def _move_to_home_opposite(self, status: AdminLabel):
-        # TODO switch to move fast profile
+        self._axis.actual_profile = self._axis.profiles.homingFast    # type: ignore
         if self._axis.home_position:
             status.set(f"Moving {self._axis.name} to minimal position")
             self._axis.move_ensure(self._axis.minimal_position)

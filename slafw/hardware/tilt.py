@@ -9,6 +9,49 @@ from functools import cached_property
 from slafw.configs.unit import Ustep
 from slafw.errors.errors import TiltMoveFailed, TiltHomeFailed
 from slafw.hardware.axis import Axis
+from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+
+
+class MovingProfilesTilt(ProfileSet):
+    @property
+    @abstractmethod
+    def homingFast(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def homingSlow(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def moveFast(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def moveSlow(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def layerMoveSlow(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def layerRelease(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def layerMoveFast(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def reserved(self) -> SingleProfile:
+        pass
 
 
 class Tilt(Axis):
@@ -64,3 +107,8 @@ class Tilt(Axis):
     @staticmethod
     def _raise_home_failed():
         raise TiltHomeFailed()
+
+    @property
+    @abstractmethod
+    def profiles(self) -> MovingProfilesTilt:
+        """all tilt profiles"""

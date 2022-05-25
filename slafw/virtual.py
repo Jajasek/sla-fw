@@ -80,6 +80,8 @@ class Virtual:
         hardware_file = self.temp / "slafw.hardware.cfg"
         hardware_file_factory = self.temp / "slafw.hardware.cfg.factory"
         prev_prints = self.temp / "previous_prints"
+        tilt_profiles = self.temp / "profiles_tilt.json"
+        tower_profiles = self.temp / "profiles_tower.json"
 
         patches: List[patch] = [
             patch("slafw.motion_controller.controller.serial", slafw.tests.mocks.mc_port),
@@ -95,6 +97,8 @@ class Virtual:
                 AsyncMock(return_value=100),
             ),
             patch("slafw.hardware.hardware_sl1.Booster", BoosterMock),
+            patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
+            patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", SAMPLES_DIR / "cputemp"),
             patch("slafw.defines.hwConfigPath", hardware_file),
             patch("slafw.defines.hwConfigPathFactory", hardware_file_factory),

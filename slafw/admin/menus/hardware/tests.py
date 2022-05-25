@@ -10,10 +10,8 @@ from slafw.admin.items import AdminAction, AdminTextValue
 from slafw.admin.menu import AdminMenu
 from slafw.admin.menus.dialogs import Error, Confirm, Info
 from slafw.configs.unit import Ustep
-from slafw.hardware.sl1.tower import TowerProfile
 from slafw.libPrinter import Printer
 from slafw.libUvLedMeterMulti import UvLedMeterMulti
-from slafw.hardware.sl1.tilt import TiltProfile
 from slafw.errors.errors import TiltHomeFailed, TowerHomeFailed
 from slafw.hardware.power_led_action import WarningAction
 from slafw.image.cairo import draw_chess
@@ -187,7 +185,7 @@ class ResinSensorTestMenu(AdminMenu):
                 self._printer.hw.motors_release()
                 return
 
-            self._printer.hw.tilt.profile_id = TiltProfile.moveFast
+            self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.moveFast
             self._printer.hw.tilt.move_ensure(self._printer.hw.config.tiltHeight)
 
             self.status = "Measuring...\nDo NOT TOUCH the printer"
@@ -265,8 +263,8 @@ class InfiniteTestMenu(AdminMenu):
         self._printer.hw.uv_led.on()
         self._printer.hw.tower.sync_ensure()
         self._printer.hw.tilt.sync_ensure()
-        self._printer.hw.tower.profile_id = TowerProfile.homingFast
-        self._printer.hw.tilt.profile_id = TiltProfile.homingFast
+        self._printer.hw.tower.actual_profile = self._printer.hw.tower.profiles.homingFast
+        self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.homingFast
 
         self.status = "Running"
         self._thread_tilt.start()

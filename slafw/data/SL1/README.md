@@ -1,24 +1,10 @@
-# Tilt profiles
+# Tilt/Tower moving profiles
 
-- set of all tilt profiles
-- values are stored in MC
-- see `slafw/hardware/tilt.py` to get the names of profiles
-- be aware of that `temp` profile is not stored in `*.tilt` file
+- set of all tilt/tower profiles
+- values are copied to MC
+- see `slafw/hardware/sl1/tilt.py:MovingProfilesTiltSL1` to get the names of Tilt profiles
+- see `slafw/hardware/sl1/tower.py:MovingProfilesTowerSL1` to get the names of Tower profiles
 
-## Structure of the file
-
-```
-[
-    [starting_steprate, maximum_steprate, acceleration, deceleration, coil current, stallguard threshold,  coolstep threshold], # homingFast
-    [...], # homingSlow
-    [...], # moveFast
-    [...], # moveSlow
-    [...], # layerMoveSlow
-    [...], # layerRelease
-    [...], # layesMoveFast
-    [...]  # reserved2
-]
-```
 
 # Tune tilt profiles
 
@@ -50,25 +36,5 @@
     [...], # tilt down small fill (area < limit for fast tilt)
     [...], # tilt up large fill (area > limit for fast tilt)
     [...]  # tilt up small fill (area < limit for fast tilt)
-]
-```
-
-# Tower profiles
-
-- set of all tower profiles
-- values are stored in MC
-
-## Structure of the file
-
-```
-[
-    [starting_steprate, maximum_steprate, acceleration, deceleration, coil current,  stallguard threshold,  coolstep threshold], # homingFast
-    [...], # homingSlow
-    [...], # moveFast
-    [...], # moveSlow
-    [...], # layer
-    [...], # layerMove
-    [...], # superSlow
-    [...]  # resinSensor
 ]
 ```

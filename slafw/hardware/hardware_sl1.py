@@ -22,14 +22,13 @@ from datetime import timedelta
 from math import ceil
 from threading import Thread
 from time import sleep
-from typing import List, Optional, Any
+from typing import Optional, Any
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.errors.errors import MotionControllerException, ConfigException
 from slafw.functions.decorators import safe_call
 from slafw.hardware.a64.temp_sensor import A64CPUTempSensor
-from slafw.hardware.axis import Axis
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.printer_model import PrinterModel
 from slafw.hardware.sl1.exposure_screen import SL1ExposureScreen, SL1SExposureScreen
@@ -37,7 +36,7 @@ from slafw.hardware.sl1.fan import SL1FanUVLED, SL1FanBlower, SL1FanRear
 from slafw.hardware.sl1.power_led import PowerLedSL1
 from slafw.hardware.sl1.temp_sensor import SL1TempSensorUV, SL1STempSensorUV, SL1TempSensorAmbient
 from slafw.hardware.sl1.tilt import TiltSL1
-from slafw.hardware.sl1.tower import TowerProfile, TowerSL1
+from slafw.hardware.sl1.tower import TowerSL1
 from slafw.hardware.sl1.uv_led import SL1UVLED, SL1SUVLED
 from slafw.hardware.sl1s_uvled_booster import Booster
 from slafw.motion_controller.controller import MotionController
@@ -93,8 +92,8 @@ class HardwareSL1(BaseHardware):
         else:
             raise NotImplementedError
         self.power_led = PowerLedSL1(self.mcc)
-        self.tower = TowerSL1(self.mcc, self.config, self.power_led)
-        self.tilt = TiltSL1(self.mcc, self.config, self.power_led, self.tower)
+        self.tower = TowerSL1(self.mcc, self.config, self.power_led, printer_model)
+        self.tilt = TiltSL1(self.mcc, self.config, self.power_led, self.tower, printer_model)
 
         self._tilt_position_checker = ValueChecker(
             lambda: self.tilt.position,
@@ -128,6 +127,8 @@ class HardwareSL1(BaseHardware):
             self.sl1s_booster.connect()
 
     def start(self):
+        self.tower.start()
+        self.tilt.start()
         self.initDefaults()
         self._value_refresh_thread.start()
 
@@ -186,17 +187,10 @@ class HardwareSL1(BaseHardware):
         self.power_led.intensity = self.config.pwrLedPwm
         self.resinSensor(False)
         self.stop_fans()
+        # TODO do it better!
         if self.config.lockProfiles:
             self.logger.warning("Printer profiles will not be overwriten")
         else:
-            for _, axis in self.axes.items():
-                mc_profiles = axis.profiles
-                with open(os.path.join(defines.dataPath, self._printer_model.name, "default." + axis.name), "r") as f:
-                    profiles = json.loads(f.read())
-                    profiles = self._get_profiles_with_sensitivity(axis, profiles=profiles)
-                    if mc_profiles != profiles:
-                        self.logger.info("Overwriting %s profiles to: %s", axis.name, profiles)
-                        axis.profiles = profiles
             with open(os.path.join(defines.dataPath, self._printer_model.name, "default.tune_tilt"), "r") as f:
                 tune_tilt = json.loads(f.read())
                 writer = self.config.get_writer()
@@ -364,7 +358,7 @@ class HardwareSL1(BaseHardware):
         try:
             self.resinSensor(True)
             await asyncio.sleep(1)
-            self.tower.profile_id = TowerProfile.resinSensor
+            self.tower.actual_profile = self.tower.profiles.resinSensor
             relative_move_nm = self.tower.resin_start_pos_nm - self.tower.resin_end_pos_nm
             self.mcc.do("!rsme", self.config.nm_to_tower_microsteps(relative_move_nm))
             while self.tower.moving:
@@ -375,22 +369,3 @@ class HardwareSL1(BaseHardware):
         finally:
             self.resinSensor(False)
         return float(self.tower.position) / 1_000_000
-
-    @staticmethod
-    def _get_profiles_with_sensitivity(axis: Axis, profiles: List[List[int]] = None, sens: int = None) -> List[List[int]]:
-        if profiles is None:
-            profiles = axis.profiles
-        if sens is None:  # if called from initDefaults, use the default config sensitivity
-            sens = axis.sensitivity
-        if sens < -2 or sens > 2:
-            raise ValueError("`axis` sensitivity must be from -2 to +2", axis)
-
-        sens_dict = axis.sensitivity_dict
-        profiles[0][4:6] = sens_dict["homingFast"][sens + 2]
-        profiles[1][4:6] = sens_dict["homingSlow"][sens + 2]
-        return profiles
-
-    def set_stepper_sensitivity(self, axis: Axis, sens: int) -> None:
-        profiles = self._get_profiles_with_sensitivity(axis, sens=sens)
-        axis.profiles = profiles
-        self.logger.info("%s profiles changed to: %s", axis.name, profiles)

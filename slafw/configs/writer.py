@@ -95,7 +95,7 @@ class ConfigWriter:
         self.update(values)
         self.commit()
 
-    def commit(self, write: bool = True):
+    def commit(self, write: bool = True, factory: bool = False):
         """
         Save changes to underlying config and write it to file
 
@@ -117,7 +117,7 @@ class ConfigWriter:
                 delattr(self._config, key)
 
         if write:
-            self._config.write()
+            self._config.write(factory=factory)
 
         # Run notify callbacks with write lock unlocked
         for key, val in self._changed.items():

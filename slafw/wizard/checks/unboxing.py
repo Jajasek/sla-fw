@@ -7,7 +7,6 @@ from typing import Optional
 
 from slafw.configs.unit import Nm
 from slafw.hardware.base.hardware import BaseHardware
-from slafw.hardware.sl1.tower import TowerProfile
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, Check
 from slafw.wizard.setup import Configuration, Resource
@@ -25,7 +24,7 @@ class MoveToFoam(Check):
 
     async def async_task_run(self, actions: UserActionBroker):
         self.hw.tower.position = Nm(0)
-        self.hw.tower.profile_id = TowerProfile.homingFast
+        self.hw.tower.actual_profile = self.hw.tower.profiles.homingFast
         initial_pos_nm = self.hw.tower.position
         self.hw.tower.move(self.FOAM_TARGET_POSITION_NM)
         while self.hw.tower.moving:

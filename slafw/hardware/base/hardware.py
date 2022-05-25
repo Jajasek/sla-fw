@@ -8,7 +8,7 @@ import re
 from abc import abstractmethod
 from functools import cached_property, lru_cache
 from time import sleep
-from typing import Dict, List
+from typing import Dict
 
 import bitstring
 import pydbus
@@ -242,26 +242,6 @@ class BaseHardware:
     @abstractmethod
     def exit(self):
         ...
-
-    @staticmethod
-    @abstractmethod
-    def _get_profiles_with_sensitivity(axis: Axis, profiles: List[List[int]] = None, sens: int = None) -> List[List[int]]:
-        """
-        Get list of adjusted profiles.
-        Adjustment means rewriting SGTHRS and CURRENT of homingFast and homingSlow profiles.
-
-        :param: axis
-        :param: profiles - if None, profiles are red from MC
-        :param: sens - if None, sensitivity is red from config
-
-        :return: list of adjusted profiles by given sensitivity
-        """
-
-    @abstractmethod
-    def set_stepper_sensitivity(self, axis: Axis, sens: int) -> None:
-        """
-        Rewrites profiles inside MC according to given sensitivity.
-        """
 
     @abstractmethod
     def motors_release(self) -> None:

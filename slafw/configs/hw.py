@@ -7,12 +7,12 @@
 from typing import List
 
 from slafw import defines
-from slafw.configs.ini import Config
+from slafw.configs.ini import IniConfig
 from slafw.configs.unit import Nm, Ustep
 from slafw.configs.value import BoolValue, IntValue, IntListValue, FloatValue, TextValue
 
 
-class HwConfig(Config):
+class HwConfig(IniConfig):
     # pylint: disable=R0902
     """
        Hardware configuration is read from /etc/sl1fw/hardware.cfg . Currently the content is parsed using a Toml

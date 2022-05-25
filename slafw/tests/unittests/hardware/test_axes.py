@@ -5,9 +5,9 @@
 
 import asyncio
 import unittest
-from abc import ABC, abstractmethod
+from abc import ABC
 from time import sleep
-from typing import List, Tuple
+from typing import Tuple
 from unittest import IsolatedAsyncioTestCase  # pylint: disable = no-name-in-module
 from unittest.mock import Mock, PropertyMock, patch
 
@@ -16,10 +16,11 @@ from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Nm, Ustep, Unit
 from slafw.errors.errors import TiltPositionFailed, TowerPositionFailed, \
     TowerMoveFailed, TiltMoveFailed, TowerHomeFailed, TiltHomeFailed
-from slafw.hardware.axis import Axis, HomingStatus, AxisProfileBase
+from slafw.hardware.axis import Axis, HomingStatus
+from slafw.functions.system import get_configured_printer_model
 
-from slafw.hardware.sl1.tilt import TiltProfile, TiltSL1
-from slafw.hardware.sl1.tower import TowerSL1, TowerProfile
+from slafw.hardware.sl1.tilt import TiltSL1
+from slafw.hardware.sl1.tower import TowerSL1
 from slafw.motion_controller.controller import MotionController
 from slafw.tests.base import SlafwTestCase
 
@@ -42,6 +43,7 @@ class DoNotRunTestDirectlyFromBaseClass:
             self.power_led = Mock()
             self.mcc = MotionController(defines.motionControlDevice)
             self.mcc.open()
+            self.printer_model = get_configured_printer_model()
 
         def tearDown(self) -> None:
             self.mcc.exit()
@@ -109,26 +111,27 @@ class DoNotRunTestDirectlyFromBaseClass:
             self.axis.position = self.pos
             self.axis.move_api(2)
             self.assertTrue(self.axis.moving)
-            current_profile = self.axis.profile_id
+            actual_profile = self.axis.actual_profile
             self.axis.move_api(0)
             self.assertFalse(self.axis.moving)
             self.assertLess(self.pos, self.axis.position)
-            self.assertEqual(current_profile, self.axis.profile_id)
+            self.assertEqual(actual_profile, self.axis.actual_profile)
 
         def _test_move_api_up_down(self, speed: int):
+            self.axis.actual_profile = self.axis.profiles.homingSlow
             self.axis.position = self.pos
-            current_profile = self.axis.profile_id
+            actual_profile = self.axis.actual_profile
             self.axis.move_api(speed)
             self.assertTrue(self.axis.moving)
             self.assertLess(self.pos, self.axis.position)
-            self.assertNotEqual(current_profile, self.axis.profile_id)
-            current_profile = self.axis.profile_id
+            self.assertNotEqual(actual_profile, self.axis.actual_profile)
+            actual_profile = self.axis.actual_profile
             self.axis.stop()
             self.axis.position = self.pos
             self.axis.move_api(-speed)
             self.assertTrue(self.axis.moving)
             self.assertGreater(self.pos, self.axis.position)
-            self.assertEqual(current_profile, self.axis.profile_id)
+            self.assertEqual(actual_profile, self.axis.actual_profile)
 
         def test_move_api_slow_up_down(self):
             self._test_move_api_up_down(1)
@@ -234,32 +237,10 @@ class DoNotRunTestDirectlyFromBaseClass:
             self.assertEqual(self.axis.config_height_position, self.axis.position)
             # already home axis does not home. Just move to top position
 
-        def profile_names(self) -> List[str]:
-            """list of all profile names of given axis"""
-
-        @abstractmethod
-        def _test_profile_id(self) -> List[AxisProfileBase]:
-            """get list of profiles"""
-
-        def test_profile_id(self):
-            profiles = self._test_profile_id()
-            for profile in profiles:
-                self.axis.profile_id = profile
-                self.assertEqual(profile, self.axis.profile_id)
-
-        def test_profile(self):
-            test_profile = [12345, 23456, 234, 345, 28, 8, 1234]
-            self.assertNotEqual(test_profile, self.axis.profile)
-            self.axis.profile = test_profile
-            self.assertEqual(test_profile, self.axis.profile)
-
-        def test_profiles(self):
-            profiles = self.axis.profiles
-            self.assertEqual(type([]), type(profiles))
-            self.assertEqual(8, len(profiles))  # all except temp
-            for profile in profiles:
-                self.assertEqual(7, len(profile))
-                self.assertEqual(type([int]), type(profile))
+        def test_actual_profile(self):
+            for profile in self.axis.profiles:
+                self.axis.actual_profile = profile
+                self.assertEqual(profile, self.axis.actual_profile)
 
         def test_unit(self):
             self.assertEqual(type(self.axis.position), self.unit)
@@ -272,17 +253,22 @@ class DoNotRunTestDirectlyFromBaseClass:
             with self.assertRaises(TypeError):
                 self.axis.move(self.incompatible_unit(0))
 
+#        def test_apply_profiles(self):
+            # TODO do it better
+#            self.axis.apply_all_profiles()
+
 
 class TestTilt(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
 
     def setUp(self):
         super().setUp()
-        tower = TowerSL1(self.mcc, self.config, self.power_led)
-        self.axis = TiltSL1(self.mcc, self.config, self.power_led, tower)
+        tower = TowerSL1(self.mcc, self.config, self.power_led, self.printer_model)
+        self.axis = TiltSL1(self.mcc, self.config, self.power_led, tower, self.printer_model)
         self.pos = self.axis.config_height_position / 4 # aprox 1000 usteps
         self.unit = Ustep
         self.incompatible_unit = Nm
         self.fullstep_offset = (Ustep(-32), Ustep(31))
+        self.axis.start()
 
     def test_name(self) -> str:
         self.assertEqual(self.axis.name, "tilt")
@@ -313,27 +299,8 @@ class TestTilt(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
         self.assertEqual(self.axis._target_position, self.config.tiltMax)
 
     def test_move_api_get_profile(self):
-        self.assertEqual(self.axis._move_api_get_profile(1), TiltProfile.moveSlow)
-        self.assertEqual(self.axis._move_api_get_profile(2), TiltProfile.homingFast)
-
-    def _test_profile_id(self):
-        return [TiltProfile.moveFast, TiltProfile.moveSlow]
-
-    def test_profile_names(self):
-        self.assertEqual(
-            [
-                "temp",
-                "homingFast",
-                "homingSlow",
-                "moveFast",
-                "moveSlow",
-                "layerMoveSlow",
-                "layerRelease",
-                "layerMoveFast",
-                "reserved2",
-            ],
-            self.axis.profile_names,
-        )
+        self.assertEqual(self.axis._move_api_get_profile(1), self.axis.profiles.moveSlow)
+        self.assertEqual(self.axis._move_api_get_profile(2), self.axis.profiles.homingFast)
 
     def test_sensitivity(self):
         self.assertEqual(self.axis.sensitivity, self.config.tiltSensitivity)
@@ -359,12 +326,13 @@ class TestTower(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
 
     def setUp(self):
         super().setUp()
-        self.axis = TowerSL1(self.mcc, self.config, self.power_led)
+        self.axis = TowerSL1(self.mcc, self.config, self.power_led, self.printer_model)
         self.pos = self.axis.home_position / 2
         self.unit = Nm
         self.incompatible_unit = Ustep
         offset = self.config.tower_microsteps_to_nm(16)
         self.fullstep_offset = (-offset, offset)
+        self.axis.start()
 
     def test_name(self):
         self.assertEqual(self.axis.name, "tower")
@@ -398,27 +366,8 @@ class TestTower(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
         self.assertEqual(self.axis._target_position, self.config.tower_height_nm)
 
     def test_move_api_get_profile(self):
-        self.assertEqual(self.axis._move_api_get_profile(1), TowerProfile.moveSlow)
-        self.assertEqual(self.axis._move_api_get_profile(2), TowerProfile.homingFast)
-
-    def _test_profile_id(self):
-        return [TowerProfile.moveFast, TowerProfile.moveSlow]
-
-    def test_profile_names(self):
-        self.assertEqual(
-            [
-                "temp",
-                "homingFast",
-                "homingSlow",
-                "moveFast",
-                "moveSlow",
-                "layer",
-                "layerMove",
-                "superSlow",
-                "resinSensor",
-            ],
-            self.axis.profile_names,
-        )
+        self.assertEqual(self.axis._move_api_get_profile(1), self.axis.profiles.moveSlow)
+        self.assertEqual(self.axis._move_api_get_profile(2), self.axis.profiles.homingFast)
 
     def test_sensitivity(self):
         self.assertEqual(self.axis.sensitivity, self.config.tiltSensitivity)

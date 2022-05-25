@@ -2,45 +2,55 @@
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from enum import unique
+from pathlib import Path
 from typing import List
 
+from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Nm
-from slafw.errors.errors import MotionControllerException, \
-    TowerPositionFailed
-from slafw.hardware.axis import AxisProfileBase, HomingStatus
+from slafw.configs.value import DictOfConfigs
+from slafw.errors.errors import TowerPositionFailed
+from slafw.hardware.printer_model import PrinterModel
+from slafw.hardware.axis import HomingStatus
 from slafw.hardware.power_led import PowerLed
-from slafw.hardware.tower import Tower
+from slafw.hardware.tower import MovingProfilesTower, Tower
+from slafw.hardware.sl1.axis import SingleProfileSL1, AxisSL1
 from slafw.motion_controller.controller import MotionController
 
 
-@unique
-class TowerProfile(AxisProfileBase):
-    temp = -1
-    homingFast = 0
-    homingSlow = 1
-    moveFast = 2
-    moveSlow = 3
-    layer = 4
-    layerMove = 5
-    superSlow = 6
-    resinSensor = 7
+TOWER_CFG_LOCAL = defines.configDir / "profiles_tower.json"
+
+class MovingProfilesTowerSL1(MovingProfilesTower):
+    # pylint: disable=too-many-ancestors
+    homingFast = DictOfConfigs(SingleProfileSL1)  # type: ignore
+    homingSlow = DictOfConfigs(SingleProfileSL1)  # type: ignore
+    moveFast = DictOfConfigs(SingleProfileSL1)    # type: ignore
+    moveSlow = DictOfConfigs(SingleProfileSL1)    # type: ignore
+    layer = DictOfConfigs(SingleProfileSL1)       # type: ignore
+    layerMove = DictOfConfigs(SingleProfileSL1)   # type: ignore
+    superSlow = DictOfConfigs(SingleProfileSL1)   # type: ignore
+    resinSensor = DictOfConfigs(SingleProfileSL1) # type: ignore
+    __definition_order__ = tuple(locals())
 
 
-class TowerSL1(Tower):
+class TowerSL1(Tower, AxisSL1):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, mcc: MotionController, config: HwConfig, power_led: PowerLed):
+    def __init__(self, mcc: MotionController, config: HwConfig, power_led: PowerLed, printer_model: PrinterModel):
         super().__init__(config, power_led)
         self._mcc = mcc
-        self._current_profile = TowerProfile.homingFast
+        defaults = Path(defines.dataPath) / printer_model.name / f"default_profiles_{self.name}.json" # type: ignore[attr-defined]
+        self._profiles = MovingProfilesTowerSL1(factory_file_path=TOWER_CFG_LOCAL, default_file_path=defaults)
         self._sensitivity = {
             #                -2       -1        0        +1       +2
             "homingFast": [[22, 0], [22, 2], [22, 4], [22, 6], [22, 8]],
             "homingSlow": [[14, 0], [15, 0], [16, 1], [16, 3], [16, 5]],
         }
+
+    def start(self):
+        self.actual_profile = self._profiles.homingFast    # type: ignore
+        self.set_stepper_sensitivity(self.sensitivity)
 
     @property
     def position(self) -> Nm:
@@ -97,58 +107,21 @@ class TowerSL1(Tower):
         if not self.synced:
             await self.sync_ensure_async()
         else:
-            self.profile_id = TowerProfile.moveFast
+            self.actual_profile = self._profiles.moveFast   # type: ignore
             await self.move_ensure_async(self._config.tower_height_nm)
 
     @property
-    def profile_id(self) -> TowerProfile:
-        return TowerProfile(self._mcc.doGetInt("?twcs"))
+    def profiles(self) -> MovingProfilesTowerSL1:
+        return self._profiles
 
-    @profile_id.setter
-    def profile_id(self, profile_id: TowerProfile):
-        if self.moving:
-            raise MotionControllerException(
-                "Cannot change profiles while tower is moving.", None
-            )
-        self._mcc.do("!twcs", profile_id.value)
-        self._current_profile = profile_id
-        self._logger.debug("Profile set to: %s", self._current_profile)
+    def _read_profile_id(self) -> int:
+        return self._mcc.doGetInt("?twcs")
 
-    @property
-    def profile(self) -> List[int]:
+    def _read_profile_data(self) -> List[int]:
         return self._mcc.doGetIntList("?twcf")
 
-    @profile.setter
-    def profile(self, profile: List[int]):
-        if self.moving:
-            raise MotionControllerException(
-                "Cannot edit profile while tower is moving.", None
-            )
-        self._mcc.do("!twcf", *profile)
+    def _write_profile_id(self, profile_id: int):
+        self._mcc.do("!twcs", profile_id)
 
-    @property
-    def profiles(self) -> List[List[int]]:
-        profiles = list()
-        for profile_id in range(8):
-            profiles.append(self._mcc.doGetIntList("?twcf %d" % profile_id))
-        return profiles
-
-    @profiles.setter
-    def profiles(self, profiles: List[List[int]]):
-        if len(profiles) != 8:
-            raise MotionControllerException("Wrong number of profiles passed",
-                                            None)
-        currentProfile = self.profile_id
-        for profile_id in range(8):
-            self.profile_id = TowerProfile(profile_id)
-            self.profile = profiles[profile_id]
-        self.profile_id = currentProfile
-
-    @property
-    def profile_names(self) -> List[str]:
-        return [profile.name for profile in TowerProfile]
-
-    def _move_api_get_profile(self, speed) -> TowerProfile:
-        if abs(speed) < 2:
-            return TowerProfile.moveSlow
-        return TowerProfile.homingFast
+    def _write_profile_data(self):
+        self._mcc.do("!twcf", *self._actual_profile.dump())

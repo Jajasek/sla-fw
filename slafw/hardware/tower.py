@@ -2,11 +2,55 @@
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from abc import abstractmethod
 from functools import cached_property
 
 from slafw.configs.unit import Nm
 from slafw.errors.errors import TowerMoveFailed, TowerHomeFailed
 from slafw.hardware.axis import Axis
+from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+
+
+class MovingProfilesTower(ProfileSet):
+    @property
+    @abstractmethod
+    def homingFast(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def homingSlow(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def moveFast(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def moveSlow(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def layer(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def layerMove(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def superSlow(self) -> SingleProfile:
+        pass
+
+    @property
+    @abstractmethod
+    def resinSensor(self) -> SingleProfile:
+        pass
 
 
 class Tower(Axis):
@@ -79,3 +123,8 @@ class Tower(Axis):
     @staticmethod
     def _raise_home_failed():
         raise TowerHomeFailed()
+
+    @property
+    @abstractmethod
+    def profiles(self) -> MovingProfilesTower:
+        """all tower profiles"""

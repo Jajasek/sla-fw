@@ -1,14 +1,19 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
-from typing import List
+
+from typing import Optional
+from unittest.mock import Mock
 
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Unit
-from slafw.hardware.axis import Axis, AxisProfileBase, HomingStatus
+from slafw.hardware.axis import Axis, HomingStatus
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.tilt import Tilt
 from slafw.hardware.tower import Tower
+from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.tilt import MovingProfilesTilt
+from slafw.hardware.tower import MovingProfilesTower
 from slafw.motion_controller.controller import MotionController
 
 
@@ -20,7 +25,7 @@ class MockAxis(Axis):
         self._mcc = mcc
         self._target_position = Unit(0)
         self._homing_status = HomingStatus.UNKNOWN
-        self._current_profile = None
+        self._actual_profile: Optional[SingleProfile] = None
 
     @property
     def position(self) -> Unit:
@@ -60,34 +65,37 @@ class MockAxis(Axis):
         self.sync()
 
     @property
-    def profile_names(self) -> List[str]:
+    def profiles(self) -> ProfileSet:
         pass
 
     @property
-    def profile_id(self) -> AxisProfileBase:
-        return self._current_profile
+    def actual_profile(self) -> SingleProfile:
+        return self._actual_profile
 
-    @profile_id.setter
-    def profile_id(self, profile_id: AxisProfileBase):
-        self._current_profile = profile_id
+    @actual_profile.setter
+    def actual_profile(self, profile: SingleProfile):
+        self._actual_profile = profile
 
-    @property
-    def profile(self) -> List[int]:
+    def apply_profile(self):
         pass
 
-    @property
-    def profiles(self) -> List[List[int]]:
+    def apply_all_profiles(self):
         pass
 
     def sensitivity(self) -> int:
         pass
 
-    def _move_api_get_profile(self, speed: int) -> AxisProfileBase:
+    def set_stepper_sensitivity(self, sensitivity: int):
+        pass
+
+    def _move_api_get_profile(self, speed: int) -> SingleProfile:
         pass
 
 
 class MockTower(Tower, MockAxis):
-    pass
+    @property
+    def profiles(self) -> MovingProfilesTower:
+        return Mock()
 
 
 class MockTilt(Tilt, MockAxis):
@@ -100,3 +108,7 @@ class MockTilt(Tilt, MockAxis):
 
     async def stir_resin_async(self) -> None:
         pass
+
+    @property
+    def profiles(self) -> MovingProfilesTilt:
+        return Mock()
