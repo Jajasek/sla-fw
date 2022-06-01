@@ -45,7 +45,7 @@ class TestExceptions(unittest.TestCase):
             message = cls.CODE.message
             print(f'Source text:\n"{message}"')
 
-            arguments = dict()
+            arguments = {}
             if is_dataclass(cls):
                 for field in fields(cls):
                     type_name: str = getattr(field.type, "__name__", str(field.type))

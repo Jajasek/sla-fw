@@ -52,7 +52,7 @@ class UVLEDSL1x(UVLED, ABC):
             return data[0], 0
 
         if len(data) == 2:
-            return data
+            return data[0], data[1]
 
         raise ValueError(f"UV data count not match! ({data})")
 
@@ -145,9 +145,9 @@ class SL1UVLED(UVLEDSL1x):
             uv_pwms = [31, 94, 188, self.max_pwm]  # board rev. < 0.6c
 
         diff = 0.55  # [mV] voltages in all rows cannot differ more than this limit
-        row1 = list()
-        row2 = list()
-        row3 = list()
+        row1 = []
+        row2 = []
+        row3 = []
         try:  # check may be interrupted by another check or canceled
             for i, pwm in enumerate(uv_pwms):
                 self.pwm = pwm

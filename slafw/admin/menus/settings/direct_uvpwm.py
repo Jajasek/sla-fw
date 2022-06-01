@@ -84,10 +84,8 @@ class DirectPwmSetMenu(SafeAdminMenu):
                 if meter.read():
                     self._data = meter.get_data(plain_mean=True)
                     self._data.uvFoundPwm = self._uv_pwm_print
-                    self.status = "<b>ø:%.1f σ:%.1f %.1f°C<b>" % (
-                        self._data.uvMean,
-                        self._data.uvStdDev,
-                        self._data.uvTemperature,
+                    self.status = (
+                        f"<b>ø:{self._data.uvMean:.1f} σ:{self._data.uvStdDev:.1f} {self._data.uvTemperature:.1f}°C<b>"
                     )
                 else:
                     self.status = "<b>UV meter disconnected<b>"

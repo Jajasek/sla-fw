@@ -103,4 +103,4 @@ class LoggingMenu(SafeAdminMenu):
         self._status.set(state.name)
 
     def _store_progress_callback(self, value: float):
-        self._status.set("UPLOADING: %d %%" % int(value * 100))
+        self._status.set(f"UPLOADING: {int(value * 100):d} %%")

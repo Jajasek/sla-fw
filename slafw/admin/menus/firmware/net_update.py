@@ -118,7 +118,7 @@ class FwInstall(AdminMenu):
         self._logger.info("Flashing: %s", fw_file)
         try:
             rauc = pydbus.SystemBus().get("de.pengutronix.rauc", "/")["de.pengutronix.rauc.Installer"]
-            rauc.InstallBundle(fw_file, dict())
+            rauc.InstallBundle(fw_file, {})
         except Exception as e:
             self._logger.error("Rauc install call failed: %s", str(e))
             self._control.enter(Error(self._control, text="Firmware install failed"))

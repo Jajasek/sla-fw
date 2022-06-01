@@ -67,7 +67,7 @@ class TowerRangeTest(DangerousCheck):
             self._hw.tower.actual_profile = self._hw.tower.profiles.homingSlow
             self._hw.tower.move(self._hw.tower.max_nm)
             while self._hw.tower.moving:
-                asyncio.sleep(0.25)
+                await asyncio.sleep(0.25)
 
         position_nm = self._hw.tower.position
         # MC moves tower by 1024 steps forward in last step of !twho

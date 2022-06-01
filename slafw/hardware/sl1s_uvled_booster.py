@@ -63,7 +63,7 @@ class Booster:
         elif (DAC_status & 0x3F) == 0x0C:
             self._logger.info("DAC53401 (10bit) detected")
         else:
-            raise BoosterError("DAC wrong status (0x%04X)" % DAC_status)
+            raise BoosterError(f"DAC wrong status (0x{DAC_status:04X})")
         # Spock! TODO something!
         if DAC_status & (1 << 12):
             self._logger.warning("DAC_UPDATE_BUSY")
@@ -97,7 +97,7 @@ class Booster:
             msg = i2c_msg.read(self.EEPROM_ADDR, count)
             self._bus.i2c_rdwr(msg)
             data += list(msg)  # type: ignore
-        self._logger.debug("data: %s", " ".join("{:02X}".format(x) for x in data))
+        self._logger.debug("data: %s", " ".join(f"{x:02X}" for x in data))
         return data
 
     def eeprom_write_byte(self, address: int, value: int) -> None:
@@ -168,4 +168,4 @@ class Booster:
 
     def _eeprom_read_serial(self) -> None:
         serial = self._bus.read_i2c_block_data(self.SN_ADDR, 0x80, 16)
-        self._sn = "".join("{:02X}".format(x) for x in serial)
+        self._sn = "".join(f"{x:02X}" for x in serial)

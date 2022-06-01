@@ -161,8 +161,7 @@ class Value(property, ABC):
         if not isinstance(val, t):
             raise ValueError(f"Value \"{val}\" not compatible with \"{t}\"")
 
-    @staticmethod
-    def adapt(val):
+    def adapt(self, val):  # pylint: disable = no-self-use
         """
         Adapt value being set
 

@@ -73,7 +73,7 @@ class UVFansTest(DangerousCheck):
             self._hw.stop_fans()
 
         # evaluate fans data
-        avg_rpms = list()
+        avg_rpms = []
 
         for i, fan in self._hw.fans.items():  # iterate over fans
             rpms = rpm[i] if len(rpm[i]) else [0]

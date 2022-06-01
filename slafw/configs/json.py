@@ -21,7 +21,7 @@ class JsonConfig(ValueConfigCommon):
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exception:
-            raise ConfigException("Failed to decode config content:\n %s" % text) from exception
+            raise ConfigException(f"Failed to decode config content:\n {text}") from exception
         self._fill_from_dict(self, self._values.values(), data, factory, defaults)
 
     def _dump_for_save(self, factory: bool = False, nondefault: bool = False) -> str:

@@ -201,8 +201,7 @@ class BaseCheck(ABC):
     async def run_wrapper(self, actions: UserActionBroker, sync_executor):
         ...
 
-    @staticmethod
-    def get_result_data() -> Dict[str, Any]:
+    def get_result_data(self) -> Dict[str, Any]:  # pylint: disable = no-self-use
         return {}
 
     def cancel(self):

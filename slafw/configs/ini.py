@@ -59,7 +59,7 @@ class IniConfig(ValueConfigCommon):
         try:
             data = toml.loads(text)
         except toml.TomlDecodeError as exception:
-            raise ConfigException("Failed to decode config content:\n %s" % text) from exception
+            raise ConfigException(f"Failed to decode config content:\n {text}") from exception
         self._fill_from_dict(self, self._values.values(), data, factory, defaults)
 
     def _normalize_text(self, text: str) -> str:

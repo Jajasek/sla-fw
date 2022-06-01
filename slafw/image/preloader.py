@@ -206,7 +206,7 @@ class Preloader(Process):
             preview = image.resize(self._params.live_preview_size_px, Image.BICUBIC)
             self._logger.debug("resize done in %f ms", 1e3 * (monotonic() - start_time))
             start_time = monotonic()
-            preview.save(defines.livePreviewImage + "-tmp%s.png" % number)
+            preview.save(f"{defines.livePreviewImage}-tmp{number}.png")
             self._logger.debug("screenshot done in %f ms", 1e3 * (monotonic() - start_time))
         except Exception:
             self._logger.exception("Screenshot exception:")

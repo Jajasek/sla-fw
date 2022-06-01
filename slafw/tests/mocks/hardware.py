@@ -89,7 +89,8 @@ class HardwareMock(BaseHardware):
     def getPowerswitchState(self):
         return False
 
-    def calcPercVolume(self, _):
+    @staticmethod
+    def calcPercVolume(_):
         return 42
 
     def start_fans(self):

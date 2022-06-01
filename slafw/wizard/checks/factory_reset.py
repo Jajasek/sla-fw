@@ -5,6 +5,7 @@
 import json
 import os
 import subprocess
+import time
 from abc import abstractmethod
 from asyncio import sleep, gather
 from pathlib import Path
@@ -369,5 +370,5 @@ class ResetTouchUI(ResetCheck):
         for _ in range(100):
             if self.BACKLIGHT_STATE.exists():
                 break
-            sleep(0.1)
+            time.sleep(0.1)
         self.BACKLIGHT_STATE.unlink(missing_ok=True)

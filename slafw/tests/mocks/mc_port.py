@@ -26,7 +26,9 @@ class Serial:
         self.process: Optional[Popen] = None
 
     def open(self):
-        self.process = Popen(["SLA-control-01.elf"], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        self.process = Popen(  # pylint: disable = consider-using-with
+            ["SLA-control-01.elf"], stdin=PIPE, stdout=PIPE, stderr=STDOUT
+        )
         mcusr = self.process.stdout.readline()
         self.logger.debug("MC serial simulator MCUSR = %s", mcusr)
         ready = self.process.stdout.readline()

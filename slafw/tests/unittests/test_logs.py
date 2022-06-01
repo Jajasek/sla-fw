@@ -22,10 +22,7 @@ from slafw.states.data_export import ExportState, StoreType
 
 
 async def fake_log_export_process(log_file: Path):
-    return await asyncio.create_subprocess_shell(
-        '(sleep 1; date) > "{0}"'.format(str(log_file)),
-        stderr=asyncio.subprocess.PIPE
-    )
+    return await asyncio.create_subprocess_shell(f'(sleep 1; date) > "{log_file}"', stderr=asyncio.subprocess.PIPE)
 
 
 class TestLogs0(SlafwTestCaseDBus, RefCheckTestCase):

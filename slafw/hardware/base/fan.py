@@ -68,7 +68,6 @@ class Fan(HardwareComponent, ABC):
         """
         Whenever fan is enabled
         """
-        ...
 
     @enabled.setter
     @abstractmethod
@@ -81,7 +80,6 @@ class Fan(HardwareComponent, ABC):
         """
         Fan RPM as reported by the fan
         """
-        ...
 
     @property
     @abstractmethod
@@ -89,7 +87,6 @@ class Fan(HardwareComponent, ABC):
         """
         Fan failed status as reported by the fan
         """
-        ...
 
     @property
     @abstractmethod
@@ -97,7 +94,6 @@ class Fan(HardwareComponent, ABC):
         """
         Target RPM to be maintained by fan
         """
-        ...
 
     @target_rpm.setter
     @abstractmethod

@@ -7,6 +7,7 @@
 
 import logging
 from time import sleep
+from typing import List
 
 from slafw.configs.hw import HwConfig
 from slafw.hardware.hardware_sl1 import HardwareSL1
@@ -24,10 +25,10 @@ while hw.tilt.moving:
     sleep(0.1)
 #endwhile
 profile = [1750, 1750, 0, 0, 58, 26, 2100]
-result = dict()
+result = {}
 for sgt in range(10, 30):
     profile[5] = sgt
-    sgbd = list()
+    sgbd: List[int] = []
     hw.mcc.do("!tics", 4)
     hw.mcc.do("!ticf", ' '.join(str(num) for num in profile))
     hw.mcc.do("?ticf")

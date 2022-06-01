@@ -24,7 +24,7 @@ class A64CPUTempSensor(TempSensor):
 
     def _read_value(self) -> Optional[float]:
         try:
-            with self.CPU_TEMP_PATH.open("r") as f:
+            with self.CPU_TEMP_PATH.open("r", encoding="utf-8") as f:
                 return round((int(f.read()) / 1000.0), 1)
         except ValueError:
             return None

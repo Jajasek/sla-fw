@@ -23,7 +23,7 @@ from dbusmock import DBusTestCase
 from gi.repository import GLib
 
 import slafw.tests.mocks.exposure_screen
-import slafw.tests.mocks.mc_port as mc_port
+from slafw.tests.mocks import mc_port
 import slafw.tests.mocks.sl1s_uvled_booster
 from slafw import defines, test_runtime
 from slafw.api.exposure0 import Exposure0
@@ -64,7 +64,7 @@ class SlafwTestCase(TestCase):
 
         super().setUp()
 
-        self.temp_dir_obj = tempfile.TemporaryDirectory()
+        self.temp_dir_obj = tempfile.TemporaryDirectory()  # pylint: disable = consider-using-with
         self.TEMP_DIR = Path(self.temp_dir_obj.name)
 
         self.__base_patches = self.patches()

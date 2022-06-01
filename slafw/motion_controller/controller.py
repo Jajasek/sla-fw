@@ -255,7 +255,7 @@ class MotionController:
                     self.logger.info("Starting exclusive debugging")
                     if not self._exclusive_lock.locked():
                         self.logger.debug("Switching to exclusive debugging")
-                        self._exclusive_lock.acquire()
+                        self._exclusive_lock.acquire()  # pylint: disable = consider-using-with
                         self._debug_sock.sendall(b"\n\n\n>>> Now in exclusive mode type #cont to leave it <<<\n\n\n")
                     else:
                         self._debug_sock.sendall(b"\n\n\n>>> Exclusive mode already enabled <<<\n\n\n")
@@ -318,7 +318,7 @@ class MotionController:
         if mc_version_check:
             if self.fw['version'] != defines.reqMcVersion:
                 raise MotionControllerWrongFw(
-                    message="Incorrect firmware, version %s is required" % defines.reqMcVersion,
+                    message=f"Incorrect firmware, version {defines.reqMcVersion} is required",
                     trace=self.trace
                 )
 
@@ -336,7 +336,7 @@ class MotionController:
     def doGetInt(self, *args):
         return self.do(*args, return_process=int)
 
-    def doGetIntList(self, cmd, args=(), base=10, multiply: float = 1):
+    def doGetIntList(self, cmd, args=(), base=10, multiply: float = 1) -> List[int]:
         return self.do(cmd, *args, return_process=lambda ret: list([int(x, base) * multiply for x in ret.split(" ")]), )
 
     def doGetBool(self, cmd, *args):
@@ -344,7 +344,7 @@ class MotionController:
 
     def doGetBoolList(self, cmd, bit_count, args=()) -> List[bool]:
         def process(data):
-            bits = list()
+            bits = []
             num = int(data)
             for i in range(bit_count):
                 bits.append(bool(num & (1 << i)))
@@ -384,7 +384,7 @@ class MotionController:
 
     def do(self, cmd, *args, return_process: Callable = lambda x: x) -> Any:
         with self._exclusive_lock, self._command_lock:
-            if self._flash_lock.acquire(blocking=False):
+            if self._flash_lock.acquire(blocking=False):  # pylint: disable = consider-using-with
                 try:
                     self._read_garbage()
                     self.do_write(cmd, *args)
@@ -446,7 +446,7 @@ class MotionController:
 
     def soft_reset(self) -> None:
         with self._exclusive_lock, self._command_lock:
-            if self._flash_lock.acquire(blocking=False):
+            if self._flash_lock.acquire(blocking=False):  # pylint: disable = consider-using-with
                 try:
                     self._read_garbage()
                     self.trace.append_trace(LineTrace(LineMarker.RESET, b"Motion controller soft reset"))
@@ -485,7 +485,7 @@ class MotionController:
             with self._raw_read_lock:
                 self.reset()
 
-                process = subprocess.Popen(
+                with subprocess.Popen(
                     [defines.script_dir / "flashMC.sh",
                         defines.dataPath,
                         str(mc_board_version),
@@ -493,20 +493,19 @@ class MotionController:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
-                )
-                while True:
-                    line = process.stdout.readline()
-                    try:
+                ) as process:
+                    while True:
+                        line = process.stdout.readline()
                         retc = process.poll()
-                    except Exception as e:
-                        raise MotionControllerException(f"Flashing MC failed with code {retc}", self.trace) from e
-                    if line == "" and retc is not None:
-                        break
-                    if line:
-                        line = line.strip()
-                        if line == "":
-                            continue
-                        self.logger.info("flashMC output: '%s'", line)
+                        if line == "" and retc is not None:
+                            break
+                        if line:
+                            line = line.strip()
+                            if line == "":
+                                continue
+                            self.logger.info("flashMC output: '%s'", line)
+                    if retc:
+                        raise MotionControllerException(f"Flashing MC failed with code {retc}", self.trace)
 
             self._ensure_ready()
 
@@ -628,7 +627,7 @@ class MotionController:
         if not rpms or len(rpms) != 3:
             raise MotionControllerException(f"RPMs count not match! ({rpms})")
 
-        return rpms
+        return rpms[0], rpms[1], rpms[2]
 
     def _get_statistics(self):
         data = self.doGetIntList("?usta")  # time counter [s] #TODO add uv average current, uv average temperature

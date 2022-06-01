@@ -87,7 +87,7 @@ class RecordExpoPanelLog(Check):
     async def async_task_run(self, actions: UserActionBroker):
         panel_sn = self._hw.exposure_screen.serial_number
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(defines.expoPanelLogPath, "r") as f:
+        with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
             log = json.load(f)
         last_key = list(log)[-1]
         log[last_key]["counter_s"] = \
@@ -96,5 +96,5 @@ class RecordExpoPanelLog(Check):
         log[timestamp] = {"panel_sn": panel_sn}  # create new record
 
         with FactoryMountedRW():
-            with open(defines.expoPanelLogPath, "w") as f:
+            with open(defines.expoPanelLogPath, "w", encoding="utf-8") as f:
                 json.dump(log, f, indent=2)

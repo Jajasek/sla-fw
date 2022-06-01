@@ -676,8 +676,7 @@ class Exposure:
 
             self.state = ExposureState.GOING_DOWN
             position_nm = self.hw.config.up_and_down_z_offset_nm
-            if position_nm < 0:
-                position_nm = 0
+            position_nm = max(position_nm, 0)
             self.hw.tower.move_ensure(position_nm)
             self.hw.tower.actual_profile = self.hw.tower.profiles.layer
 
@@ -979,8 +978,8 @@ class Exposure:
         statistics["total_seconds"] += seconds
         statistics["total_resin"] += self.resin_count
         statistics.save_raw()
-        exposure_times = "{0:d}/{1:d}/{2:d} s".format(
-            project.exposure_time_first_ms, project.exposure_time_ms, project.exposure_time_calibrate_ms
+        exposure_times = (
+            f"{project.exposure_time_first_ms:d}/{project.exposure_time_ms:d}/{project.exposure_time_calibrate_ms:d} s"
         )
         self.logger.info(
             "Job finished » { 'job': %d, 'project': '%s', 'finished': %s, "

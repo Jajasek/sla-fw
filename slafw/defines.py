@@ -122,7 +122,7 @@ internalProjectGroup = "projects"
 internalProjectMode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
 internalProjectDirMode = stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH
 examplesURL = "https://sl1.prusa3d.com/examples-cleaning-adaptor-{PRINTER_MODEL}.tar.gz"
-bootFailedStamp = os.path.join(persistentStorage, "failedboot")
+bootFailedStamp = Path(persistentStorage) / "failedboot"
 apikeyFile = configDir / "api.key"
 uvLedMeterMaxWait_s = 10
 

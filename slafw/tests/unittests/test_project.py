@@ -24,7 +24,7 @@ from slafw.hardware.printer_model import PrinterModel
 def _layer_generator(name, count, height_nm, times_ms, layer_times_ms):
     layers = []
     for i in range(count):
-        layer = ProjectLayer('%s%05d.png' % (name, i), height_nm)
+        layer = ProjectLayer(f'{name}{i:05d}.png', height_nm)
         if i >= len(layer_times_ms):
             times_ms[0] = layer_times_ms[-1]
         else:

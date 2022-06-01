@@ -616,7 +616,7 @@ class Printer:
         panel_sn = self.hw.exposure_screen.serial_number
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
-            with open(defines.expoPanelLogPath, "r") as f:
+            with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
                 log = json.load(f)
             last_key = list(log)[-1]
             if log[last_key]["panel_sn"] != panel_sn:  # if new panel detected
@@ -636,11 +636,10 @@ class Printer:
         except Exception as e:  # no records found
             self.logger.exception(e)
             with FactoryMountedRW():
-                with open(defines.expoPanelLogPath, "a+") as f:
+                with open(defines.expoPanelLogPath, "a+", encoding="utf-8") as f:
                     f.seek(0)
                     self.logger.warning("Expo panel logs: Current contents: %s", f.read())
-                    record = dict()
-                    record[timestamp] = {"panel_sn": panel_sn}
+                    record = {timestamp: {"panel_sn": panel_sn}}
                     f.seek(0)
                     f.truncate()
                     self.logger.warning("Expo panel logs: Adding first record: %s", panel_sn)

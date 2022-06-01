@@ -6,47 +6,52 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
+
 import bitstring
 
 # pylint: disable = unbalanced-tuple-unpacking
 # pylint does not understand tuples passed by bitstring
 
 if len(sys.argv) != 2:
-    print("Usage: %s nvram_file" % sys.argv[0])
+    print(f"Usage: {sys.argv[0]} nvram_file")
     sys.exit(1)
-#enddef
 
-s = bitstring.BitArray(bytes=open(sys.argv[1], 'rb').read())
+with open(sys.argv[1], "rb") as file:
+    s = bitstring.BitArray(bytes=file.read())
 
-mac, mcs1, mcs2, snbe = s.unpack('pad:192, bits:48, uint:8, uint:8, pad:224, uintbe:64')
+mac, mcs1, mcs2, snbe = s.unpack("pad:192, bits:48, uint:8, uint:8, pad:224, uintbe:64")
 
 mcsc = mac.count(1)
 if mcsc == mcs1 and mcsc ^ 255 == mcs2:
-    print("MAC checksum OK (%02x:%02x)" % (mcs1, mcs2))
+    print(f"MAC checksum OK ({mcs1:02x}:{mcs2:02x})")
     print(":".join([x.encode("hex") for x in mac.bytes]))
 else:
-    print("MAC checksum FAIL (is %02x:%02x, should be %02x:%02x)" % (mcs1, mcs2, mcsc, mcsc ^ 255))
-#endif
+    print(f"MAC checksum FAIL (is {mcs1:02x}:{mcs2:02x}, should be {mcsc:02x}:{mcsc ^ 255:02x})")
 
 
 print()
 
 # byte order change
-sn = bitstring.BitArray(length = 64, uintle = snbe)
+sn = bitstring.BitArray(length=64, uintle=snbe)
 
-ot = { 0 : "CZP" }
+ot = {0: "CZP"}
 
-scs2, scs1, snnew = sn.unpack('uint:8, uint:8, bits:48')
+scs2, scs1, snnew = sn.unpack("uint:8, uint:8, bits:48")
 
 scsc = snnew.count(1)
 if scsc == scs1 and scsc ^ 255 == scs2:
-    print("SN checksum OK (%02x:%02x)" % (scs1, scs2))
-    sequence_number, is_kit, ean_pn, year, week, origin = snnew.unpack('pad:4, uint:17, bool, uint:10, uint:6, uint:6, uint:4')
+    print(f"SN checksum OK ({scs1:02x}:{scs2:02x})")
+    sequence_number, is_kit, ean_pn, year, week, origin = snnew.unpack(
+        "pad:4, uint:17, bool, uint:10, uint:6, uint:6, uint:4"
+    )
     txt = ""
 else:
-    print("SN checksum FAIL (is %02x:%02x, should be %02x:%02x)" % (scs1, scs2, scsc, scsc ^ 255))
-    sequence_number, is_kit, ean_pn, year, week, origin = sn.unpack('pad:14, uint:17, bool, uint:10, uint:6, pad:2, uint:6, pad:2, uint:4')
+    print(f"SN checksum FAIL (is {scs1:02x}:{scs2:02x}, should be {scsc:02x}:{scsc ^ 255:02x})")
+    sequence_number, is_kit, ean_pn, year, week, origin = sn.unpack(
+        "pad:14, uint:17, bool, uint:10, uint:6, pad:2, uint:6, pad:2, uint:4"
+    )
     txt = "*"
-#endif
 
-print("%s%3sX%02u%02uX%03uX%c%05u" % (txt, ot.get(origin, "UNK"), week, year, ean_pn, "K" if is_kit else "C", sequence_number))
+print(
+    f"{txt}{ot.get(origin, 'UNK'):3s}X{week:02d}{year:02d}X{ean_pn:03d}X{'K' if is_kit else 'C':c}{sequence_number:05d}"
+)

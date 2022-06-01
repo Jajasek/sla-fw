@@ -73,7 +73,7 @@ class Virtual:
         self.admin_manager = None
         self.admin0_dbus = None
 
-        self.temp_dir_obj = tempfile.TemporaryDirectory()
+        self.temp_dir_obj = tempfile.TemporaryDirectory()  # pylint: disable = consider-using-with
         self.temp = Path(self.temp_dir_obj.name)
 
     def __call__(self):

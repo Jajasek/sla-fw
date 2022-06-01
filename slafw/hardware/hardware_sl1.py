@@ -191,7 +191,11 @@ class HardwareSL1(BaseHardware):
         if self.config.lockProfiles:
             self.logger.warning("Printer profiles will not be overwriten")
         else:
-            with open(os.path.join(defines.dataPath, self._printer_model.name, "default.tune_tilt"), "r") as f:
+            with open(
+                os.path.join(defines.dataPath, self._printer_model.name, "default.tune_tilt"),
+                "r",
+                encoding="utf-8",
+            ) as f:
                 tune_tilt = json.loads(f.read())
                 writer = self.config.get_writer()
                 if tune_tilt != writer.tuneTilt:
@@ -222,7 +226,7 @@ class HardwareSL1(BaseHardware):
     @property
     def mcBoardRevision(self):
         if self.mcc.board["revision"] > -1 and self.mcc.board["subRevision"] != "":
-            return "%d%s" % (self.mcc.board["revision"], self.mcc.board["subRevision"])
+            return f"{self.mcc.board['revision']:d}{self.mcc.board['subRevision']}"
 
         return "*INVALID*"
 
@@ -235,7 +239,7 @@ class HardwareSL1(BaseHardware):
         self.mcc.soft_reset()  # FIXME MC issue
 
     def getStallguardBuffer(self):
-        samplesList = list()
+        samplesList = []
         samplesCount = self.mcc.doGetInt("?sgbc")
         while samplesCount > 0:
             try:

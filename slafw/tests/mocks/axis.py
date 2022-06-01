@@ -2,6 +2,7 @@
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from functools import cached_property
 from typing import Optional
 from unittest.mock import Mock
 
@@ -82,8 +83,9 @@ class MockAxis(Axis):
     def apply_all_profiles(self):
         pass
 
+    @cached_property
     def sensitivity(self) -> int:
-        pass
+        return 0
 
     def set_stepper_sensitivity(self, sensitivity: int):
         pass

@@ -161,7 +161,7 @@ class Network:
             # TODO do we still need this functionality?
             # URL is file, source is file
             self.logger.info("Copying file %s", url)
-            source = open(url, "rb")
+            source = open(url, "rb")  # pylint: disable = consider-using-with
             file_size = os.path.getsize(url)
             block_size = 1024 * 1024
 

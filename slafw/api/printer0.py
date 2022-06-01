@@ -462,7 +462,7 @@ class Printer0:
 
     @staticmethod
     def _format_leds(leds):
-        return {"led%d_voltage_volt" % i: v for i, v in enumerate(leds)}
+        return {f"led{i}_voltage_volt": v for i, v in enumerate(leds)}
 
     @staticmethod
     def _limit_to_32bit(value: int):
@@ -493,7 +493,7 @@ class Printer0:
     @staticmethod
     def _format_uv_statistics(statistics):
         # Saturate the value at max 32bit signed int due to the UI limitation
-        return {"uv_stat%d" % i: Printer0._limit_to_32bit(v) for i, v in enumerate(statistics)}
+        return {f"uv_stat{i}": Printer0._limit_to_32bit(v) for i, v in enumerate(statistics)}
         # uv_stats0 - time counter [s] # TODO: add uv average current,
 
     @auto_dbus
@@ -631,7 +631,7 @@ class Printer0:
         """
         # pylint: disable=no-self-use
         pydbus.SystemBus().get("de.pengutronix.rauc", "/")["de.pengutronix.rauc.Installer"].InstallBundle(
-            fw_file, dict()
+            fw_file, {}
         )
 
     @auto_dbus

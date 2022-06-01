@@ -37,7 +37,7 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
     def test_expo_panel_log_first_record(self):
         self._run_printer()
         self.assertEqual(self.printer.state, PrinterState.RUNNING)  # no wizard is running, no error is raised
-        with open(defines.expoPanelLogPath, "r") as f:
+        with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
             log = json.load(f)
         self.assertEqual(1, len(log))  # log holds only one record
         last_key = list(log)[-1]
@@ -52,7 +52,7 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
         copyfile(self.SAMPLES_DIR / defines.expoPanelLogFileName, defines.expoPanelLogPath)
 
         self._run_printer()
-        with open(defines.expoPanelLogPath, "r") as f:
+        with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
             log = json.load(f)
         self.assertEqual(3, len(log))  # log holds records from sample file
 
@@ -70,7 +70,7 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
             PropertyMock(return_value="CZPX2921X021X000262"),
         ):
             self._run_printer()
-        with open(defines.expoPanelLogPath, "r") as f:
+        with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
             log = json.load(f)
         next_to_last_key = list(log)[-2]  # get counter_s from sample file
         observer.assert_called_with(OldExpoPanel(counter_h=round(log[next_to_last_key]["counter_s"] / 3600)))
@@ -109,8 +109,7 @@ class TestStartupSL1(SlafwTestCaseDBus):
         set_configured_printer_model(PrinterModel.SL1)  # Set SL1 as the current model
 
         self.assertEqual(self.printer.state, PrinterState.RUNNING)  # no wizard is running, no error is raised
-        with self.assertRaises(FileNotFoundError):
-            _ = open(defines.expoPanelLogPath, "r")
+        self.assertFalse(defines.expoPanelLogPath.exists())
 
     def _run_printer(self):
         self.printer.setup()

@@ -65,7 +65,7 @@ class ProfilesSetsMenu(SafeAdminMenu):
         )
 
     def _setTuneTilt(self, path, _):
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             profiles = json.loads(f.read())
             self.logger.info("Overwriting tune tilt profiles to: %s", profiles)
             writer = self._printer.hw.config.get_writer()

@@ -21,7 +21,7 @@ def display_usage_heatmap(
 
     try:
         palette_bytes = bytes()
-        with open(palette_filename, "r") as f:
+        with open(palette_filename, "r", encoding="utf-8") as f:
             for line in f:
                 palette_bytes += bytes.fromhex(line.strip()[1:])
         palette = list(palette_bytes)
@@ -35,7 +35,7 @@ def display_usage_heatmap(
         raise DisplayUsageError("No display usage data.") from e
 
     if saved_data.shape != parameters.display_usage_size_px:
-        raise DisplayUsageError("Wrong saved data shape: %s" % saved_data.shape)
+        raise DisplayUsageError(f"Wrong saved data shape: {saved_data.shape}")
 
     max_value = saved_data.max()
     saved_data = saved_data * 255 / max_value # 0-255 range
@@ -52,13 +52,13 @@ def uv_calibration_result(data: Optional[dict], data_filename: Optional[Path], o
         if data_filename.suffix == ".toml":
             data = TomlConfig(data_filename).load()
         elif data_filename.suffix == ".json":
-            with open(data_filename, "r") as jf:
+            with open(data_filename, "r", encoding="utf-8") as jf:
                 data = json.load(jf)
         else:
             raise NoUvCalibrationData
     if not data:
         raise NoUvCalibrationData
     if data.get('uvSensorType', None) == 0:
-        UvLedMeterMulti().save_pic(800, 480, "PWM: %d" % data['uvFoundPwm'], output_filename, data)
+        UvLedMeterMulti().save_pic(800, 480, f"PWM: {data['uvFoundPwm']:d}", output_filename, data)
     else:
         raise DataFromUnknownUvSensor

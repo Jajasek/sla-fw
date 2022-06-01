@@ -19,7 +19,7 @@ class TomlConfig:
         try:
             if not self.filename:
                 raise Exception("No filename specified")
-            with open(self.filename, "r") as f:
+            with open(self.filename, "r", encoding="utf-8") as f:
                 self.data = toml.load(f)
         except FileNotFoundError:
             self.logger.warning("File '%s' not found", self.filename)
@@ -32,7 +32,7 @@ class TomlConfig:
     def save_raw(self):
         if not self.filename:
             raise Exception("No filename specified")
-        with open(self.filename, "w") as f:
+        with open(self.filename, "w", encoding="utf-8") as f:
             toml.dump(self.data, f)
 
     def save(self, data=None, filename=None):

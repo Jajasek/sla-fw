@@ -231,8 +231,7 @@ class TestHardwareConfig(SlafwTestCase):
 
     @staticmethod
     def get_config_content(path: Path):
-        with open(str(path), "r") as f:
-            return f.read()
+        return path.read_text(encoding="utf-8")
 
     def test_instances(self):
         """

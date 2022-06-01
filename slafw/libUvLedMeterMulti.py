@@ -237,7 +237,7 @@ class UvLedMeterMulti:
             data.uvStdDev = float(round(self.np.std(), self.ndigits))
             data.uvMinValue = int(self.np.min())
             data.uvMaxValue = int(self.np.max())
-            data.uvPercDiff = ((self.np - mean) / (mean / 100.0)).round(self.ndigits).tolist() if mean > 0 else list()
+            data.uvPercDiff = ((self.np - mean) / (mean / 100.0)).round(self.ndigits).tolist() if mean > 0 else []
 
         return data
 
@@ -306,14 +306,9 @@ class UvLedMeterMulti:
         surf = ImageDraw.Draw(image)
 
         surf.rectangle(((0, 0), (width, text_size)), bg_color)
-        status = "ø %.1f  σ %.1f  %.1f°C  %s" % (
-            data["uvMean"],
-            data["uvStdDev"],
-            data["uvTemperature"],
-            data["uvDateTime"],
-        )
-        rect = font.getsize(status)
-        surf.text((width - rect[0], 0), status, fill=text_color, font=font)
+        state = f"ø {data['uvMean']:.1f}  σ {data['uvStdDev']:.1f}  {data['uvTemperature']:.1f}°C  {data['uvDateTime']}"
+        rect = font.getsize(state)
+        surf.text((width - rect[0], 0), state, fill=text_color, font=font)
         surf.text((0, 0), text, fill=text_color, font=font)
 
         for col in range(cols):
@@ -330,7 +325,7 @@ class UvLedMeterMulti:
                 offset_y = int((step_y - rect[1]) / 2)
                 surf.text((pos_x + offset_x, pos_y + offset_y), val, fill=text_color, font=font)
 
-                val = "%+.1f %%" % perc[i]
+                val = f"{perc[i]:+.1f} %"
                 rect = font_small.getsize(val)
                 offset_x = int((step_x - rect[0]) / 2)
                 surf.text(

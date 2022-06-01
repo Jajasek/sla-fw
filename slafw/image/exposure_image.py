@@ -248,7 +248,7 @@ class ExposureImage:
     @measure_time("rename")
     def screenshot_rename(self, second=False):
         try:
-            os.rename(defines.livePreviewImage + "-tmp%s.png" % ("2" if second else "1"), defines.livePreviewImage)
+            os.rename(f"{defines.livePreviewImage}-tmp{2 if second else 1}.png", defines.livePreviewImage)
         except Exception:
             self.logger.exception("Screenshot rename exception:")
 

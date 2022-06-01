@@ -58,11 +58,11 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
     def patches(self) -> List[patch]:
         self.hardware_factory_file = self.TEMP_DIR / "hardware.toml"
         self.hardware_file = self.TEMP_DIR / "slafw.hardware.cfg"
-        self.temp_dir_wizard_history = TemporaryDirectory()
+        self.temp_dir_wizard_history = TemporaryDirectory()  # pylint: disable = consider-using-with
         self.sdl_audio_file = self.TEMP_DIR / "slafw.sdl_audio.raw"
         self.api_key_file = self.TEMP_DIR / "api.key"
         self.counter_log = self.TEMP_DIR / defines.counterLogFilename
-        self.temp_dir_project = TemporaryDirectory()
+        self.temp_dir_project = TemporaryDirectory()  # pylint: disable = consider-using-with
 
         return super().patches() + [
             patch("slafw.defines.wizardHistoryPath", Path(self.temp_dir_wizard_history.name)),

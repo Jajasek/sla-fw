@@ -12,23 +12,22 @@ import logging
 import sys
 from time import sleep
 from dataclasses import asdict
+
 sys.path.append("..")
 from slafw.libUvLedMeterMulti import UvLedMeterMulti
 
-logging.basicConfig(format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s", level = logging.DEBUG)
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG)
 
 uvmeterMulti = UvLedMeterMulti()
 
 uvmeter = None
 wait = 10
 for i in range(0, wait):
-    print("Waiting for UV calibrator (%d/%d)" % (i, wait))
+    print(f"Waiting for UV calibrator ({i}/{wait})")
     if uvmeterMulti.present:
         uvmeter = uvmeterMulti
         break
-    #endif
     sleep(1)
-#endfor
 
 if not uvmeter:
     print("UV calibrator not detected")
@@ -39,12 +38,11 @@ elif not uvmeter.read():
 else:
     data = uvmeter.get_data()
     data.uvFoundPwm = 256
-    print("Arithmetic mean: %.1f" % data.uvMean)
-    print("Standard deviation: %.1f" % data.uvStdDev)
-    print("Teperature: %.1f" % data.uvTemperature)
-    print("Values: %s" % data.uvSensorData)
-    print("MinValue: %d" % data.uvMinValue)
-    print("MaxValue: %d" % data.uvMaxValue)
-    print("Differences: %s" % data.uvPercDiff)
-    uvmeter.save_pic(800, 400, "PWM: %d" % data.uvFoundPwm, "test.png", asdict(data))
-#endif
+    print(f"Arithmetic mean: {data.uvMean:.1f}")
+    print(f"Standard deviation: {data.uvStdDev:.1f}")
+    print(f"Temperature: {data.uvTemperature:.1f}")
+    print(f"Values: {data.uvSensorData}")
+    print(f"MinValue: {data.uvMinValue}")
+    print(f"MaxValue: {data.uvMaxValue}")
+    print(f"Differences: {data.uvPercDiff}")
+    uvmeter.save_pic(800, 400, f"PWM: {data.uvFoundPwm}", "test.png", asdict(data))

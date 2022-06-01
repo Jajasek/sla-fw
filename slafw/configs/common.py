@@ -111,7 +111,7 @@ class ValueConfigCommon(ValueConfig):
         try:
             self.read_text(text, factory=factory, defaults=defaults)
         except Exception as exception:
-            raise ConfigException('Failed to parse config file: "%s"' % file_path) from exception
+            raise ConfigException(f'Failed to parse config file: "{file_path}"') from exception
 
     def read_dict(self, data: dict, factory: bool = False, defaults: bool = False) -> None:
         """
@@ -159,7 +159,6 @@ class ValueConfigCommon(ValueConfig):
         :param text: Config text
         :param factory: Whenever to read factory configuration
         """
-        ...
 
     def write(self, file_path: Optional[Path] = None, factory: bool = False, nondefault: bool = False) -> None:
         """

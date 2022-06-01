@@ -56,13 +56,13 @@ class TestProfileSet(SlafwTestCase):
         test_profiles = DummyProfileSet(factory_file_path=self.outfile, default_file_path=self.infile)
         test_profiles.first_profile.first_value = 999
         test_profiles.write_factory()
-        with open(self.outfile) as o:
+        with open(self.outfile, encoding="utf-8") as o:
             self.assertEqual({'first_profile': {'first_value': 999}}, json.load(o))
 
     def test_write_unchanged(self):
         test_profiles = DummyProfileSet(factory_file_path=self.outfile, default_file_path=self.infile)
         test_profiles.write_factory()
-        with open(self.outfile) as o:
+        with open(self.outfile, encoding="utf-8") as o:
             self.assertFalse(len(json.load(o)))
 
     def test_writer(self):
@@ -71,7 +71,7 @@ class TestProfileSet(SlafwTestCase):
         writer.second_value = 555
         writer.third_value = 999
         writer.commit(factory=True)
-        with open(self.outfile) as o:
+        with open(self.outfile, encoding="utf-8") as o:
             self.assertEqual({'second_profile': {'second_value': 555, 'third_value': 999}}, json.load(o))
 
     def test_load_as_defaults(self):
@@ -111,7 +111,7 @@ class TestProfileSet(SlafwTestCase):
         self.assertEqual(777, test_profiles.first_profile.second_value)
         self.assertEqual(666, test_profiles.first_profile.third_value)
         test_profiles.write_factory(self.outfile)
-        with open(self.outfile) as o:
+        with open(self.outfile, encoding="utf-8") as o:
             self.assertEqual({}, json.load(o))
         test_profiles = DummyProfileSet(factory_file_path=self.infile)
         test_profiles.factory_reset(True)
@@ -119,7 +119,7 @@ class TestProfileSet(SlafwTestCase):
         self.assertEqual(777, test_profiles.first_profile.second_value)
         self.assertEqual(666, test_profiles.first_profile.third_value)
         test_profiles.write_factory(self.outfile)
-        with open(self.outfile) as o:
+        with open(self.outfile, encoding="utf-8") as o:
             self.assertEqual({}, json.load(o))
 
 class TestMovingProfilesSL1(SlafwTestCase):

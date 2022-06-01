@@ -87,7 +87,6 @@ class ConfigException(PrinterException):
 @with_code(Sl1Codes.MOTION_CONTROLLER_EXCEPTION)
 class MotionControllerException(PrinterException):
     def __init__(self, message: str = "", trace: Trace = None):
-        self.__trace = trace
         super().__init__(f"{message}, trace: {trace}")
 
 

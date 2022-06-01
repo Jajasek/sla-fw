@@ -28,7 +28,7 @@ class TestSL1Hardware(SlafwTestCase):
     def setUp(self):
         super().setUp()
 
-        A64CPUTempSensor.CPU_TEMP_PATH.write_text("53500")
+        A64CPUTempSensor.CPU_TEMP_PATH.write_text("53500", encoding="utf-8")
         self.hw_config = HwConfig(file_path=self.SAMPLES_DIR / "hardware.cfg", is_master=True)
         self.hw = HardwareSL1(self.hw_config, PrinterModel.SL1)
 
@@ -248,20 +248,20 @@ class TestSL1Hardware(SlafwTestCase):
 
         # Setters
         self.assertEqual(3, len(self.hw.fans))
-        for key in self.hw.fans:
+        for key, value in self.hw.fans.items():
             # max RPM
-            self.hw.fans[key].target_rpm = defines.fanMaxRPM[key]
-            self.assertEqual(defines.fanMaxRPM[key], self.hw.fans[key].target_rpm)
-            self.assertEqual(True, self.hw.fans[key].enabled)
+            value.target_rpm = defines.fanMaxRPM[key]
+            self.assertEqual(defines.fanMaxRPM[key], value.target_rpm)
+            self.assertEqual(True, value.enabled)
 
             # min RPM
-            self.hw.fans[key].target_rpm = defines.fanMinRPM
-            self.assertEqual(defines.fanMinRPM, self.hw.fans[key].target_rpm)
-            self.assertEqual(True, self.hw.fans[key].enabled)
+            value.target_rpm = defines.fanMinRPM
+            self.assertEqual(defines.fanMinRPM, value.target_rpm)
+            self.assertEqual(True, value.enabled)
 
             # below min RPM (exception)
             with self.assertRaises(ValueError):
-                self.hw.fans[key].target_rpm = defines.fanMinRPM - 1
+                value.target_rpm = defines.fanMinRPM - 1
 
     def test_uv_fan_rpm_control(self):
         self.hw.uv_led_fan.enabled = True

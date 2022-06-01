@@ -41,7 +41,7 @@ def shut_down(hw: BaseHardware, reboot=False):
 
 def get_update_channel() -> str:
     try:
-        return defines.update_channel.read_text().strip()
+        return defines.update_channel.read_text(encoding="ascii").strip()
     except (FileNotFoundError, PermissionError) as e:
         raise FailedUpdateChannelGet() from e
 
@@ -55,8 +55,7 @@ def set_update_channel(channel: str):
 
 def get_octoprint_auth(logger: logging.Logger) -> str:
     try:
-        with open(defines.octoprintAuthFile, "r") as f:
-            return f.read()
+        return defines.octoprintAuthFile.read_text(encoding="utf-8")
     except IOError as e:
         logger.exception("Octoprint auth file read failed")
         raise ConfigException("Octoprint auth file read failed") from e

@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
-import os
 import re
 from abc import abstractmethod
 from functools import cached_property, lru_cache
@@ -142,22 +141,20 @@ class BaseHardware:
 
             if a == "good" and b == "good":
                 # Device is booting fine, remove stamp
-                if os.path.isfile(defines.bootFailedStamp):
-                    os.remove(defines.bootFailedStamp)
+                if defines.bootFailedStamp.is_file():
+                    defines.bootFailedStamp.unlink()
 
                 return False
 
             self.logger.error("Detected broken boot slot !!!")
             # Device has boot problems
-            if os.path.isfile(defines.bootFailedStamp):
+            if defines.bootFailedStamp.is_file():
                 # The problem is already reported
                 return False
 
             # This is a new problem, create stamp, report problem
-            if not os.path.exists(defines.persistentStorage):
-                os.makedirs(defines.persistentStorage)
-
-            open(defines.bootFailedStamp, "a").close()
+            defines.bootFailedStamp.parent.mkdir(parents=True, exist_ok=True)
+            defines.bootFailedStamp.touch(exist_ok=True)
             return True
 
         except Exception:
@@ -210,15 +207,8 @@ class BaseHardware:
                     )
                     prefix = ""
 
-                sn = "%s%3sX%02u%02uX%03uX%c%05u" % (
-                    prefix,
-                    ot.get(origin, "UNK"),
-                    week,
-                    year,
-                    ean_pn,
-                    "K" if is_kit else "C",
-                    sequence_number,
-                )
+                sn = f"{prefix:s}{ot.get(origin, 'UNK'):3s}X{week:02d}{year:02d}X{ean_pn:03d}X" \
+                     f"{'K' if is_kit else 'C':s}{sequence_number:05d}"
                 self.logger.info("SN: %s", sn)
 
         except Exception:
@@ -228,7 +218,7 @@ class BaseHardware:
 
     @cached_property
     def emmc_serial(self) -> str:  # pylint: disable = no-self-use
-        return defines.emmc_serial_path.read_text().strip()
+        return defines.emmc_serial_path.read_text(encoding="ascii").strip()
 
     @property
     def white_pixels_threshold(self) -> int:

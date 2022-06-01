@@ -303,8 +303,8 @@ class TestWizards(TestWizardsBase):
         self.time_date.SetNTP(not self.time_date.DEFAULT_NTP, False)
         self.time_date.SetTimezone("Europe/Prague", False)
         self.locale.SetLocale("en_US.utf-8", False)
-        self.touch_ui_config = Path(NamedTemporaryFile(delete=False).name)
-        self.backlight_state = Path(NamedTemporaryFile(delete=False).name)
+        self.touch_ui_config = Path(NamedTemporaryFile(delete=False).name)  # pylint: disable = consider-using-with
+        self.backlight_state = Path(NamedTemporaryFile(delete=False).name)  # pylint: disable = consider-using-with
 
     def tearDown(self) -> None:
         del self.hw
@@ -631,7 +631,7 @@ class TestWizards(TestWizardsBase):
 
         self.assertEqual(self.hw.uv_led.usage_s, uv_usage)
         self.assertEqual(self.hw.exposure_screen.usage_s, 0)
-        with open(defines.expoPanelLogPath, "r") as f:
+        with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
             log = json.load(f)
         last_key = list(log)[-1]
         self.assertEqual(log[last_key]["panel_sn"], self.hw.exposure_screen.serial_number)

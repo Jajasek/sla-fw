@@ -20,6 +20,7 @@ from slafw.motion_controller.controller import MotionController
 
 TOWER_CFG_LOCAL = defines.configDir / "profiles_tower.json"
 
+
 class MovingProfilesTowerSL1(MovingProfilesTower):
     # pylint: disable=too-many-ancestors
     homingFast = DictOfConfigs(SingleProfileSL1)  # type: ignore

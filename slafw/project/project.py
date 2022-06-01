@@ -160,10 +160,9 @@ class Project:
             self.logger.error("Project lookup exception: file not found: %s", self.path)
             raise ProjectErrorNotFound
         try:
-            zf = ZipFile(self.path, "r")
-            self._config.read_text(zf.read(defines.configFile).decode("utf-8"))
-            namelist = zf.namelist()
-            zf.close()
+            with ZipFile(self.path, "r") as zf:
+                self._config.read_text(zf.read(defines.configFile).decode("utf-8"))
+                namelist = zf.namelist()
         except Exception as exception:
             self.logger.exception("zip read exception")
             raise ProjectErrorCantRead from exception
@@ -451,9 +450,8 @@ class Project:
                     self.warnings.add(PrintingDirectlyFromMedia())
         try:
             self.logger.debug("Testing project file integrity")
-            zf = ZipFile(self.path, "r")
-            badfile = zf.testzip()
-            zf.close()
+            with ZipFile(self.path, "r") as zf:
+                badfile = zf.testzip()
             self.logger.debug("Done testing integrity")
         except Exception as e:
             self.logger.exception("zip read exception: %s", str(e))
@@ -480,7 +478,7 @@ class Project:
     def data_open(self):
         ''' may raise ZipFile exception '''
         if not self._zf:
-            self._zf = ZipFile(self.path, "r")
+            self._zf = ZipFile(self.path, "r")  # pylint: disable = consider-using-with
 
     def data_close(self):
         if self._zf:
@@ -492,8 +490,7 @@ class Project:
         total_layers = len(self.layers)
         # TODO count forced slow layers at the beginning and forced slow layers after slow layer
         slow_layers = self._layers_slow - slow_layers_done
-        if slow_layers < 0:
-            slow_layers = 0
+        slow_layers = max(slow_layers, 0)
         fast_layers = total_layers - layers_done - slow_layers
 
         # Fast and slow tilt times
