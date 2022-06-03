@@ -30,8 +30,7 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import FactoryResetCheckFailure
 from slafw.functions.files import ch_mode_owner, get_all_supported_files
-from slafw.functions.system import FactoryMountedRW, reset_hostname, \
-    compute_uvpwm, get_configured_printer_model
+from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvpwm, get_configured_printer_model
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType, SyncCheck, DangerousCheck
@@ -179,8 +178,7 @@ class RemoveSlicerProfiles(ResetCheck):
 
 
 class ResetHWConfig(ResetCheck):
-    def __init__(self, hw: BaseHardware, *args, disable_unboxing: bool = False,
-                 **kwargs):
+    def __init__(self, hw: BaseHardware, *args, disable_unboxing: bool = False, **kwargs):
         super().__init__(WizardCheckType.RESET_HW_CONFIG, *args, **kwargs)
         self._hw = hw
         self._disable_unboxing = disable_unboxing
@@ -366,9 +364,12 @@ class ResetTouchUI(ResetCheck):
         # Once the file appears it is removed again. This way we can be sure the service will
         # not recreate the file once we remove it.
         self.BACKLIGHT_STATE.unlink(missing_ok=True)
-        pydbus.SystemBus().get(self.SYSTEMD_INTERFACE).StopUnit(self.SYSTEMD_BACKLIGHT, "replace")
+        self._restart_backlight_service()
         for _ in range(100):
             if self.BACKLIGHT_STATE.exists():
                 break
             time.sleep(0.1)
         self.BACKLIGHT_STATE.unlink(missing_ok=True)
+
+    def _restart_backlight_service(self):
+        pydbus.SystemBus().get(self.SYSTEMD_INTERFACE).StopUnit(self.SYSTEMD_BACKLIGHT, "replace")

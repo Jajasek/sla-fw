@@ -318,6 +318,8 @@ class TestWizards(TestWizardsBase):
         ), patch("slafw.wizard.checks.factory_reset.ch_mode_owner"), patch(
             "slafw.wizard.checks.factory_reset.ResetTouchUI.BACKLIGHT_STATE", self.backlight_state
         ), patch(
+            "slafw.wizard.checks.factory_reset.ResetTouchUI._restart_backlight_service", self.backlight_state.touch
+        ), patch(
             "slafw.wizard.checks.factory_reset.ResetTouchUI.TOUCH_UI_CONFIG", self.touch_ui_config
         ):
             super()._run_wizard(wizard, limit_s, expected_state)
