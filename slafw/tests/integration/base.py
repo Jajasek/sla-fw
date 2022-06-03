@@ -70,7 +70,7 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             patch("slafw.defines.hwConfigPathFactory", self.hardware_factory_file),
             patch("slafw.defines.hwConfigPath", self.hardware_file),
             patch("slafw.defines.internalProjectPath", str(self.SAMPLES_DIR)),
-            patch("slafw.defines.octoprintAuthFile", str(self.SAMPLES_DIR / "slicer-upload-api.key")),
+            patch("slafw.defines.octoprintAuthFile", self.SAMPLES_DIR / "slicer-upload-api.key"),
             patch("slafw.defines.livePreviewImage", str(self.TEMP_DIR / "live.png")),
             patch("slafw.defines.displayUsageData", str(self.TEMP_DIR / "display_usage.npz")),
             patch("slafw.defines.serviceData", str(self.TEMP_DIR / "service.toml")),
