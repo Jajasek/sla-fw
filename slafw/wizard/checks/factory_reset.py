@@ -121,14 +121,10 @@ class ResetWifi(ResetCheck):
     def reset_task_run(self, actions: UserActionBroker):
         system_bus = pydbus.SystemBus()
         for connection in system_bus.get(self.NETWORK_MANAGER, "Settings").ListConnections():
-            if (
-                system_bus.get(self.NETWORK_MANAGER, connection).GetSettings()["connection"]["type"]
-                == "802-11-wireless"
-            ):
-                try:
-                    system_bus.get(self.NETWORK_MANAGER, connection).Delete()
-                except GLib.GError:  # type: ignore[attr-defined]
-                    self._logger.exception("Failed to delete connection %s", connection)
+            try:
+                system_bus.get(self.NETWORK_MANAGER, connection).Delete()
+            except GLib.GError:  # type: ignore[attr-defined]
+                self._logger.exception("Failed to delete connection %s", connection)
 
 
 class ResetTimezone(ResetCheck):

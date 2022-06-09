@@ -45,8 +45,9 @@ class NetworkManager:
 
     @auto_dbus
     def Delete(self) -> None:
-        # TODO: improve. This relies on the fact that connections are deleted while iterating over them.
-        self.connections.remove(self.currentItem)
+        # hotfix SL!SW-1673 for 1.7.x
+        # hide clear all connection under WIFI factory reset
+        self.connections.clear()
 
     @auto_dbus
     def GetSettings(self) -> Dict[str, Dict[str, str]]:

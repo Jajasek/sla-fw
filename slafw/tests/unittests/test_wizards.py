@@ -602,8 +602,8 @@ class TestWizards(TestWizardsBase):
         self.assertFalse(defines.ssh_service_enabled.exists(), "ssh is disabled check")
         self.assertEqual(
             pydbus.SystemBus().get("org.freedesktop.NetworkManager").ListConnections(),
-            ["ethernet"],
-        )  # all wifi connections deleted
+            [],
+        )  # all connections deleted
 
         self.assertEqual(False, defines.remoteConfig.exists())
         self.assertNotEqual(self.hostname.Hostname, "")
