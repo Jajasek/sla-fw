@@ -512,6 +512,20 @@ class Printer:
     def self_tested(self):
         return not self.hw.config.showWizard
 
+    @property
+    def is_calibrated(self):
+        return self.mechanically_calibrated and self.uv_calibrated and self.self_tested
+
+    def check_printer_calibrated_before_print(self):
+        """
+        Make sure that the printer is calibrated before print
+        """
+        if not self.is_calibrated:
+            if not self.uv_calibrated:
+                raise NotUVCalibrated()
+            else:
+                raise NotMechanicallyCalibrated()
+
     def run_make_ready_to_print(self):
         threading.Thread(target=self._make_ready_to_print, daemon=True).start()
 

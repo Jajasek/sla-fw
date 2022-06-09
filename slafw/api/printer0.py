@@ -656,6 +656,8 @@ class Printer0:
 
         :returns: Print task object
         """
+        self.printer.check_printer_calibrated_before_print()
+
         expo = self.printer.action_manager.new_exposure(
             self.printer.hw,
             self.printer.exposure_image,
@@ -678,6 +680,8 @@ class Printer0:
         :param auto_advance: Automatic print
         :return:  Print task object
         """
+        self.printer.check_printer_calibrated_before_print()
+
         if not self.printer.action_manager.exposure:
             raise ReprintWithoutHistory()
 

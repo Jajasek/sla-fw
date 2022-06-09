@@ -55,7 +55,12 @@ class ActionManager:
         path = self._register_exposure(exposure)
         self._register_exposure_signal(path)
 
-        exposure.read_project(project)
+        try:
+            exposure.read_project(project)
+        except Exception:
+            exposure.cancel()
+            self.exposure_change.emit()
+            raise
 
         self._current_exposure = exposure
         self.exposure_change.emit()

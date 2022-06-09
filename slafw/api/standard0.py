@@ -478,6 +478,7 @@ class Standard0:
 
         :returns: Print task object
         """
+        self._printer.check_printer_calibrated_before_print()
         try:
             # close a project already opened
             last_exposure = self._printer.action_manager.exposure
