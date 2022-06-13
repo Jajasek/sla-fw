@@ -21,12 +21,15 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
     def setUp(self):
         super().setUp()
 
-        # Fake calibration
+        self.printer.hw.config.showWizard = False
+        self.printer.hw.config.uvPwm = self.printer.hw.uv_led.parameters.min_pwm + 1
+
+        #self.mechanically_calibrated and self.uv_calibrated and self.self_tested
         self.printer.hw.config.calibrated = True
         self.printer.hw.config.fanCheck = False
         self.printer.hw.config.coverCheck = False
         self.printer.hw.config.resinSensor = False
-
+        print("MODIFIED CONFIG: ", self.printer.hw.config)
         # Resolve printer and start the print
         self.bus = pydbus.SystemBus()
         self.printer0 = self.bus.get("cz.prusa3d.sl1.printer0")
@@ -99,6 +102,7 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
         self._test_home_axis()
 
     def test_home_axis_with_both(self):
+
         self.printer.hw.tilt.sync_ensure()
         self.printer.hw.tower.sync_ensure()
         self.exposure0.confirm_start()

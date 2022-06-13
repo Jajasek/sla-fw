@@ -22,6 +22,7 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
 
         # Fake calibration
         self.printer.hw.config.calibrated = True
+        self.printer.hw.config.showWizard = False
         self.printer.hw.config.fanCheck = False
         self.printer.hw.config.coverCheck = False
         self.printer.hw.config.resinSensor = False

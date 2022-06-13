@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import gc
+import time
 import unittest
 import weakref
 from pathlib import Path
@@ -13,14 +14,19 @@ from unittest.mock import patch, Mock
 
 import pydbus
 
+from gi.repository.GLib import GError
+
 from slafw.api.exposure0 import Exposure0
 from slafw.api.printer0 import Printer0State, Printer0
+from slafw.api.wizard0 import Wizard0
+from slafw.states.wizard import  WizardId
 from slafw.errors.errors import UnknownPrinterModel
 from slafw.exposure.exposure import Exposure
 from slafw.functions.system import printer_model_regex
 from slafw.hardware.printer_model import PrinterModel
 from slafw.state_actions.manager import ActionManager
 from slafw.tests.integration.base import SlaFwIntegrationTestCaseBase
+
 
 
 class TestIntegrationPrinter0(SlaFwIntegrationTestCaseBase):
@@ -155,6 +161,7 @@ class TestIntegrationPrinter0(SlaFwIntegrationTestCaseBase):
     def test_print_start(self):
         # Fake calibration
         self.printer.hw.config.calibrated = True
+        self.printer.hw.config.showWizard = False
 
         # Test print start
         path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
@@ -164,6 +171,7 @@ class TestIntegrationPrinter0(SlaFwIntegrationTestCaseBase):
     def test_exposure_gc(self):
         # Fake calibration
         self.printer.hw.config.calibrated = True
+        self.printer.hw.config.showWizard = False
 
         initial_exposure0 = self._get_num_instances(Exposure0)
         initial_exposure = self._get_num_instances(Exposure)
@@ -215,6 +223,73 @@ class TestIntegrationUnknownPrinter0(SlaFwIntegrationTestCaseBase):
 
     def test_unknown_model(self):
         self.assertEqual(Printer0State.EXCEPTION, Printer0State(self.printer0.state))
+
+
+class TestIntegrationPrinter0Uncalibrated(SlaFwIntegrationTestCaseBase):
+    def setUp(self):
+        super().setUp()
+        self.printer0: Printer0 = pydbus.SystemBus().get("cz.prusa3d.sl1.printer0")
+        self.printer.hw.config.calibrated = False
+
+    def tearDown(self):
+        super().tearDown()
+        del self.printer0
+
+    def test_initial_state(self):
+        self.assertEqual(Printer0State.IDLE.value, self.printer0.state)
+        self.assertEqual(False, self.printer.mechanically_calibrated)
+
+    def test_uncalibrated_print(self):
+        """
+        Attempts a normal print on uncalibrated printer and checks the resulting state
+        """
+        # Fake NOT calibration
+        self.printer.hw.config.calibrated = False
+        path = None
+
+        # Test print start on uncalibrated printer
+        # Ignore all exceptions, check only the resulting state
+        try:
+            path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+        except GError as e:
+            print("GError: ", e)
+
+        self.assertEqual(path, None)
+        self.assertEqual(Printer0State.IDLE, Printer0State(self.printer0.state))
+
+    def test_uncalibrated_oneclick_print(self):
+        """
+        Emulates a oneclick print where the user aborts the offered mandatory
+        wizards that must run before the printer is ready to print.
+        """
+        # Fake calibration
+        self.printer.hw.config.calibrated = False
+        self.printer.hw.config.showWizard = False
+
+        # Test print start
+        # pylint: disable=protected-access
+        self.printer._media_inserted(1, 2, 3, 4, [str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)),])
+
+        # There might be a delay between inserting the media and running "make_ready_to_print"
+        time.sleep(3)
+        wizard0: Wizard0 = pydbus.SystemBus().get("cz.prusa3d.sl1.wizard0")
+
+        self.assertEqual(WizardId.CALIBRATION, WizardId(wizard0.identifier))
+        wizard0.cancel()
+
+        self.assertEqual(Printer0State.IDLE, Printer0State(self.printer0.state))
+        del wizard0
+
+    def test_print_start(self):
+        """ This time the print should start """
+        # Fake calibration
+        self.printer.hw.config.calibrated = True
+        self.printer.hw.config.showWizard = False
+
+        # Test print start
+        path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+        self.assertNotEqual(path, "/")
+        self.assertEqual(Printer0State.PRINTING, Printer0State(self.printer0.state))
 
 
 if __name__ == "__main__":

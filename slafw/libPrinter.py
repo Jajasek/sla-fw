@@ -523,8 +523,7 @@ class Printer:
         if not self.is_calibrated:
             if not self.uv_calibrated:
                 raise NotUVCalibrated()
-            else:
-                raise NotMechanicallyCalibrated()
+            raise NotMechanicallyCalibrated()
 
     def run_make_ready_to_print(self):
         threading.Thread(target=self._make_ready_to_print, daemon=True).start()
