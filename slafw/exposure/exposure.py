@@ -920,8 +920,8 @@ class Exposure:
                     " 'height [mm]': '%.3f/%.3f',"
                     " 'elapsed [min]': %d,"
                     " 'remain [ms]': %d,"
-                    " 'used [ml]': %d,"
-                    " 'remaining [ml]': %d,"
+                    " 'used [ml]': %.2f,"
+                    " 'remaining [ml]': %.2f,"
                     " 'RAM': '%.1f%%',"
                     " 'CPU': '%.1f%%'"
                     " }",
@@ -984,7 +984,7 @@ class Exposure:
         self.logger.info(
             "Job finished » { 'job': %d, 'project': '%s', 'finished': %s, "
             "'autoOff': %s, 'Layers': '%d/%d', 'printTime [s]': %d, "
-            "'used [ml]': %g, 'remaining [ml]': %g, 'exposure [s]': '%s', 'height [mm]': %g, }",
+            "'used [ml]': %.2f, 'remaining [ml]': %.2f, 'exposure [s]': '%s', 'height [mm]': %g, }",
             statistics["started_projects"],
             project_hash[:-1],
             is_finished,
@@ -1015,7 +1015,7 @@ class Exposure:
         self.logger.debug("Exposure ended")
 
     def _update_resin(self):
-        self.remain_resin_ml = self.resin_volume - int(self.resin_count)
+        self.remain_resin_ml = self.resin_volume - self.resin_count
         self.warn_resin = self.remain_resin_ml < defines.resinLowWarn
         self.low_resin = self.remain_resin_ml < defines.resinFeedWait
 
