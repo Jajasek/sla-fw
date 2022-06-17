@@ -6,7 +6,7 @@ from time import sleep
 from slafw.admin.control import AdminControl
 from slafw.admin.items import AdminAction, AdminLabel
 from slafw.admin.menus.dialogs import Wait, Error
-from slafw.admin.menus.hardware.profiles import ProfilesList
+from slafw.admin.menus.hardware.profiles import Profiles
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.libPrinter import Printer
 from slafw.errors.errors import TiltHomeFailed, TowerHomeFailed
@@ -29,7 +29,7 @@ class AxisMenu(SafeAdminMenu):
                 AdminAction(f"Manual {axis.name} move", self.manual_move, "control_color"),
                 AdminAction(
                     f"{axis.name.capitalize()} profiles",
-                    lambda: self.enter(ProfilesList(self._control, axis.profiles)),
+                    lambda: self.enter(Profiles(self._control, printer, axis)),
                     "steppers_color"
                  ),
 #                AdminAction("Tune tilt", self.tune_tilt, "tilt_sensivity_color"),

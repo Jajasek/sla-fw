@@ -127,5 +127,5 @@ class IniConfig(ValueConfigCommon):
             lines.append(f"{name} = {value}")
         return "\n".join(lines)
 
-    def _dump_for_save(self, factory: bool = False) -> str:
-        return toml.dumps(self.as_dictionary(nondefault=False, factory=factory))
+    def _dump_for_save(self, factory: bool = False, nondefault: bool = False) -> str:
+        return toml.dumps(self.as_dictionary(nondefault=nondefault, factory=factory))

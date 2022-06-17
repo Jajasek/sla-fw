@@ -26,6 +26,8 @@ from slafw.errors.errors import ConfigException
 from slafw.state_actions.data_export import DataExport, UsbExport, ServerUpload
 from slafw.states.data_export import ExportState
 from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.sl1.tower import TOWER_CFG_LOCAL
+from slafw.hardware.sl1.tilt import TILT_CFG_LOCAL
 
 
 factory_configs = [
@@ -37,6 +39,8 @@ factory_configs = [
 user_configs = [
     defines.hwConfigPath,
     defines.loggingConfig,
+    TOWER_CFG_LOCAL,        # TODO based on printer model
+    TILT_CFG_LOCAL,
 ]
 filenamebase = "configs-"
 factory_export_dir = "factory"
@@ -121,9 +125,6 @@ class BackupConfigMenu(AdminMenu):
             self._control.enter(Error(self._control,
                 text=exporter.format_exception(),
                 headline="Failed to save configs"))
-
-    def restore_from_net(self):
-        pass
 
     def save_to_net(self):
         self.enter(Wait(self._control, self._do_save_to_net))

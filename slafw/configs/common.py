@@ -87,25 +87,25 @@ class ValueConfigCommon(ValueConfig):
             try:
                 if self._default_file_path:
                     if self._default_file_path.exists():
-                        self._read_file(self._default_file_path, defaults=True)
+                        self.read_file_raw(self._default_file_path, defaults=True)
                     else:
                         self._logger.info("Defaults config file does not exists: %s", self._default_file_path)
                 if self._factory_file_path:
                     if self._factory_file_path.exists():
-                        self._read_file(self._factory_file_path, factory=True)
+                        self.read_file_raw(self._factory_file_path, factory=True)
                     else:
                         self._logger.info("Factory config file does not exists: %s", self._factory_file_path)
                 if file_path is None:
                     file_path = self._file_path
                 if file_path:
                     if file_path.exists():
-                        self._read_file(file_path)
+                        self.read_file_raw(file_path)
                     else:
                         self._logger.info("Config file does not exists: %s", file_path)
             except Exception as exception:
                 raise ConfigException("Failed to read configuration files") from exception
 
-    def _read_file(self, file_path: Path, factory: bool = False, defaults: bool = False) -> None:
+    def read_file_raw(self, file_path: Path, factory: bool = False, defaults: bool = False) -> None:
         with file_path.open("r") as f:
             text = f.read()
         try:
@@ -136,7 +136,9 @@ class ValueConfigCommon(ValueConfig):
                     key = val.file_key.lower()
                 if key is not None:
                     if isinstance(val, DictOfConfigs):
-                        config = val.type[0]()
+                        config = val.value_getter(container)
+                        if config is None:
+                            config = val.type[0]()
                         self._fill_from_dict(config, config.get_values().values(), data[key], factory, defaults)
                         val.value_setter(container, config, write_override=True, factory=factory, defaults=defaults)
                     else:
@@ -158,7 +160,7 @@ class ValueConfigCommon(ValueConfig):
         """
         ...
 
-    def write(self, file_path: Optional[Path] = None, factory: bool = False) -> None:
+    def write(self, file_path: Optional[Path] = None, factory: bool = False, nondefault: bool = False) -> None:
         """
         Write configuration file
 
@@ -172,7 +174,7 @@ class ValueConfigCommon(ValueConfig):
             try:
                 if not self._is_master:
                     raise ConfigException("Cannot save config that is not master")
-                data = self._dump_for_save(factory=factory)
+                data = self._dump_for_save(factory=factory, nondefault=nondefault)
                 if not file_path.exists() or file_path.read_text() != data:
                     file_path.write_text(data)
                 else:
@@ -180,17 +182,17 @@ class ValueConfigCommon(ValueConfig):
             except Exception as exception:
                 raise ConfigException(f'Cannot save config to: "{file_path}"') from exception
 
-    def write_factory(self, file_path: Optional[Path] = None) -> None:
+    def write_factory(self, file_path: Optional[Path] = None, nondefault = False) -> None:
         """
         Write factory configuration file
         Alias for write(file_path, factory=True)
 
         :param file_path: Optional file pathlib Path, default is to save to path set during construction
         """
-        self.write(file_path, factory=True)
+        self.write(file_path, factory=True, nondefault=nondefault)
 
     @abstractmethod
-    def _dump_for_save(self, factory: bool = False) -> str:
+    def _dump_for_save(self, factory: bool = False, nondefault: bool = False) -> str:
         """Prepare content of the save file"""
 
     def as_dictionary(self, nondefault: bool = True, factory: bool = False):
@@ -215,7 +217,7 @@ class ValueConfigCommon(ValueConfig):
                 obj[val.key] = val.type[0](val.value_getter(container))
         return obj
 
-    def factory_reset(self) -> None:
+    def factory_reset(self, to_defaults = False) -> None:
         """
         Do factory rest
 
@@ -224,7 +226,18 @@ class ValueConfigCommon(ValueConfig):
         self._logger.info("Running factory reset on config")
         with self._lock.gen_wlock():
             for val in self._values.values():
-                val.set_value(self, None)
+                if isinstance(val, DictOfConfigs):
+                    # TODO handle recursion
+                    config = val.value_getter(self)
+                    if config:
+                        for item in config.get_values().values():
+                            item.set_value(config, None)
+                            if to_defaults:
+                                item.set_factory_value(config, None)
+                else:
+                    val.set_value(self, None)
+                    if to_defaults:
+                        val.set_factory_value(self, None)
 
     def is_factory_read(self) -> bool:
         """

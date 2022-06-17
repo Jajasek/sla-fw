@@ -215,7 +215,11 @@ class ResetHomingProfiles(ResetCheck):
         self._hw = hw
 
     def reset_task_run(self, actions: UserActionBroker):
+        self._hw.tower.profiles.factory_reset(True)
+        self._hw.tower.profiles.write_factory()
         self._hw.tower.set_stepper_sensitivity(0)
+        self._hw.tilt.profiles.factory_reset(True)
+        self._hw.tilt.profiles.write_factory()
         self._hw.tilt.set_stepper_sensitivity(0)
 
 

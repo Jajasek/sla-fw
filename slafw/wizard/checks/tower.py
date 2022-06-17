@@ -33,6 +33,7 @@ class TowerHomeTest(DangerousCheck):
                     if sensitivity == 3:
                         raise e
                     self._hw.tower.set_stepper_sensitivity(sensitivity)
+                    self._hw.tower.apply_all_profiles()
                     self.config_writer.towerSensitivity = sensitivity   # FIXME this should only be done upon success
                     break
             if sensitivity_failed is False:

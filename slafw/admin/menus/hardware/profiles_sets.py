@@ -44,27 +44,15 @@ class ProfilesSetsMenu(SafeAdminMenu):
         self.add_item(AdminBoolValue.from_value("Lock profiles", self._temp, "lockProfiles"))
 
     def _listProfiles(self, basePath: Path, internal: bool):
-        files = glob(os.path.join(basePath, "*.tilt"))
-        files.extend(glob(os.path.join(basePath, "*.tune_tilt")))
-        files.extend(glob(os.path.join(basePath, "*.tower")))
+        files = glob(os.path.join(basePath, "*.tune_tilt"))
         for filePath in files:
             itemName = os.path.basename(filePath)
             if internal:
                 itemName = os.path.basename(basePath) + " - " + itemName
-            if filePath.endswith(".tilt"):
-                self.add_item(AdminAction(
-                    itemName,
-                    partial(self._confirm, self._printer.hw.tilt, self._setAxisProfiles, itemName, filePath)
-                ))
-            elif filePath.endswith(".tune_tilt"):
+            if filePath.endswith(".tune_tilt"):
                 self.add_item(AdminAction(
                     itemName,
                     partial(self._confirm, self._printer.hw.tilt, self._setTuneTilt, itemName, filePath)
-                ))
-            elif filePath.endswith(".tower"):
-                self.add_item(AdminAction(
-                    itemName,
-                    partial(self._confirm, self._printer.hw.tower, self._setAxisProfiles, itemName, filePath)
                 ))
 
     def _confirm(self, axis: Axis, action = None, itemName = None, path = None):
@@ -75,12 +63,6 @@ class ProfilesSetsMenu(SafeAdminMenu):
                 text="Do you really want to set profiles: " + itemName,
             )
         )
-
-    def _setAxisProfiles(self, path, axis: Axis):
-        with open(path, "r") as f:
-            profiles = json.loads(f.read())
-            self.logger.info("Overwriting %s profiles to: %s", axis.name, profiles)
-            axis.profiles = profiles
 
     def _setTuneTilt(self, path, _):
         with open(path, "r") as f:

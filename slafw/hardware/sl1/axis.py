@@ -88,14 +88,15 @@ class AxisSL1(Axis):
         pass
 
     def set_stepper_sensitivity(self, sensitivity: int):
+        """ Profiles are not written to MC, call apply_all_profiles() manually """
         if sensitivity < -2 or sensitivity > 2:
             raise ValueError(f"{self.name} sensitivity must be from -2 to +2")
-        # TODO detect modified profiles!
         hf = self.profiles.homingFast   # type: ignore
+        hs = self.profiles.homingSlow   # type: ignore
+        if hf.is_modified or hs.is_modified:
+            raise RuntimeError(f"Can't set motor sensitivity for {self.name}, modified profile(s)")
         hf.current = self.sensitivity_dict["homingFast"][sensitivity+2][0]
         hf.stallguard_threshold = self.sensitivity_dict["homingFast"][sensitivity+2][1]
-        hs = self.profiles.homingSlow   # type: ignore
         hs.current = self.sensitivity_dict["homingSlow"][sensitivity+2][0]
         hs.stallguard_threshold = self.sensitivity_dict["homingSlow"][sensitivity+2][1]
         self._logger.info("%s profiles changed to: %s", self.name, self.profiles)
-        self.apply_all_profiles()

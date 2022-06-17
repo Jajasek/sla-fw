@@ -516,7 +516,7 @@ class ValueConfig(BaseConfig):
                     self._lower_to_normal_map[var.lower()] = var
 
     @abstractmethod
-    def write(self, file_path: Optional[Path] = None, factory: bool = False) -> None:
+    def write(self, file_path: Optional[Path] = None, factory: bool = False, nondefault: bool = False) -> None:
         ...
 
     def schedule_on_change(self, key: str, value: Any) -> None:

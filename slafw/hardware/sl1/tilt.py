@@ -56,7 +56,11 @@ class TiltSL1(Tilt, AxisSL1):
 
     def start(self):
         self.actual_profile = self._profiles.homingFast    # type: ignore
-        self.set_stepper_sensitivity(self.sensitivity)
+        try:
+            self.set_stepper_sensitivity(self.sensitivity)
+        except RuntimeError as e:
+            self._logger.error("%s - ignored", e)
+        self.apply_all_profiles()
 
     @property
     def position(self) -> Ustep:

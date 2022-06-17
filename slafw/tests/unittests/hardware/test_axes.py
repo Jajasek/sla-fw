@@ -253,6 +253,13 @@ class DoNotRunTestDirectlyFromBaseClass:
             with self.assertRaises(TypeError):
                 self.axis.move(self.incompatible_unit(0))
 
+        def test_set_sensitivity(self):
+            self.axis.set_stepper_sensitivity(-2)
+            p = self.axis.profiles.homingFast
+            p.get_values()["starting_steprate"].set_factory_value(p, 10)
+            with self.assertRaises(RuntimeError):
+                self.axis.set_stepper_sensitivity(0)
+
 #        def test_apply_profiles(self):
             # TODO do it better
 #            self.axis.apply_all_profiles()

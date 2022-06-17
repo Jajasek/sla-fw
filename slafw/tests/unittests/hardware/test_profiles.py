@@ -98,9 +98,33 @@ class TestProfileSet(SlafwTestCase):
         self.assertEqual(222, tp.get_values()["second_value"].get_default_value(tp))
         self.assertEqual(333, tp.get_values()["third_value"].get_default_value(tp))
 
+    def test_is_modified(self):
+        test_profiles = DummyProfileSet(default_file_path=self.infile)
+        self.assertFalse(test_profiles.first_profile.is_modified)
+        test_profiles = DummyProfileSet(factory_file_path=self.infile)
+        self.assertTrue(test_profiles.first_profile.is_modified)
+
+    def test_factory_reset(self):
+        test_profiles = DummyProfileSet(self.infile)
+        test_profiles.factory_reset()
+        self.assertEqual(888, test_profiles.first_profile.first_value)
+        self.assertEqual(777, test_profiles.first_profile.second_value)
+        self.assertEqual(666, test_profiles.first_profile.third_value)
+        test_profiles.write_factory(self.outfile)
+        with open(self.outfile) as o:
+            self.assertEqual({}, json.load(o))
+        test_profiles = DummyProfileSet(factory_file_path=self.infile)
+        test_profiles.factory_reset(True)
+        self.assertEqual(888, test_profiles.first_profile.first_value)
+        self.assertEqual(777, test_profiles.first_profile.second_value)
+        self.assertEqual(666, test_profiles.first_profile.third_value)
+        test_profiles.write_factory(self.outfile)
+        with open(self.outfile) as o:
+            self.assertEqual({}, json.load(o))
+
 class TestMovingProfilesSL1(SlafwTestCase):
     def test_tilt_profiles(self):
-        profiles = MovingProfilesTiltSL1(self.SAMPLES_DIR / "profiles_tilt.json")
+        profiles = MovingProfilesTiltSL1(factory_file_path=self.SAMPLES_DIR / "profiles_tilt.json")
         self.assertEqual(2560, profiles.homingFast.starting_steprate)
         self.assertEqual(1500, profiles.homingSlow.maximum_steprate)
         self.assertEqual(0, profiles.moveFast.acceleration)
@@ -111,7 +135,7 @@ class TestMovingProfilesSL1(SlafwTestCase):
         self.assertEqual(3840, profiles.reserved.starting_steprate)
 
     def test_tower_profiles(self):
-        profiles = MovingProfilesTowerSL1(self.SAMPLES_DIR / "profiles_tower.json")
+        profiles = MovingProfilesTowerSL1(factory_file_path=self.SAMPLES_DIR / "profiles_tower.json")
         self.assertEqual(2500, profiles.homingFast.starting_steprate)
         self.assertEqual(7500, profiles.homingSlow.maximum_steprate)
         self.assertEqual(250, profiles.moveFast.acceleration)
@@ -120,6 +144,14 @@ class TestMovingProfilesSL1(SlafwTestCase):
         self.assertEqual(6, profiles.layerMove.stallguard_threshold)
         self.assertEqual(500, profiles.superSlow.coolstep_threshold)
         self.assertEqual(2500, profiles.resinSensor.starting_steprate)
+
+    def test_profile_overlay(self):
+        profiles = MovingProfilesTowerSL1(
+                factory_file_path=self.SAMPLES_DIR / "profiles_tower_overlay.json",
+                default_file_path=self.SAMPLES_DIR / "profiles_tower.json")
+        self.assertEqual(2499, profiles.homingFast.starting_steprate)
+        self.assertEqual(7500, profiles.homingSlow.maximum_steprate)
+
 
 if __name__ == '__main__':
     unittest.main()

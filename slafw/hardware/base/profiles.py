@@ -45,10 +45,17 @@ class SingleProfile(ValueConfig):
     def get_writer(self) -> ConfigWriter:
         return ConfigWriter(self)
 
-    def write(self, file_path: Optional[Path]=None, factory: bool=False) -> None:
+    def write(self, file_path: Optional[Path]=None, factory: bool=False, nondefault: bool=False) -> None:
         if not callable(self.saver):
             raise ConfigException("Write fuction not defined")
-        self.saver(file_path, factory)  # pylint: disable=not-callable
+        self.saver(file_path, factory, nondefault)  # pylint: disable=not-callable
+
+    @property
+    def is_modified(self):
+        for val in self._values.values():
+            if val.get_factory_value(self) is not None:
+                return True
+        return False
 
 
 class ProfileSet(JsonConfig):
@@ -78,7 +85,7 @@ class ProfileSet(JsonConfig):
                     raise ConfigException(f"Missing data for profile <{name}>")
                 for value in profile:
                     if value.value_getter(profile) is None:
-                        raise ConfigException(f"Missing data for value <{value}> in profile <{name}>")
+                        raise ConfigException(f"Missing data for value <{value.key}> in profile <{name}>")
                 profile.name = name
                 profile.idx = idx
                 profile.saver = self.write
