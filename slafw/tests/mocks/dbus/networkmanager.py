@@ -50,6 +50,11 @@ class NetworkManager:
         self.connections.clear()
 
     @auto_dbus
+    @property
+    def Flags(self) -> int:
+        return 0
+
+    @auto_dbus
     def GetSettings(self) -> Dict[str, Dict[str, str]]:
         try:
             self.currentItem = next(self.iter)

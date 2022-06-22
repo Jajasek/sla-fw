@@ -114,6 +114,7 @@ class ResetHttpDigest(ResetCheck):
 
 class ResetWifi(ResetCheck):
     NETWORK_MANAGER = "org.freedesktop.NetworkManager"
+    NM_SETTINGS_CONNECTION_FLAG_NM_GENERATED = 0x02
 
     def __init__(self, *args, **kwargs):
         super().__init__(WizardCheckType.RESET_WIFI, *args, **kwargs)
@@ -122,7 +123,11 @@ class ResetWifi(ResetCheck):
         system_bus = pydbus.SystemBus()
         for connection in system_bus.get(self.NETWORK_MANAGER, "Settings").ListConnections():
             try:
-                system_bus.get(self.NETWORK_MANAGER, connection).Delete()
+                con = system_bus.get(self.NETWORK_MANAGER, connection)
+                if not con.Flags & self.NM_SETTINGS_CONNECTION_FLAG_NM_GENERATED:
+                    con.Delete()
+                else:
+                    self._logger.debug("Not removing generated connection %s", connection)
             except GLib.GError:  # type: ignore[attr-defined]
                 self._logger.exception("Failed to delete connection %s", connection)
 
