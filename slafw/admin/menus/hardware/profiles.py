@@ -80,8 +80,10 @@ class EditProfileItems(AdminMenu):
     def __init__(self, control: AdminControl, axis: Axis, profile: SingleProfile):
         super().__init__(control)
         self._axis = axis
+        self._profile = profile
         self._temp = profile.get_writer()
         self.add_back()
+        self.add_item(AdminAction("Test profile", self.test_profile, "touchscreen-icon"))
         self.add_items(self._get_items(profile))
 
     def _get_items(self, profile: SingleProfile) -> Collection[AdminItem]:
@@ -91,6 +93,15 @@ class EditProfileItems(AdminMenu):
     def on_leave(self):
         self._temp.commit(factory=True)
         self._axis.apply_all_profiles()
+
+    def test_profile(self):
+        temp_profile = type(self._axis.profiles[self._profile.idx])()
+        temp_profile.name = "temporary"
+        temp_profile.idx = -1
+        for val in temp_profile.get_values().values():
+            val.set_value(temp_profile, getattr(self._temp, val.key))
+        self._axis.actual_profile = temp_profile
+        getattr(self._control, f"{self._axis.name}_moves")()
 
 
 class ImportProfiles(SafeAdminMenu):

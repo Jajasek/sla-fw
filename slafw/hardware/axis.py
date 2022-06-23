@@ -198,7 +198,8 @@ class Axis(ABC):
            :2: Fast up
         :return: True on success, False otherwise
         """
-        if not self.moving and speed != 0:
+        # do not change the profile while temporary profile is selected (profile testing in admin)
+        if not self.moving and speed != 0 and self.actual_profile.idx != -1:
             self.actual_profile = self._move_api_get_profile(speed)
 
         if speed != 0:

@@ -59,7 +59,10 @@ class AxisSL1(Axis):
         if self._actual_profile.idx != mc_id:
             self._logger.warning("Wrong actual profile %d for %s, right one is %d",
                     self._actual_profile.idx, self.name, mc_id)
-            self._actual_profile = self.profiles[mc_id]
+            try:
+                self._actual_profile = self.profiles[mc_id]
+            except IndexError:
+                self._logger.error("Wrong profile index %d in MC", mc_id)   # TODO should we raise an exception?
         return self._actual_profile
 
     @actual_profile.setter
@@ -70,6 +73,9 @@ class AxisSL1(Axis):
             self._write_profile_id(profile.idx)
             self._actual_profile = profile
             self._logger.debug("Profile set to %s<%d>", self._actual_profile.name, self._actual_profile.idx)
+            if profile.idx == -1:
+                self._logger.debug("Temporary profile, forcing profile data write")
+                self._write_profile_data()
 
     @abstractmethod
     def _read_profile_id(self) -> int:
