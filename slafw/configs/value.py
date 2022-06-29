@@ -32,7 +32,7 @@ class BaseConfig(ABC):
     @abstractmethod
     def __init__(self, is_master: bool = False):
         self._lower_to_normal_map: Dict[str, str] = {}
-        self._logger = logging.getLogger(__name__)
+        self._logger = logging.getLogger("slafw.configs")   # FIXME __name__ or "slafw.configs.value" does not log
         self._is_master = is_master
         self._lock = rwlock.RWLockRead()
         self._data_values: Dict[str, Any] = {}
