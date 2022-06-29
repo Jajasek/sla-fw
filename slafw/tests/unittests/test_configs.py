@@ -225,9 +225,9 @@ class TestHardwareConfig(SlafwTestCase):
 
         self.assertFalse(hw_config.showUnboxing, "Test show unboxing read")
         self.assertTrue(hw_config.coverCheck, "Test cover check read")
-        self.assertTrue(hw_config.coverCheck, "Test cover check read")
         self.assertFalse(hw_config.calibrated, "Test calibrated read")
-        self.assertEqual(hw_config.layerTowerHop, Ustep(0), "Test layerTowerHop read")
+        self.assertEqual(hw_config.layerTowerHop, Ustep(0), "Default Ustep read")
+        self.assertEqual(hw_config.tiltHeight, Ustep(2624), "Config Ustep read")
 
     @staticmethod
     def get_config_content(path: Path):

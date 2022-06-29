@@ -142,7 +142,8 @@ class ValueConfigCommon(ValueConfig):
                         self._fill_from_dict(config, config.get_values().values(), data[key], factory, defaults)
                         val.value_setter(container, config, write_override=True, factory=factory, defaults=defaults)
                     else:
-                        val.value_setter(container, data[key], write_override=True, factory=factory, defaults=defaults)
+                        v = data[key] if val.unit is None else val.unit(data[key])
+                        val.value_setter(container, v, write_override=True, factory=factory, defaults=defaults)
                     del data[key]
             except (KeyError, ConfigException):
                 self._logger.exception("Setting config value %s to %s failed", val.name, val)
