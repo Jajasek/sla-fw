@@ -92,6 +92,8 @@ class Unit:
         raise TypeError(f"Units {self.__class__} and {other.__class__} are incompatible")
 
     def _int_not_compatible(self, other, operation, return_bool=False):
+        if return_bool and other is None:
+            return self.val is None
         return_obj = self.__class__
         if return_bool:
             return_obj = bool

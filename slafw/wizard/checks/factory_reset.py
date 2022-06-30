@@ -220,6 +220,8 @@ class ResetHomingProfiles(ResetCheck):
         self._hw.tilt.profiles.factory_reset(True)
         self._hw.tilt.profiles.write_factory()
         self._hw.tilt.set_stepper_sensitivity(0)
+        self._hw.tilt.tune.factory_reset(True)
+        self._hw.tilt.tune.write_factory()
 
 
 class DisableFactory(SyncCheck):

@@ -329,12 +329,8 @@ class Axis(ABC):
         """select profile"""
 
     @abstractmethod
-    def apply_profile(self):
+    def apply_profile(self, profile: SingleProfile):
         """update values of currently selected profile in MC"""
-
-    @abstractmethod
-    def apply_all_profiles(self):
-        """write all profiles to MC"""
 
     @cached_property
     @abstractmethod

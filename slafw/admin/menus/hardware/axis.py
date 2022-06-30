@@ -1,6 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2021-2022 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
+
 from time import sleep
 
 from slafw.admin.control import AdminControl
@@ -29,11 +30,19 @@ class AxisMenu(SafeAdminMenu):
                 AdminAction(f"Manual {axis.name} move", self.manual_move, "control_color"),
                 AdminAction(
                     f"{axis.name.capitalize()} profiles",
-                    lambda: self.enter(Profiles(self._control, printer, axis)),
+                    lambda: self.enter(Profiles(self._control, printer, axis, axis.profiles)),
                     "steppers_color"
                  ),
-#                AdminAction("Tune tilt", self.tune_tilt, "tilt_sensivity_color"),
-
+            )
+        )
+        if hasattr(axis, "tune"):
+            self.add_item(AdminAction(
+                f"Tune {axis.name}",
+                lambda: self.enter(Profiles(self._control, printer, axis, axis.tune)),  # type: ignore
+                f"{axis.name}_sensivity_color"
+                ))
+        self.add_items(
+            (
                 AdminAction("Home calibration", self.home_calib, "calibration_color"),
                 AdminAction(f"Test {axis.name}", self.test, "limit_color"),
             )

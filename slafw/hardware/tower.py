@@ -12,6 +12,8 @@ from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 
 
 class MovingProfilesTower(ProfileSet):
+    name = "tower moving profiles"
+
     @property
     @abstractmethod
     def homingFast(self) -> SingleProfile:

@@ -9,9 +9,10 @@ from slafw.errors.errors import ConfigException
 from slafw.tests.base import SlafwTestCase
 
 from slafw.hardware.base.profiles import SingleProfile, ProfileSet
-from slafw.hardware.sl1.tilt import MovingProfilesTiltSL1
+from slafw.hardware.sl1.tilt import MovingProfilesTiltSL1, TuneTiltSL1
 from slafw.hardware.sl1.tower import MovingProfilesTowerSL1
 from slafw.configs.value import IntValue, DictOfConfigs
+from slafw.configs.unit import Ustep
 
 
 class DummySingleProfile(SingleProfile):
@@ -29,16 +30,19 @@ class DummyProfileSet(ProfileSet):
     second_profile = DictOfConfigs(DummySingleProfile)
     third_profile = DictOfConfigs(DummySingleProfile)
     __definition_order__ = tuple(locals())
+    name = "test profile set"
 
 class ErrorProfileSet1(ProfileSet):
     first_profile = DictOfConfigs(ErrorSingleProfile)
     second_profile = DictOfConfigs(ErrorSingleProfile)
     third_profile = DictOfConfigs(ErrorSingleProfile)
     __definition_order__ = tuple(locals())
+    name = "test profile set"
 
 class ErrorProfileSet2(ProfileSet):
     first = DictOfConfigs(DummySingleProfile)
     __definition_order__ = tuple(locals())
+    name = "test profile set"
 
 class TestProfileSet(SlafwTestCase):
     def setUp(self):
@@ -151,6 +155,32 @@ class TestMovingProfilesSL1(SlafwTestCase):
                 default_file_path=self.SAMPLES_DIR / "profiles_tower.json")
         self.assertEqual(2499, profiles.homingFast.starting_steprate)
         self.assertEqual(7500, profiles.homingSlow.maximum_steprate)
+
+class TestTuneTiltSL1(SlafwTestCase):
+    def setUp(self):
+        super().setUp()
+        self.infile = self.SAMPLES_DIR / "tune_tilt.json"
+        self.outfile = self.TEMP_DIR / "tune_out.json"
+
+    def test_tune_tilt(self):
+        tune_profiles = TuneTiltSL1(factory_file_path=self.infile)
+        print(tune_profiles)
+        self.assertEqual(5, tune_profiles.tilt_down_large_fill.initial_profile)
+        self.assertEqual(Ustep(650), tune_profiles.tilt_down_large_fill.offset_steps)
+        self.assertEqual(0, tune_profiles.tilt_down_small_fill.offset_delay_ms)
+        self.assertEqual(6, tune_profiles.tilt_down_small_fill.finish_profile)
+        self.assertEqual(1, tune_profiles.tilt_up_large_fill.tilt_cycles)
+        self.assertEqual(0, tune_profiles.tilt_up_large_fill.tilt_delay_ms)
+        self.assertEqual(Ustep(0), tune_profiles.tilt_up_small_fill.homing_tolerance)
+        self.assertEqual(0, tune_profiles.tilt_up_small_fill.homing_cycles)
+
+    def test_tune_tilt_write(self):
+        tune_profiles = TuneTiltSL1(factory_file_path=self.infile)
+        tune_profiles.write_factory(self.outfile, nondefault=True)
+        with open(self.infile, "r", encoding="utf-8") as i:
+            di = json.load(i)
+        with open(self.outfile, "r", encoding="utf-8") as o:
+            self.assertEqual(di, json.load(o))
 
 
 if __name__ == '__main__':

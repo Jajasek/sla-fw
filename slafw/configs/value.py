@@ -323,6 +323,10 @@ class Value(property, ABC):
             self.get_factory_value(config) is None or self.get_factory_value(config) == self.get_default_value(config)
         )
 
+    def presentation(self, val):
+        # pylint: disable=no-self-use
+        return val
+
 
 class BoolValue(Value):
     """
@@ -399,6 +403,36 @@ class FloatValue(NumericValue):
         if isinstance(val, int):
             return float(adapted)
         return adapted
+
+
+class ProfileIndex(NumericValue):
+    """
+    Integer configuration value
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.options = list(self._profile_names(args[0]))
+        super().__init__([int], minimum=0, maximum=len(self.options)-1, **kwargs)
+
+    @staticmethod
+    def _profile_names(profile):
+        for name in profile.__definition_order__:
+            if not name.startswith("_"):
+                yield name
+
+    def value_setter(
+        self, config: BaseConfig, val, write_override: bool = False, factory: bool = False, defaults: bool = False,
+        dry_run = False
+    ) -> None:
+        if isinstance(val, str):
+            try:
+                val = self.options.index(val)
+            except ValueError as e:
+                raise ConfigException(f"{self.file_key} has no index for option '{val}'") from e
+        super().value_setter(config, val, write_override, factory, defaults, dry_run)
+
+    def presentation(self, val):
+        return self.options[val]
 
 
 class ListValue(Value):

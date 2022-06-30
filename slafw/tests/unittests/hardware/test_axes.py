@@ -260,10 +260,6 @@ class DoNotRunTestDirectlyFromBaseClass:
             with self.assertRaises(RuntimeError):
                 self.axis.set_stepper_sensitivity(0)
 
-#        def test_apply_profiles(self):
-            # TODO do it better
-#            self.axis.apply_all_profiles()
-
 
 class TestTilt(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
 

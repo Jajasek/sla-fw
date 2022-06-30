@@ -34,16 +34,10 @@ class AxisSL1(Axis):
             return self.profiles.moveSlow  # type: ignore
         return self.profiles.homingFast    # type: ignore
 
-    def apply_all_profiles(self):
-        profile_backup = self.actual_profile
-        for profile in self.profiles:
-            self.actual_profile = profile
-            self.apply_profile()
-        self.actual_profile = profile_backup
-
-    def apply_profile(self):
+    def apply_profile(self, profile: SingleProfileSL1):
         if self.moving:
             raise MotionControllerException(f"Cannot edit profile while {self.name} is moving.", None)
+        self.actual_profile = profile
         profile_data = self._read_profile_data()
         if self.actual_profile == profile_data:
             self._logger.debug("MC profile %s<%d> is up-to-date",
@@ -94,7 +88,7 @@ class AxisSL1(Axis):
         pass
 
     def set_stepper_sensitivity(self, sensitivity: int):
-        """ Profiles are not written to MC, call apply_all_profiles() manually """
+        """ Profiles are not written to MC, call profiles.apply_all() manually """
         if sensitivity < -2 or sensitivity > 2:
             raise ValueError(f"{self.name} sensitivity must be from -2 to +2")
         hf = self.profiles.homingFast   # type: ignore

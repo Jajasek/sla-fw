@@ -11,7 +11,6 @@ from slafw.admin.menus.hardware.tests import HardwareTestMenu
 from slafw.admin.menus.hardware.display import ExposureDisplayMenu
 from slafw.admin.menus.hardware.motion_controller import MotionControllerMenu
 from slafw.admin.menus.hardware.axis import AxisMenu
-from slafw.admin.menus.hardware.profiles_sets import ProfilesSetsMenu
 
 
 class HardwareRoot(AdminMenu):
@@ -30,12 +29,6 @@ class HardwareRoot(AdminMenu):
                     axis.name.capitalize(),
                     self._get_callback(axis),
                     f"{axis.name}_sensivity_color"
-                ))
-        items.append(
-                AdminAction(
-                    "Profile sets",
-                    lambda: self.enter(ProfilesSetsMenu(self._control, self._printer)),
-                    "steppers_color"
                 ))
         items.append(
                 AdminAction(

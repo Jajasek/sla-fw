@@ -580,11 +580,11 @@ class Exposure:
             self.logger.info("%s tilt up", "Slow" if self._slow_move else "Fast")
             if self.hw.config.layer_tower_hop_nm:
                 self.hw.tower.move_ensure(position_nm + self.hw.config.layer_tower_hop_nm)
-                self.hw.tilt.layer_up_wait(slowMove=self._slow_move)
+                self.hw.tilt.layer_up_wait(self.hw.tilt.get_tune_profile_up(self._slow_move))
                 self.hw.tower.move_ensure(position_nm)
             else:
                 self.hw.tower.move_ensure(position_nm)
-                self.hw.tilt.layer_up_wait(slowMove=self._slow_move)
+                self.hw.tilt.layer_up_wait(self.hw.tilt.get_tune_profile_up(self._slow_move))
         else:
             self.hw.tower.move_ensure(position_nm + self.hw.config.layer_tower_hop_nm)
             self.hw.tower.move_ensure(position_nm)
@@ -644,7 +644,7 @@ class Exposure:
                 self.slow_layers_done += 1
             try:
                 self.logger.info("%s tilt down", "Slow" if self._slow_move else "Fast")
-                self.hw.tilt.layer_down_wait(self._slow_move)
+                self.hw.tilt.layer_down_wait(self.hw.tilt.get_tune_profile_down(self._slow_move))
             except Exception:
                 return False, white_pixels
 
@@ -744,7 +744,7 @@ class Exposure:
         try:
             self.logger.info("Started exposure thread")
             self.logger.info("Motion controller tilt profiles: %s", self.hw.tilt.profiles)
-            self.logger.info("Printer tune tilt profiles: %s", self.hw.config.tuneTilt)
+            self.logger.info("Printer tune tilt profiles: %s", self.hw.tilt.tune)
 
             while not self.done:
                 command = self.commands.get()

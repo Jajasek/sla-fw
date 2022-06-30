@@ -56,10 +56,12 @@ class ValueConfigCommon(ValueConfig):
                 if config:
                     res.append(f"\t{val} [{config.idx}]:")
                     for item in config._values:
-                        value = config._values[item].get_value(config)
-                        factory = config._values[item].get_factory_value(config)
-                        default = config._values[item].get_default_value(config)
-                        res.append(f"\t\t{item}: {getattr(config, item)} ({value}, {factory}, {default})")
+                        i = config._values[item]
+                        value = i.get_value(config)
+                        factory = i.get_factory_value(config)
+                        default = i.get_default_value(config)
+                        v = i.presentation(getattr(config, item))
+                        res.append(f"\t\t{item}: {v} ({value}, {factory}, {default})")
             elif isinstance(o, Value):
                 value = self._values[val].get_value(self)
                 factory = self._values[val].get_factory_value(self)
@@ -214,7 +216,7 @@ class ValueConfigCommon(ValueConfig):
                 if next_level:
                     obj[val.key] = next_level
             elif (not factory or val.factory) and (not val.is_default(container) or nondefault):
-                obj[val.key] = val.type[0](val.value_getter(container))
+                obj[val.key] = val.presentation(val.type[0](val.value_getter(container)))
         return obj
 
     def factory_reset(self, to_defaults = False) -> None:

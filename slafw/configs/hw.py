@@ -4,12 +4,10 @@
 # Copyright (C) 2020-2021 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import List
-
 from slafw import defines
 from slafw.configs.ini import IniConfig
 from slafw.configs.unit import Nm, Ustep
-from slafw.configs.value import BoolValue, IntValue, IntListValue, FloatValue, TextValue
+from slafw.configs.value import BoolValue, IntValue, FloatValue
 
 
 class HwConfig(IniConfig):
@@ -76,22 +74,9 @@ class HwConfig(IniConfig):
                        doc="Max position allowed. It shoud corespond to the top deadlock of the axis. [ustep]")
     tiltMin = IntValue(defines.tiltMin, unit=Ustep,
                        doc="Position used to ensure the tilt ends at the bottom. [ustep]")
-    raw_tiltdownlargefill = IntListValue([5, 650, 1000, 4, 1, 0, 64, 3], length=8, key="tiltdownlargefill", doc="Definitions for tilt down where printed area > limit4fast. Profiles, offsets and wait times.")
-    raw_tiltdownsmallfill = IntListValue([5, 0, 0, 6, 1, 0, 0, 0], length=8, key="tiltdownsmallfill", doc="Definitions for tilt down where printed area < limit4fast. Profiles, offsets and wait times.")
-    raw_tiltuplargefill = IntListValue([2, 400, 0, 5, 1, 0, 0, 0], length=8, key="tiltuplargefill", doc="Definitions for tilt up where printed area > limit4fast. Profiles, offsets and wait times.")
-    raw_tiltupsmallfill = IntListValue([2, 400, 0, 5, 1, 0, 0, 0], length=8, key="tiltupsmallfill", doc="Definitions for tilt up where printed area < limit4fast. Profiles, offsets and wait times.")
     limit4fast = IntValue(35, minimum=0, maximum=100, doc="Fast tearing is used if layer area is under this value. [%]")
     tiltFastTime = FloatValue(5.5, doc="Time necessary to perform fast tear off. [seconds]")
     tiltSlowTime = FloatValue(8.0, doc="Time necessary to perform slow tear off. [seconds]")
-
-    @property
-    def tuneTilt(self) -> List[List[int]]:
-        return [self.raw_tiltdownlargefill, self.raw_tiltdownsmallfill, self.raw_tiltuplargefill, self.raw_tiltupsmallfill]
-
-    @tuneTilt.setter
-    def tuneTilt(self, value: List[List[int]]):
-        [self.raw_tiltdownlargefill, self.raw_tiltdownsmallfill, self.raw_tiltuplargefill, self.raw_tiltupsmallfill] = value
-
 
     stirringMoves = IntValue(3, minimum=1, maximum=10, doc="Number of stirring moves")
     stirringDelay = IntValue(5, minimum=0, maximum=300)
@@ -201,8 +186,6 @@ class HwConfig(IniConfig):
                                             doc="Expected cleaning adapter height, the platform will descend at most "
                                                 "3mm below this height")
 
-    currentProfilesSet = TextValue("n/a", doc="Last applied profiles set")
-
     raw_calibrated = BoolValue(False, key="calibrated")
 
     @property
@@ -238,4 +221,3 @@ class HwConfig(IniConfig):
     showWizard = BoolValue(True, doc="Display wizard at startup if True.")
     showUnboxing = BoolValue(True, doc="Display unboxing wizard at startup if True.")
     showI18nSelect = BoolValue(True, doc="Display language select dialog at startup if True.")
-    lockProfiles = BoolValue(False, doc="Restrict overwrite of SL1/SL1s profiles on startup.")

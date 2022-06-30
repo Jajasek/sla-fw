@@ -207,25 +207,51 @@ class AdminLabel(AdminTextValue):
 class AdminSelectionValue(AdminValue):
     """Allow selection of an item from a preset list, value is an index in the list"""
     # pylint: disable = too-many-arguments
-    def __init__(self, name: str, getter: Callable, setter: Callable, selection: List[str], wrap_around=False, icon: str=""):
+    def __init__(
+            self,
+            name: str,
+            getter: Callable,
+            setter: Callable,
+            selection: List[str],
+            wrap_around: bool=False,
+            icon: str=""):
         super().__init__(name, getter, setter, icon)
         self._selection = selection
         self._wrap_around = wrap_around
 
     @classmethod
-    def from_value(cls, name: str, obj: object, prop: str, selection: List[str], icon: str="") -> AdminSelectionValue:
+    def from_value(
+            cls,
+            name: str,
+            obj: object,
+            prop: str,
+            selection: List[str],
+            wrap_around: bool=False,
+            icon: str="") -> AdminSelectionValue:
         def g():
             return getattr(obj, prop)
 
         def s(value):
             setattr(obj, prop, value)
 
-        return AdminSelectionValue(name, g, s, selection, icon)
+        return AdminSelectionValue(name, g, s, selection, wrap_around, icon)
 
     @classmethod
-    def from_property(cls, obj: object, prop: property, selection: List[str], icon: str="") -> AdminSelectionValue:
+    def from_property(
+            cls,
+            obj: object,
+            prop: property,
+            selection: List[str],
+            wrap_around: bool=False,
+            icon: str="") -> AdminSelectionValue:
         prop_name = cls._get_prop_name(obj, prop)
-        value = AdminSelectionValue(prop_name, partial(prop.fget, obj), partial(prop.fset, obj), selection, icon)
+        value = AdminSelectionValue(
+                prop_name,
+                partial(prop.fget, obj),
+                partial(prop.fset, obj),
+                selection,
+                wrap_around,
+                icon)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 

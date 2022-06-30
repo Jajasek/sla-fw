@@ -19,14 +19,14 @@
 ```
 - the movement is split on slow and fast by `limit for fast tilt` parameter
 - values are stored in A64
--  tilt down procedure:
-    1. set `initial profile` (the number of profile coresponds to TiltProfile(Enum))
+- tilt down procedure:
+    1. set `initial profile` (see Tilt moving Profiles)
     2. go number of `offset steps` [usteps]
     3. wait `offset delay` [ms]
     4. set `finish profile`
     5. split rest of the distence to X `tilt cycles`
     6. wait `tilt delay` between `tilt cycles`
-    7. home (`homing cycles` defines number of retries)
+    7. home (`homing cycles` defines number of retries, `homing tolerance` ???)
 
 ## Structure of the file
 

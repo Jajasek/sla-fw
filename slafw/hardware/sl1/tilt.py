@@ -10,11 +10,12 @@ from typing import List
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Ustep
-from slafw.configs.value import DictOfConfigs
+from slafw.configs.value import DictOfConfigs, IntValue, ProfileIndex
 from slafw.errors.errors import TiltPositionFailed
 from slafw.hardware.printer_model import PrinterModel
 from slafw.hardware.axis import HomingStatus
 from slafw.hardware.power_led import PowerLed
+from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 from slafw.hardware.sl1.tower import TowerSL1
 from slafw.hardware.sl1.axis import SingleProfileSL1, AxisSL1
 from slafw.hardware.tilt import MovingProfilesTilt, Tilt
@@ -22,6 +23,7 @@ from slafw.motion_controller.controller import MotionController
 
 
 TILT_CFG_LOCAL = defines.configDir / "profiles_tilt.json"
+TILT_TUNE_LOCAL = defines.configDir / "tune_tilt.json"
 
 class MovingProfilesTiltSL1(MovingProfilesTilt):
     # pylint: disable=too-many-ancestors
@@ -36,6 +38,28 @@ class MovingProfilesTiltSL1(MovingProfilesTilt):
     __definition_order__ = tuple(locals())
 
 
+class SingleTuneTiltSL1(SingleProfile):
+    initial_profile = ProfileIndex(MovingProfilesTiltSL1, factory=True)
+    offset_steps = IntValue(minimum=0, maximum=10000, unit=Ustep, factory=True)
+    offset_delay_ms = IntValue(minimum=0, maximum=20000, factory=True)
+    finish_profile = ProfileIndex(MovingProfilesTiltSL1, factory=True)
+    tilt_cycles = IntValue(minimum=0, maximum=10, factory=True)
+    tilt_delay_ms = IntValue(minimum=0, maximum=20000, factory=True)
+    # TODO not used?
+    homing_tolerance = IntValue(minimum=0, maximum=1000, unit=Ustep, factory=True)
+    homing_cycles = IntValue(minimum=0, maximum=10, factory=True)
+    __definition_order__ = tuple(locals())
+
+
+class TuneTiltSL1(ProfileSet):
+    tilt_down_large_fill = DictOfConfigs(SingleTuneTiltSL1)
+    tilt_down_small_fill = DictOfConfigs(SingleTuneTiltSL1)
+    tilt_up_large_fill = DictOfConfigs(SingleTuneTiltSL1)
+    tilt_up_small_fill = DictOfConfigs(SingleTuneTiltSL1)
+    __definition_order__ = tuple(locals())
+    name = "tilt tuning profiles"
+
+
 class TiltSL1(Tilt, AxisSL1):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
@@ -46,21 +70,24 @@ class TiltSL1(Tilt, AxisSL1):
         super().__init__(config, power_led)
         self._mcc = mcc
         self._tower = tower
-        defaults = Path(defines.dataPath) / printer_model.name / f"default_profiles_{self.name}.json" # type: ignore[attr-defined]
-        self._profiles = MovingProfilesTiltSL1(factory_file_path=TILT_CFG_LOCAL, default_file_path=defaults)
+        default_profiles = Path(defines.dataPath) / printer_model.name / f"default_{self.name}_moving_profiles.json" # type: ignore[attr-defined]
+        self._profiles = MovingProfilesTiltSL1(factory_file_path=TILT_CFG_LOCAL, default_file_path=default_profiles)
+        self._profiles.apply_profile = self.apply_profile
         self._sensitivity = {
             #                -2       -1        0        +1       +2
             "homingFast": [[20, 5], [20, 6], [20, 7], [21, 9], [22, 12]],
             "homingSlow": [[16, 3], [16, 5], [16, 7], [16, 9], [16, 11]],
         }
+        default_tune = Path(defines.dataPath) / printer_model.name / f"default_{self.name}_tuning_profiles.json" # type: ignore[attr-defined]
+        self._tune = TuneTiltSL1(factory_file_path=TILT_TUNE_LOCAL, default_file_path=default_tune)
 
     def start(self):
-        self.actual_profile = self._profiles.homingFast    # type: ignore
         try:
             self.set_stepper_sensitivity(self.sensitivity)
         except RuntimeError as e:
             self._logger.error("%s - ignored", e)
-        self.apply_all_profiles()
+        self._profiles.apply_all()
+        self.actual_profile = self._profiles.homingFast    # type: ignore
 
     @property
     def position(self) -> Ustep:
@@ -98,23 +125,30 @@ class TiltSL1(Tilt, AxisSL1):
     def go_to_fullstep(self, go_up: bool):
         self._mcc.do("!tigf", int(go_up))
 
-    async def layer_down_wait_async(self, slowMove: bool = False) -> None:
-        profile = self._config.tuneTilt[0] if slowMove else self._config.tuneTilt[1]
+    def get_tune_profile_up(self, slow_move: bool) -> SingleTuneTiltSL1:
+        return self._tune.tilt_up_large_fill if slow_move else self._tune.tilt_up_small_fill
+
+    def get_tune_profile_down(self, slow_move: bool) -> SingleTuneTiltSL1:
+        return self._tune.tilt_down_large_fill if slow_move else self._tune.tilt_down_small_fill
+
+    async def layer_down_wait_async(self, profile: SingleTuneTiltSL1=None) -> None:
+        if profile is None:
+            profile = self._tune.tilt_down_small_fill
         # initial release movement with optional sleep at the end
-        self.actual_profile = self._profiles[profile[0]]
-        if profile[1] > 0:
-            self.move(self.position - Ustep(profile[1]))
+        self.actual_profile = self._profiles[profile.initial_profile]
+        if profile.offset_steps > Ustep(0):
+            self.move(self.position - profile.offset_steps)
             while self.moving:
                 await asyncio.sleep(0.1)
-        await asyncio.sleep(profile[2] / 1000.0)
+        await asyncio.sleep(profile.offset_delay_ms / 1000.0)
         # next movement may be splited
-        self.actual_profile = self._profiles[profile[3]]
-        movePerCycle = self.position // profile[4]
-        for _ in range(profile[4]):
+        self.actual_profile = self._profiles[profile.finish_profile]
+        movePerCycle = self.position // profile.tilt_cycles
+        for _ in range(profile.tilt_cycles):
             self.move(self.position - movePerCycle)
             while self.moving:
                 await asyncio.sleep(0.1)
-            await asyncio.sleep(profile[5] / 1000.0)
+            await asyncio.sleep(profile.tilt_delay_ms / 1000.0)
         tolerance = Ustep(defines.tiltHomingTolerance)
         # if not already in endstop ensure we end up at defined bottom position
         if not self._mcc.checkState("endstop"):
@@ -138,27 +172,28 @@ class TiltSL1(Tilt, AxisSL1):
             count += step
         await self.sync_ensure_async(retries=0)
 
-    def layer_up_wait(self, slowMove: bool = False, tiltHeight: Ustep = Ustep(0)) -> None:
+    def layer_up_wait(self, profile: SingleTuneTiltSL1=None, tiltHeight: Ustep=Ustep(0)) -> None:
         if tiltHeight == self.home_position: # use self._config.tiltHeight by default
             _tiltHeight = self.config_height_position
         else: # in case of calibration there is need to force new unstored tiltHeight
             _tiltHeight = tiltHeight
-        profile = self._config.tuneTilt[2] if slowMove else self._config.tuneTilt[3]
+        if profile is None:
+            profile = self._tune.tilt_up_small_fill
 
-        self.actual_profile = self._profiles[profile[0]]
-        self.move(_tiltHeight - Ustep(profile[1]))
+        self.actual_profile = self._profiles[profile.initial_profile]
+        self.move(_tiltHeight - profile.offset_steps)
         while self.moving:
             sleep(0.1)
-        sleep(profile[2] / 1000.0)
-        self.actual_profile = self._profiles[profile[3]]
+        sleep(profile.offset_delay_ms / 1000.0)
+        self.actual_profile = self._profiles[profile.finish_profile]
 
         # finish move may be also splited in multiple sections
-        movePerCycle = (_tiltHeight - self.position) // profile[4]
-        for _ in range(profile[4]):
+        movePerCycle = (_tiltHeight - self.position) // profile.tilt_cycles
+        for _ in range(profile.tilt_cycles):
             self.move(self.position + movePerCycle)
             while self.moving:
                 sleep(0.1)
-            sleep(profile[5] / 1000.0)
+            sleep(profile.tilt_delay_ms / 1000.0)
 
     def release(self) -> None:
         axis_enabled = self._mcc.doGetInt("?ena")
@@ -200,6 +235,10 @@ class TiltSL1(Tilt, AxisSL1):
     @property
     def profiles(self) -> MovingProfilesTiltSL1:
         return self._profiles
+
+    @property
+    def tune(self) -> TuneTiltSL1:
+        return self._tune
 
     def _read_profile_id(self) -> int:
         return self._mcc.doGetInt("?tics")

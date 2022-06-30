@@ -97,6 +97,7 @@ class SlafwTestCase(TestCase):
         factory_enable_path = self.TEMP_DIR / "factory_mode_enabled"
         factory_enable_path.touch()
         tilt_profiles = self.TEMP_DIR / "profiles_tilt.json"
+        tilt_tune = self.TEMP_DIR / "tune_tilt.json"
         tower_profiles = self.TEMP_DIR / "profiles_tower.json"
 
         return [
@@ -109,6 +110,7 @@ class SlafwTestCase(TestCase):
             patch("slafw.hardware.base.exposure_screen.Wayland", Mock()),
             patch("slafw.hardware.hardware_sl1.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
+            patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
             patch("slafw.defines.ramdiskPath", str(self.TEMP_DIR)),
             patch("slafw.defines.previousPrints", str(self.TEMP_DIR)),

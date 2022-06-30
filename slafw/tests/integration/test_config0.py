@@ -34,7 +34,6 @@ class TestIntegrationConfig0(SlaFwIntegrationTestCaseBase):
         self.assertEqual(0, self.config0.delayAfterExposure)
         self.assertEqual(0, self.config0.trigger)
         self.assertEqual(0, self.config0.delayBeforeExposure)
-        self.assertEqual(list, type(self.config0.tuneTilt))
         self.assertEqual(1800, self.config0.fan1Rpm)
         self.assertFalse(self.config0.upAndDownEveryLayer)
         self.assertEqual(3300, self.config0.fan2Rpm)

@@ -81,6 +81,7 @@ class Virtual:
         hardware_file_factory = self.temp / "slafw.hardware.cfg.factory"
         prev_prints = self.temp / "previous_prints"
         tilt_profiles = self.temp / "profiles_tilt.json"
+        tilt_tune = self.temp / "tune_tilt.json"
         tower_profiles = self.temp / "profiles_tower.json"
 
         patches: List[patch] = [
@@ -98,6 +99,7 @@ class Virtual:
             ),
             patch("slafw.hardware.hardware_sl1.Booster", BoosterMock),
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
+            patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", SAMPLES_DIR / "cputemp"),
             patch("slafw.defines.hwConfigPath", hardware_file),

@@ -15,8 +15,6 @@
 # pylint: disable=too-many-function-args
 
 import asyncio
-import json
-import os
 from asyncio import Task, CancelledError
 from datetime import timedelta
 from math import ceil
@@ -26,7 +24,7 @@ from typing import Optional, Any
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
-from slafw.errors.errors import MotionControllerException, ConfigException
+from slafw.errors.errors import MotionControllerException
 from slafw.functions.decorators import safe_call
 from slafw.hardware.a64.temp_sensor import A64CPUTempSensor
 from slafw.hardware.base.hardware import BaseHardware
@@ -187,26 +185,7 @@ class HardwareSL1(BaseHardware):
         self.power_led.intensity = self.config.pwrLedPwm
         self.resinSensor(False)
         self.stop_fans()
-        # TODO do it better!
-        if self.config.lockProfiles:
-            self.logger.warning("Printer profiles will not be overwriten")
-        else:
-            with open(
-                os.path.join(defines.dataPath, self._printer_model.name, "default.tune_tilt"),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                tune_tilt = json.loads(f.read())
-                writer = self.config.get_writer()
-                if tune_tilt != writer.tuneTilt:
-                    self.logger.info("Overwriting tune tilt profiles to: %s", tune_tilt)
-                    writer.tuneTilt = tune_tilt
-                    try:
-                        writer.commit()
-                    except Exception as e:
-                        raise ConfigException() from e
-
-            self.tilt.movement_ended.connect(lambda: self._tilt_position_checker.set_rapid_update(False))
+        self.tilt.movement_ended.connect(lambda: self._tilt_position_checker.set_rapid_update(False))
 
     def flashMC(self):
         self.mcc.flash(self.config.MCBoardVersion)

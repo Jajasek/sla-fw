@@ -149,9 +149,9 @@ class TiltTimingTest(DangerousCheck):
             )
             await asyncio.sleep(0)
             tilt_start_time = time()
-            self._hw.tilt.layer_up_wait(slowMove=slow_move, tiltHeight=self._config_writer.tiltHeight)
+            self._hw.tilt.layer_up_wait(self._hw.tilt.get_tune_profile_up(slow_move), self._config_writer.tiltHeight)
             await asyncio.sleep(0)
-            await self._hw.tilt.layer_down_wait_async(slow_move)
+            await self._hw.tilt.layer_down_wait_async(self._hw.tilt.get_tune_profile_down(slow_move))
             tilt_time += time() - tilt_start_time
 
         return tilt_time / total

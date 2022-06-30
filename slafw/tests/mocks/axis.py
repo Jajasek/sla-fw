@@ -77,10 +77,7 @@ class MockAxis(Axis):
     def actual_profile(self, profile: SingleProfile):
         self._actual_profile = profile
 
-    def apply_profile(self):
-        pass
-
-    def apply_all_profiles(self):
+    def apply_profile(self, profile: SingleProfile):
         pass
 
     @cached_property
@@ -101,11 +98,16 @@ class MockTower(Tower, MockAxis):
 
 
 class MockTilt(Tilt, MockAxis):
-    def layer_up_wait(self, slowMove: bool = False,
-                      tiltHeight: int = 0) -> None:
+    def get_tune_profile_up(self, slow_move: bool):
+        return None
+
+    def get_tune_profile_down(self, slow_move: bool):
+        return None
+
+    def layer_up_wait(self, profile: SingleProfile=None, tiltHeight: int=0) -> None:
         self.move(self._config.tiltHeight)
 
-    async def layer_down_wait_async(self, slowMove: bool = False) -> None:
+    async def layer_down_wait_async(self, profile: SingleProfile=None) -> None:
         self._move_api_min()
 
     async def stir_resin_async(self) -> None:
@@ -113,4 +115,8 @@ class MockTilt(Tilt, MockAxis):
 
     @property
     def profiles(self) -> MovingProfilesTilt:
+        return Mock()
+
+    @property
+    def tune(self):
         return Mock()

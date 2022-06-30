@@ -1,0 +1,42 @@
+{
+	"tilt_down_large_fill": {
+		"initial_profile": "layerRelease",
+		"offset_steps": 650,
+		"offset_delay_ms": 1000,
+		"finish_profile": "layerMoveSlow",
+		"tilt_cycles": 1,
+		"tilt_delay_ms": 0,
+		"homing_tolerance": 64,
+		"homing_cycles": 3
+	},
+	"tilt_down_small_fill": {
+		"initial_profile": "layerRelease",
+		"offset_steps": 0,
+		"offset_delay_ms": 0,
+		"finish_profile": "layerMoveFast",
+		"tilt_cycles": 1,
+		"tilt_delay_ms": 0,
+		"homing_tolerance": 0,
+		"homing_cycles": 0
+	},
+	"tilt_up_large_fill": {
+		"initial_profile": "moveFast",
+		"offset_steps": 400,
+		"offset_delay_ms": 0,
+		"finish_profile": "layerRelease",
+		"tilt_cycles": 1,
+		"tilt_delay_ms": 0,
+		"homing_tolerance": 0,
+		"homing_cycles": 0
+	},
+	"tilt_up_small_fill": {
+		"initial_profile": "moveFast",
+		"offset_steps": 400,
+		"offset_delay_ms": 0,
+		"finish_profile": "layerRelease",
+		"tilt_cycles": 1,
+		"tilt_delay_ms": 0,
+		"homing_tolerance": 0,
+		"homing_cycles": 0
+	}
+}

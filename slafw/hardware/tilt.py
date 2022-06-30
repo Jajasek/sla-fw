@@ -13,6 +13,8 @@ from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 
 
 class MovingProfilesTilt(ProfileSet):
+    name = "tilt moving profiles"
+
     @property
     @abstractmethod
     def homingFast(self) -> SingleProfile:
@@ -77,14 +79,22 @@ class Tilt(Axis):
         return self.home_position
 
     @abstractmethod
-    def layer_up_wait(self, slowMove: bool = False, tiltHeight: Ustep = Ustep(0)) -> None:
-        """tilt up during the print"""
-
-    def layer_down_wait(self, slowMove: bool = False) -> None:
-        asyncio.run(self.layer_down_wait_async(slowMove=slowMove))
+    def get_tune_profile_up(self, slow_move: bool) -> SingleProfile:
+        """get profile for up move"""
 
     @abstractmethod
-    async def layer_down_wait_async(self, slowMove: bool = False) -> None:
+    def get_tune_profile_down(self, slow_move: bool) -> SingleProfile:
+        """get profile for up move"""
+
+    @abstractmethod
+    def layer_up_wait(self, profile: SingleProfile=None, tiltHeight: Ustep=Ustep(0)) -> None:
+        """tilt up during the print"""
+
+    def layer_down_wait(self, profile: SingleProfile=None) -> None:
+        asyncio.run(self.layer_down_wait_async(profile=profile))
+
+    @abstractmethod
+    async def layer_down_wait_async(self, profile: SingleProfile=None) -> None:
         """tilt up during the print"""
 
     def stir_resin(self) -> None:
@@ -112,3 +122,8 @@ class Tilt(Axis):
     @abstractmethod
     def profiles(self) -> MovingProfilesTilt:
         """all tilt profiles"""
+
+    @property
+    @abstractmethod
+    def tune(self) -> ProfileSet:
+        """tilt tune profiles"""

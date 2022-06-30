@@ -64,12 +64,18 @@ class ProfileSet(JsonConfig):
     def __definition_order__(self) -> tuple:
         """defined items order"""
 
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """profile set name"""
+
     def __init__(
             self,
             file_path: Optional[Path]=None,
             factory_file_path: Optional[Path]=None,
             default_file_path: Optional[Path]=None
     ):
+        self._apply_profile: Optional[Callable] = None
         super().__init__(
                 file_path=file_path,
                 factory_file_path=factory_file_path,
@@ -98,7 +104,20 @@ class ProfileSet(JsonConfig):
 
     @cache
     def __getitem__(self, key):
-        for obj in self:
-            if obj.idx == key:
-                return obj
+        for profile in self:
+            if profile.idx == key:
+                return profile
         raise IndexError
+
+    def apply_all(self):
+        if callable(self._apply_profile):
+            for profile in self:
+                self._apply_profile(profile)
+
+    @property
+    def apply_profile(self) -> Callable:
+        return self._apply_profile
+
+    @apply_profile.setter
+    def apply_profile(self, callback: Callable):
+        self._apply_profile = callback

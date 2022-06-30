@@ -181,7 +181,7 @@ class GentlyUp(Check):
         self._logger.info("GentlyUp with %s -> %s", up_profile.name, tower_profile.idx)
         self._hw.tower.actual_profile = tower_profile
 
-        await self._hw.tilt.layer_down_wait_async(slowMove=True)
+        await self._hw.tilt.layer_down_wait_async(self._hw.tilt.get_tune_profile_down(True))
         # TODO: constant in code !!!
         target_position = Nm(50_000_000)
         for _ in range(3):

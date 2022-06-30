@@ -156,10 +156,6 @@ class Config0:
 
     CHANGED_MAP = {
         "screwMm": {"microStepsMM"},
-        "raw_tiltdownlargefill": {"tuneTilt"},
-        "raw_tiltdownsmallfill": {"tuneTilt"},
-        "raw_tiltuplargefill": {"tuneTilt"},
-        "raw_tiltupsmallfill": {"tuneTilt"},
         "raw_calibrated": {"calibrated"},
         "tiltHeight": {"calibrated"},
         "tiltFastTime": {"tiltFastTime"},

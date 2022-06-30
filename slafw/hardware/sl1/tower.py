@@ -41,8 +41,9 @@ class TowerSL1(Tower, AxisSL1):
     def __init__(self, mcc: MotionController, config: HwConfig, power_led: PowerLed, printer_model: PrinterModel):
         super().__init__(config, power_led)
         self._mcc = mcc
-        defaults = Path(defines.dataPath) / printer_model.name / f"default_profiles_{self.name}.json" # type: ignore[attr-defined]
+        defaults = Path(defines.dataPath) / printer_model.name / f"default_{self.name}_moving_profiles.json" # type: ignore[attr-defined]
         self._profiles = MovingProfilesTowerSL1(factory_file_path=TOWER_CFG_LOCAL, default_file_path=defaults)
+        self._profiles.apply_profile = self.apply_profile
         self._sensitivity = {
             #                -2       -1        0        +1       +2
             "homingFast": [[22, 0], [22, 2], [22, 4], [22, 6], [22, 8]],
@@ -50,12 +51,12 @@ class TowerSL1(Tower, AxisSL1):
         }
 
     def start(self):
-        self.actual_profile = self._profiles.homingFast    # type: ignore
         try:
             self.set_stepper_sensitivity(self.sensitivity)
         except RuntimeError as e:
             self._logger.error("%s - ignored", e)
-        self.apply_all_profiles()
+        self._profiles.apply_all()
+        self.actual_profile = self._profiles.homingFast    # type: ignore
 
     @property
     def position(self) -> Nm:
