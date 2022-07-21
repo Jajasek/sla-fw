@@ -614,8 +614,8 @@ class MotionController:
         self._value_refresh_task = asyncio.gather(*checks)
         await self._value_refresh_task
 
-    def set_fan_enabled(self, index: int, enabled: bool):
-        self._fans_mask[index] = enabled
+    def set_fan_running(self, index: int, run: bool):
+        self._fans_mask[index] = run
         self.doSetBoolList("!fans", self._fans_mask.values())
 
     def set_fan_rpm(self, index: int, rpm: int):
@@ -635,6 +635,10 @@ class MotionController:
             raise ValueError(f"UV statistics data count not match! ({data})")
 
         return data
+
+    @safe_call(False, (MotionControllerException, ValueError))
+    def get_fan_running(self, index: int):
+        return self.get_fans_bits("?fans", (index,))[index]
 
     @safe_call({0: True, 1: True, 2: True}, (MotionControllerException, ValueError))
     def get_fans_error(self):

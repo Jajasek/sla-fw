@@ -73,11 +73,11 @@ class BaseHardware:
 
     def start_fans(self):
         for fan in self.fans.values():
-            fan.enabled = True
+            fan.running = True
 
     def stop_fans(self):
         for fan in self.fans.values():
-            fan.enabled = False
+            fan.running = False
 
     @abstractmethod
     def connect(self):

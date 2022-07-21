@@ -213,26 +213,10 @@ class TestSL1Hardware(SlafwTestCase):
         self.assertFalse(self.hw.mcc.checkState('fans'))
 
         for fan in self.hw.fans.values():
-            self.assertFalse(fan.enabled)
-
-        self.hw.start_fans()
-
-        for fan in self.hw.fans.values():
-            self.assertTrue(fan.enabled)
-
-        self.hw.uv_led_fan.enabled = True
-        self.hw.blower_fan.enabled = False
-        self.hw.rear_fan.enabled = True
-
-        self.assertTrue(self.hw.uv_led_fan.enabled)
-        self.assertFalse(self.hw.blower_fan.enabled)
-        self.assertTrue(self.hw.rear_fan.enabled)
+            fan.enabled = True
 
         self.hw.stop_fans()
         sleep(1)  # Wait for fans to stabilize and MC to report RPMs
-        for fan in self.hw.fans.values():
-            self.assertFalse(fan.enabled)
-
         for fan in self.hw.fans.values():
             self.assertFalse(fan.error)
 
@@ -265,12 +249,11 @@ class TestSL1Hardware(SlafwTestCase):
 
     def test_uv_fan_rpm_control(self):
         self.hw.uv_led_fan.enabled = True
-        # self.hw_config.rpmControlOverride = True
+        self.hw.uv_led_fan.running = True
         sleep(1)
         self.hw.uv_led_fan.auto_control = False
         sleep(1)
         self.assertEqual(self.hw.uv_led_fan.rpm, self.hw.uv_led_fan.rpm)
-        # self.hw_config.rpmControlOverride = False
         self.hw.uv_led_fan.auto_control = True
         type(self.hw.uv_led_temp).value = PropertyMock(return_value=self.hw_config.rpmControlUvLedMinTemp)
         sleep(1)  # Wait for fans to stabilize

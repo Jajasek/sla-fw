@@ -176,7 +176,7 @@ class HwConfig(IniConfig):
     rpmControlUvLedMaxTemp = IntValue(defines.maxUVTemp - 5, minimum=0, maximum=80, doc="At this temperature UV LED fan will spin at the maximum RPM.")
     rpmControlUvFanMinRpm = IntValue(defines.fanMinRPM, minimum=defines.fanMinRPM, maximum=defines.fanMaxRPM[0], doc="RPM is lineary mapped to UV LED temp. This is the lower limit..")
     rpmControlUvFanMaxRpm = IntValue(defines.fanMaxRPM[0], minimum=defines.fanMinRPM, maximum=defines.fanMaxRPM[0], doc="RPM is lineary mapped to UV LED temp. This is the upper limit.")
-    rpmControlOverride = BoolValue(False, doc="Overide UV FAN RPM control with UV LED temp. Force the RPM set in this config.")
+    rpmControlUvEnabled = BoolValue(True, doc="Control UV FAN RPM by UV LED temp. If false use the RPM set in this config.")
     tankCleaningExposureTime = IntValue(0, minimum=5, maximum=120, doc="Exposure time when running the tank surface cleaning wizard, default 0 needs to be overwritten once the printer model is known.")
     tankCleaningGentlyUpProfile = IntValue(1, minimum=0, maximum=3, doc="Select the profile used for the upward movement of the platform in the tank surface cleaning wizard(should be cast into GentlyUpProfile enum).")
     tankCleaningMinDistance_nm = IntValue(100_000,  unit=Nm, minimum=0, maximum=5_000_000,

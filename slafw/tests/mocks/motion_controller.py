@@ -16,7 +16,8 @@ class MotionControllerMock:
         self.fans_error_changed = Signal()
         self.fans_rpm_changed = Signal()
         self.set_fan_rpm = Mock()
-        self.set_fan_enabled = Mock()
+        self.set_fan_running = Mock()
+        self.get_fan_running = Mock()
         self.statistics_changed = Signal()
 
     @staticmethod

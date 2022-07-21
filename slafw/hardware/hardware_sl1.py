@@ -77,9 +77,7 @@ class HardwareSL1(BaseHardware):
         self.ambient_temp = SL1TempSensorAmbient(self.mcc)
         self.cpu_temp = A64CPUTempSensor()
 
-        self.uv_led_fan = SL1FanUVLED(
-            self.mcc, self.config, self.uv_led_temp, auto_control_inhibitor=lambda: self.config.rpmControlOverride
-        )
+        self.uv_led_fan = SL1FanUVLED(self.mcc, self.config, self.uv_led_temp)
         self.blower_fan = SL1FanBlower(self.mcc, self.config)
         self.rear_fan = SL1FanRear(self.mcc, self.config)
 

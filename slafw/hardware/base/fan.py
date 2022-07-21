@@ -6,12 +6,13 @@ from __future__ import annotations
 
 import asyncio
 from abc import abstractmethod, ABC
-from typing import Optional, Callable
+from typing import Optional
 
 from PySignal import Signal
 
 from slafw.hardware.base.component import HardwareComponent
 from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.configs.writer import ConfigWriter
 
 
 class FanState:
@@ -45,8 +46,9 @@ class Fan(HardwareComponent, ABC):
         min_rpm: int,
         max_rpm: int,
         default_rpm: int,
+        enabled: bool,
         reference: Optional[TempSensor] = None,
-        auto_control_inhibitor: Callable[[], bool] = lambda: False,
+        auto_control: bool = False,
     ):
         super().__init__(name)
         self.rpm_changed = Signal()
@@ -54,25 +56,62 @@ class Fan(HardwareComponent, ABC):
         self._min_rpm = min_rpm
         self._max_rpm = max_rpm
         self._default_rpm = default_rpm
+        self._enabled = enabled
         self._reference = reference
-        self._auto_control = bool(reference)
-        self._auto_control_inhibitor = auto_control_inhibitor
+        self._auto_control = False
+        if auto_control:
+            if reference:
+                self._auto_control = True
+            else:
+                raise ValueError("Cannot set auto control, no reference temperature sensor")
         self._last_logged_rpm: Optional[int] = None
 
         self.rpm_changed.connect(self._on_rpm_changed)
         self.error_changed.connect(self._on_error_changed)
 
-    @property
     @abstractmethod
-    def enabled(self) -> bool:
+    def save(self, writer: ConfigWriter):
         """
-        Whenever fan is enabled
+        Store actual settings to writer
         """
 
-    @enabled.setter
+    @property
+    def running(self) -> bool:
+        return self._running
+
+    @running.setter
+    def running(self, value: bool):
+        if self._enabled:
+            self._running = value
+        elif value:
+            self._logger.info("Fan %s not turned on (disabled)", self.name)
+        else:
+            self._running = False
+
+    @property
     @abstractmethod
+    def _running(self) -> bool:
+        """
+        Get fan state
+        """
+
+    @_running.setter
+    @abstractmethod
+    def _running(self, value: bool):
+        """
+        Start/stop the fan
+        """
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
     def enabled(self, value: bool):
-        ...
+        self._enabled = value
+        if not value and self.running:
+            self._running = False
+            self._logger.info("Fan %s was stopped (disabled)", self.name)
 
     @property
     @abstractmethod
@@ -107,6 +146,8 @@ class Fan(HardwareComponent, ABC):
     @default_rpm.setter
     def default_rpm(self, rpm: int):
         self._default_rpm = rpm
+        if not self.auto_control:
+            self.target_rpm = rpm
 
     @property
     def min_rpm(self) -> int:
@@ -117,6 +158,10 @@ class Fan(HardwareComponent, ABC):
         return self._max_rpm
 
     @property
+    def has_auto_control(self):
+        return bool(self._reference)
+
+    @property
     def auto_control(self):
         return self._auto_control
 
@@ -124,8 +169,9 @@ class Fan(HardwareComponent, ABC):
     def auto_control(self, value: bool):
         if value and not self._reference:
             raise ValueError("Cannot set auto control, no reference temperature sensor")
-
         self._auto_control = value
+        if not value:
+            self.target_rpm = self.default_rpm
 
     async def run(self):
         await super().run()
@@ -148,11 +194,11 @@ class Fan(HardwareComponent, ABC):
 
     async def _fan_rpm_control(self):
         if not self.auto_control:
-            self._logger.debug("Skipping auto control - disabled")
+            self._logger.debug("Automatic RPM control is disabled")
             return
 
-        if self._auto_control_inhibitor():
-            self._logger.info("Skipping auto control - inhibited")
+        if not self.running:
+            self._logger.debug("Automatic RPM control - fan is not running")
             return
 
         map_constant = (self.max_rpm - self.min_rpm) / (self._reference.max - self._reference.min)

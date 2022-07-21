@@ -2,11 +2,12 @@
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional
 
 from slafw import defines
 
 from slafw.configs.hw import HwConfig
+from slafw.configs.writer import ConfigWriter
 from slafw.hardware.base.fan import Fan
 from slafw.hardware.base.temp_sensor import TempSensor
 from slafw.motion_controller.controller import MotionController
@@ -25,28 +26,26 @@ class SL1Fan(Fan):
         default_rpm: int,
         enabled: bool,
         reference: Optional[TempSensor] = None,
-        auto_control_inhibitor: Callable[[], bool] = lambda: False,
+        auto_control: bool = False,
     ):
         super().__init__(
-            name, min_rpm, max_rpm, default_rpm, reference=reference, auto_control_inhibitor=auto_control_inhibitor
+            name, min_rpm, max_rpm, default_rpm, enabled, reference=reference, auto_control=auto_control
         )
         self._index = index
         self._rpm: Optional[int] = None
         self._error: Optional[bool] = False
         self._target_rpm = self.default_rpm
-        self._enabled = enabled
         self._mcc = mcc
         mcc.fans_error_changed.connect(self._on_fans_error_changed)
         mcc.fans_rpm_changed.connect(self._on_fans_rpm_changed)
 
     @property
-    def enabled(self) -> bool:
-        return self._enabled
+    def _running(self) -> bool:
+        return self._mcc.get_fan_running(self._index)
 
-    @enabled.setter
-    def enabled(self, value: bool):
-        self._enabled = value
-        self._mcc.set_fan_enabled(self._index, value)
+    @_running.setter
+    def _running(self, value: bool):
+        self._mcc.set_fan_running(self._index, value)
         self._mcc.set_fan_rpm(self._index, self.target_rpm)  # MC forgets RPM configuration ???
 
     @property
@@ -84,13 +83,7 @@ class SL1Fan(Fan):
 
 
 class SL1FanUVLED(SL1Fan):
-    def __init__(
-        self,
-        mcc: MotionController,
-        config: HwConfig,
-        reference: TempSensor,
-        auto_control_inhibitor: Callable[[], bool] = lambda: False,
-    ):
+    def __init__(self, mcc: MotionController, config: HwConfig, reference: TempSensor):
         super().__init__(
             mcc,
             "UV LED",
@@ -100,8 +93,13 @@ class SL1FanUVLED(SL1Fan):
             config.fan1Rpm,
             config.fan1Enabled,
             reference=reference,
-            auto_control_inhibitor=auto_control_inhibitor,
+            auto_control=config.rpmControlUvEnabled,
         )
+
+    def save(self, writer: ConfigWriter):
+        writer.fan1Rpm = self.default_rpm
+        writer.fan1Enabled = self.enabled
+        writer.rpmControlUvEnabled = self.auto_control
 
 
 class SL1FanBlower(SL1Fan):
@@ -116,6 +114,10 @@ class SL1FanBlower(SL1Fan):
             config.fan2Enabled,
         )
 
+    def save(self, writer: ConfigWriter):
+        writer.fan2Rpm = self.default_rpm
+        writer.fan2Enabled = self.enabled
+
 
 class SL1FanRear(SL1Fan):
     def __init__(self, mcc: MotionController, config: HwConfig):
@@ -128,3 +130,7 @@ class SL1FanRear(SL1Fan):
             config.fan3Rpm,
             config.fan3Enabled,
         )
+
+    def save(self, writer: ConfigWriter):
+        writer.fan3Rpm = self.default_rpm
+        writer.fan3Enabled = self.enabled

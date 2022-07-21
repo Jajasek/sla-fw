@@ -12,6 +12,7 @@ from typing import Optional
 from unittest.mock import Mock
 
 from slafw.configs.hw import HwConfig
+from slafw.configs.writer import ConfigWriter
 from slafw.hardware.base.fan import Fan
 from slafw.hardware.sl1.fan import SL1FanUVLED, SL1FanBlower, SL1FanRear
 from slafw.tests.base import SlafwTestCase
@@ -25,10 +26,18 @@ class TestFan(Fan):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._target_rpm = 0
+        self._running_flag = False
+
+    def save(self, writer: ConfigWriter):
+        pass
 
     @property
-    def enabled(self) -> bool:
-        return True
+    def _running(self):
+        return self._running_flag
+
+    @_running.setter
+    def _running(self, value: bool):
+        self._running_flag = value
 
     @property
     def rpm(self) -> int:
@@ -75,13 +84,24 @@ class OutOfControlExecutor:
         self._control_performed.wait(self.MAX_CONTROL_WAIT_S)
 
 
+class TestBaseFanFail(SlafwTestCase):
+    def test_auto_control_fail_init(self):
+        with self.assertRaises(ValueError):
+            TestFan("Test", 1000, 2000, 1500, True, auto_control=True)
+
+    def test_auto_control_fail_set(self):
+        fan = TestFan("Test", 1000, 2000, 1500, True)
+        self.assertFalse(fan.has_auto_control)
+        with self.assertRaises(ValueError):
+            fan.auto_control = True
+
+
 class TestBaseFan(SlafwTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.temp_value = Mock(return_value=12)
-        self.inhibitor_value = Mock(return_value=False)
         self.temp = MockTempSensor("Fake temp", 10, 20, mock_value=self.temp_value)
-        self.fan = TestFan("Test", 1000, 2000, 1500, reference=self.temp, auto_control_inhibitor=self.inhibitor_value)
+        self.fan = TestFan("Test", 1000, 2000, 1500, True, reference=self.temp, auto_control=True)
         self.env_setter = OutOfControlExecutor(self.fan)
 
         self._thread = Thread(target=self._run_components)
@@ -107,6 +127,9 @@ class TestBaseFan(SlafwTestCase):
             raise
 
     def test_auto_control(self):
+        self.assertTrue(self.fan.has_auto_control)
+        self.assertTrue(self.fan.auto_control)
+        self.fan.running = True
         with self.env_setter:
             self.fan.target_rpm = self.fan.min_rpm
             self.temp_value.return_value = self.temp.max
@@ -121,25 +144,17 @@ class TestBaseFan(SlafwTestCase):
         self.assertEqual((self.fan.min_rpm + self.fan.max_rpm) / 2, self.fan.target_rpm)
 
     def test_auto_control_disable(self):
+        self.fan.running = True
         with self.env_setter:
             self.fan.auto_control = False
             self.fan.target_rpm = self.fan.min_rpm
         self.temp_value.return_value = self.temp.max
+        self.assertFalse(self.fan.auto_control)
         self.assertEqual(self.fan.min_rpm, self.fan.target_rpm)
 
         with self.env_setter:
             self.fan.auto_control = True
-        self.assertEqual(self.fan.max_rpm, self.fan.target_rpm)
-
-    def test_auto_control_inhibit(self):
-        with self.env_setter:
-            self.inhibitor_value.return_value = True
-            self.temp_value.return_value = self.temp.max
-            self.fan.target_rpm = self.fan.min_rpm
-        self.assertEqual(self.fan.min_rpm, self.fan.target_rpm)
-
-        with self.env_setter:
-            self.inhibitor_value.return_value = False
+        self.assertTrue(self.fan.auto_control)
         self.assertEqual(self.fan.max_rpm, self.fan.target_rpm)
 
 
@@ -166,11 +181,11 @@ class DoNotRunTestDirectlyFromBaseClass:
             self.fan.target_rpm = 1000
             self.mcc.set_fan_rpm.assert_called_with(self.index, 1000)
 
-        def test_enable_set(self):
-            self.fan.enabled = False
-            self.mcc.set_fan_enabled.assert_called_with(self.index, False)
-            self.fan.enabled = True
-            self.mcc.set_fan_enabled.assert_called_with(self.index, True)
+        def test_running_set(self):
+            self.fan.running = False
+            self.mcc.set_fan_running.assert_called_with(self.index, False)
+            self.fan.running = True
+            self.mcc.set_fan_running.assert_called_with(self.index, True)
 
         def test_rpm_read(self):
             callback = Mock(__name__="callback")
@@ -221,3 +236,35 @@ class TestSL1FanRear(DoNotRunTestDirectlyFromBaseClass.BaseSL1FanTest):
     @cached_property
     def index(self) -> int:
         return 2
+
+
+class TestSave(SlafwTestCase):
+    def test_save(self):
+        config = HwConfig()
+        writer = config.get_writer()
+        mcc = MotionControllerMock.get_6c()
+        temp = MockTempSensor("Fake temp", 10, 20, mock_value=Mock(return_value=20))
+
+        uvled = SL1FanUVLED(mcc, config, reference=temp)
+        uvled.enabled = False
+        uvled.default_rpm = 2700
+        uvled.auto_control = False
+        uvled.save(writer)
+
+        blower = SL1FanBlower(mcc, config)
+        blower.enabled = False
+        blower.default_rpm = 3300
+        blower.save(writer)
+
+        rear = SL1FanRear(mcc, config)
+        rear.enabled = False
+        rear.default_rpm = 5000
+        rear.save(writer)
+
+        self.assertFalse(writer.fan1Enabled)
+        self.assertEqual(2700, writer.fan1Rpm)
+        self.assertFalse(writer.rpmControlUvEnabled)
+        self.assertFalse(writer.fan2Enabled)
+        self.assertEqual(3300, writer.fan2Rpm)
+        self.assertFalse(writer.fan3Enabled)
+        self.assertEqual(5000, writer.fan3Rpm)

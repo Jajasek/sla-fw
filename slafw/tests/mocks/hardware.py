@@ -54,7 +54,7 @@ class HardwareMock(BaseHardware):
             defines.fanMaxRPM,
             2000,
             reference=self.uv_led_temp,
-            auto_control_inhibitor=lambda: self.config.rpmControlOverride,
+            auto_control=self.config.rpmControlUvEnabled,
         )
         self.blower_fan = MockFan("UV LED", defines.fanMinRPM, defines.fanMaxRPM, 3300)
         self.rear_fan = MockFan("UV LED", defines.fanMinRPM, defines.fanMaxRPM, 1000)
@@ -95,7 +95,7 @@ class HardwareMock(BaseHardware):
 
     def start_fans(self):
         for fan in self.fans.values():
-            fan.enabled = True
+            fan.running = True
 
     def connect(self):
         pass
