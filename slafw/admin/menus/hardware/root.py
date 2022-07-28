@@ -28,7 +28,7 @@ class HardwareRoot(AdminMenu):
                 AdminAction(
                     axis.name.capitalize(),
                     self._get_callback(axis),
-                    f"{axis.name}_sensivity_color"
+                    f"{axis.name}_sensitivity_color"
                 ))
         items.append(
                 AdminAction(

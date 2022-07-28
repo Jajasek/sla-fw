@@ -39,7 +39,7 @@ class AxisMenu(SafeAdminMenu):
             self.add_item(AdminAction(
                 f"Tune {axis.name}",
                 lambda: self.enter(Profiles(self._control, printer, axis, axis.tune)),  # type: ignore
-                f"{axis.name}_sensivity_color"
+                f"{axis.name}_sensitivity_color"
                 ))
         self.add_items(
             (

@@ -78,7 +78,7 @@ class EditProfiles(AdminMenu):
         if isinstance(pset, (MovingProfilesTilt, MovingProfilesTower)):
             icon = "steppers_color"
         elif isinstance(pset, TuneTiltSL1):
-            icon = "tilt_sensivity_color"
+            icon = "tilt_sensitivity_color"
         else:
             icon = ""
         for profile in pset:
