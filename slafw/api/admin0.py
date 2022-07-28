@@ -32,6 +32,7 @@ class Admin0ActionItem:
 
     def __init__(self, item: AdminAction):
         self._item = item
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -44,9 +45,17 @@ class Admin0ActionItem:
         return self._item.icon
 
     @auto_dbus
+    @property
+    def enabled(self) -> bool:
+        return self._item.enabled
+
+    @auto_dbus
     def execute(self):
         print(f"Running action: {self.name}")
         self._item.execute()
+
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
 
 
 @dbus_api
@@ -61,6 +70,7 @@ class Admin0IntValueItem:
     def __init__(self, item: AdminIntValue):
         self._item = item
         item.changed.connect(self._value_changed)
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -71,6 +81,11 @@ class Admin0IntValueItem:
     @property
     def icon(self) -> str:
         return self._item.icon
+
+    @auto_dbus
+    @property
+    def enabled(self) -> bool:
+        return self._item.enabled
 
     @auto_dbus
     @property
@@ -90,6 +105,9 @@ class Admin0IntValueItem:
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
+
 
 @dbus_api
 class Admin0FixedValueItem:
@@ -103,6 +121,7 @@ class Admin0FixedValueItem:
     def __init__(self, item: AdminFixedValue):
         self._item = item
         item.changed.connect(self._value_changed)
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -113,6 +132,11 @@ class Admin0FixedValueItem:
     @property
     def icon(self) -> str:
         return self._item.icon
+
+    @auto_dbus
+    @property
+    def enabled(self) -> bool:
+        return self._item.enabled
 
     @auto_dbus
     @property
@@ -137,6 +161,9 @@ class Admin0FixedValueItem:
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
+
 
 @dbus_api
 class Admin0FloatValueItem:
@@ -150,6 +177,7 @@ class Admin0FloatValueItem:
     def __init__(self, item: AdminFloatValue):
         self._item = item
         item.changed.connect(self._value_changed)
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -160,6 +188,11 @@ class Admin0FloatValueItem:
     @property
     def icon(self) -> str:
         return self._item.icon
+
+    @auto_dbus
+    @property
+    def enabled(self) -> bool:
+        return self._item.enabled
 
     @auto_dbus
     @property
@@ -179,6 +212,9 @@ class Admin0FloatValueItem:
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
+
 
 @dbus_api
 class Admin0SelectionItem:
@@ -192,6 +228,7 @@ class Admin0SelectionItem:
     def __init__(self, item: AdminSelectionValue):
         self._item = item
         item.changed.connect(self._value_changed)
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -202,6 +239,11 @@ class Admin0SelectionItem:
     @property
     def icon(self) -> str:
         return self._item.icon
+
+    @auto_dbus
+    @property
+    def enabled(self) -> bool:
+        return self._item.enabled
 
     @auto_dbus
     @property
@@ -226,7 +268,8 @@ class Admin0SelectionItem:
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
-
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
 
 
 @dbus_api
@@ -241,6 +284,7 @@ class Admin0BoolValueItem:
     def __init__(self, item: AdminBoolValue):
         self._item = item
         item.changed.connect(self._value_changed)
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -251,6 +295,11 @@ class Admin0BoolValueItem:
     @property
     def icon(self) -> str:
         return self._item.icon
+
+    @auto_dbus
+    @property
+    def enabled(self) -> bool:
+        return self._item.enabled
 
     @auto_dbus
     @property
@@ -265,6 +314,9 @@ class Admin0BoolValueItem:
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
+
 
 @dbus_api
 class Admin0TextValueItem:
@@ -278,6 +330,7 @@ class Admin0TextValueItem:
     def __init__(self, item: AdminTextValue):
         self._item = item
         item.changed.connect(self._value_changed)
+        item.changed.connect(self._enabled_changed)
 
     @auto_dbus
     @property
@@ -291,6 +344,11 @@ class Admin0TextValueItem:
 
     @auto_dbus
     @property
+    def enabled(self) -> bool:
+        return self._item.enabled
+
+    @auto_dbus
+    @property
     def value(self) -> str:
         return self._item.get_value()
 
@@ -301,6 +359,9 @@ class Admin0TextValueItem:
 
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
+
+    def _enabled_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"enabled": self.enabled}, [])
 
 
 @dbus_api
