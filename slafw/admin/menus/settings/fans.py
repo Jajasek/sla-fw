@@ -2,83 +2,103 @@
 # Copyright (C) 2020-2022 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from typing import Dict
+from collections.abc import Callable
+from threading import Thread
+from time import sleep
+
 from slafw.libPrinter import Printer
 from slafw.admin.control import AdminControl
-from slafw.admin.items import AdminIntValue, AdminBoolValue
+from slafw.admin.items import AdminIntValue, AdminBoolValue, AdminLabel
 from slafw.admin.menus.settings.base import SettingsMenu
-
-from slafw.hardware.base.fan import FanState
 
 
 class FansMenu(SettingsMenu):
-
     def __init__(self, control: AdminControl, printer: Printer):
         super().__init__(control, printer)
-        self._printer = printer
+        self._fans = printer.hw.fans
+        self._data: Dict[int, dict] = {}
+        items = []
+        for idx, fan in self._fans.items():
+            self._data[idx] = {}
+            enabled = AdminBoolValue.from_value(
+                    f"{fan.name} fan enabled",
+                    fan,
+                    "enabled",
+                    "fan_color")
+            enabled.changed.connect(self._get_callback(self._changed_enable, idx))
+            self._data[idx]["en"] = enabled
+            items.append(enabled)
 
-        self._init_uv_led_fan = FanState(self._printer.hw.uv_led_fan)
-        self._init_blower_fan = FanState(self._printer.hw.blower_fan)
-        self._init_rear_fan = FanState(self._printer.hw.rear_fan)
+            if fan.has_auto_control:
+                ac = AdminBoolValue.from_value(
+                        f"{fan.name} fan auto control",
+                        fan,
+                        "auto_control",
+                        "firmware-icon",
+                        enabled=fan.enabled)
+                ac.changed.connect(self._get_callback(self._changed_auto_control, idx))
+                self._data[idx]["ac"] = ac
+                items.append(ac)
 
-        uv_led_fan_rpm_item = AdminIntValue.from_value("UV LED fan RPM", self._temp, "fan1Rpm", 100, "limit_color")
-        uv_led_fan_rpm_item.changed.connect(self._uv_led_fan_changed)
-        blower_fan_rpm_item = AdminIntValue.from_value("Blower fan RPM", self._temp, "fan2Rpm", 100, "limit_color")
-        blower_fan_rpm_item.changed.connect(self._blower_fan_changed)
-        rear_fan_rpm_item = AdminBoolValue.from_value("Rear fan", self, "rear_fan", "fan_color")
-        rear_fan_rpm_item.changed.connect(self._rear_fan_changed)
+            trpm = AdminIntValue.from_value(
+                    f"{fan.name} fan target RPM",
+                    fan,
+                    "default_rpm",
+                    100,
+                    "limit_color",
+                    enabled=fan.enabled and not fan.auto_control)
+            self._data[idx]["trpm"] = trpm
+            items.append(trpm)
 
-        self.add_items(
-            (
-                AdminBoolValue.from_value("UV LED fan", self, "uv_led_fan", "fan_color"),
-                uv_led_fan_rpm_item,
-                AdminBoolValue.from_value("Blower fan", self, "blower_fan", "fan_color"),
-                blower_fan_rpm_item,
-                rear_fan_rpm_item,
-                AdminIntValue.from_value("Rear fan RPM", self._temp, "fan3Rpm", 100, "limit_color"),
-            )
-        )
+            run = AdminBoolValue.from_value(
+                    f"{fan.name} fan running",
+                    fan,
+                    "running",
+                    "turn_off_color",
+                    enabled=fan.enabled)
+            self._data[idx]["run"] = run
+            items.append(run)
+
+            arpm = AdminLabel(None, "limit_color", enabled=fan.enabled)
+            self._data[idx]["arpm"] = arpm
+            items.append(arpm)
+
+        self.add_items(items)
+        self._running = True
+        self._thread = Thread(target=self._run)
+
+    def on_enter(self):
+        self._thread.start()
 
     def on_leave(self):
-        self._init_uv_led_fan.restore()
-        self._init_blower_fan.restore()
-        self._init_rear_fan.restore()
+        self._running = False
+        self._thread.join()
+        for fan in self._fans.values():
+            fan.save(self._temp)
+        super().on_leave()
 
-    @property
-    def uv_led_fan(self) -> bool:
-        return self._printer.hw.uv_led_fan.enabled
+    @staticmethod
+    def _get_callback(callback: Callable, idx: int):
+        return lambda: callback(idx)
 
-    @uv_led_fan.setter
-    def uv_led_fan(self, value: bool):
-        self._printer.hw.uv_led_fan.enabled = value
+    def _changed_enable(self, idx: int):
+        if "ac" in self._data[idx]:
+            self._data[idx]["ac"].enabled = self._fans[idx].enabled
+        else:
+            self._changed_auto_control(idx)
+        self._data[idx]["run"].enabled = self._fans[idx].enabled
+        self._data[idx]["arpm"].enabled = self._fans[idx].enabled
 
-    @property
-    def blower_fan(self) -> bool:
-        return self._printer.hw.blower_fan.enabled
+    def _changed_auto_control(self, idx: int):
+        self._data[idx]["trpm"].enabled = self._fans[idx].enabled and not self._fans[idx].auto_control
 
-    @blower_fan.setter
-    def blower_fan(self, value: bool):
-        self._printer.hw.blower_fan.enabled = value
-
-    @property
-    def rear_fan(self) -> bool:
-        return self._printer.hw.rear_fan.enabled
-
-    @rear_fan.setter
-    def rear_fan(self, value: bool):
-        self._printer.hw.rear_fan.enabled = value
-
-    @property
-    def uv_led(self) -> bool:
-        return self._printer.hw.uv_led.active
-
-    def _uv_led_fan_changed(self):
-        self.uv_led_fan = True
-        self._printer.hw.fans[0].target_rpm = self._temp.fan1Rpm
-
-    def _blower_fan_changed(self):
-        self.blower_fan = True
-        self._printer.hw.fans[1].target_rpm = self._temp.fan2Rpm
-
-    def _rear_fan_changed(self):
-        self.rear_fan = True
-        self._printer.hw.fans[2].target_rpm = self._temp.fan3Rpm
+    def _run(self):
+        loop = 0
+        while self._running:
+            loop += 1
+            if loop >= 10:
+                for idx, fan in self._fans.items():
+                    self._data[idx]["arpm"].set(f"{fan.name} fan actual RPM: {fan.rpm}")
+                    loop = 0
+            sleep(.1)

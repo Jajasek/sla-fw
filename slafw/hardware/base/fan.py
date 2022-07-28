@@ -15,24 +15,6 @@ from slafw.hardware.base.temp_sensor import TempSensor
 from slafw.configs.writer import ConfigWriter
 
 
-class FanState:
-    # pylint: disable = too-few-public-methods
-    """
-    Capture fan state, allows to restore it
-    """
-
-    def __init__(self, fan: Fan):
-        self._fan = fan
-        self._enabled = fan.enabled
-        self._target_rpm = fan.target_rpm
-        self._auto_control = fan.auto_control
-
-    def restore(self):
-        self._fan.enabled = self._enabled
-        self._fan.target_rpm = self._target_rpm
-        self._fan.auto_control = self._auto_control
-
-
 class Fan(HardwareComponent, ABC):
     # pylint: disable = too-many-arguments
     # pylint: disable = too-many-instance-attributes
