@@ -45,6 +45,8 @@ from slafw.tests.mocks.wayland import WaylandMock
 
 # gitlab CI job creates model folder in different location due to restricted permissions in Docker container
 # common path is /builds/project-0/model
+from slafw.wizard.wizards.self_test import SelfTestWizard
+
 if "CI" in os.environ:
     defines.printer_model_run = Path(os.environ["CI_PROJECT_DIR"] + "/model")
 printer_model = PrinterModel()
@@ -136,6 +138,10 @@ class Virtual:
             patch("slafw.defines.factory_enable", self.temp / "factory_mode_enabled"),
             patch("slafw.defines.exposure_panel_of_node", SAMPLES_DIR / "of_node" / printer_model.name.lower()),
             patch("slafw.defines.expoPanelLogPath", self.temp / defines.expoPanelLogFileName),
+            patch("slafw.wizard.checks.factory_reset.ResetHttpDigest.reset_task_run", Mock()),
+            patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock()),
+            patch("slafw.wizard.checks.factory_reset.ResetTouchUI.reset_task_run", Mock()),
+            patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock())
         ]
 
         if not os.environ.get("WAYLAND_DISPLAY") or printer_model != PrinterModel.VIRTUAL:
@@ -143,6 +149,7 @@ class Virtual:
 
         copyfile(SAMPLES_DIR / "hardware-virtual.cfg", hardware_file)
         copyfile(SAMPLES_DIR / "hardware.toml", hardware_file_factory)
+        copyfile(SAMPLES_DIR / "self_test_data.json", self.temp / SelfTestWizard.get_data_filename())
 
         for p in patches:
             p.start()
@@ -191,6 +198,7 @@ class Virtual:
         self.printer.setup()
         print("Overriding printer settings")
         self.printer.hw.config.calibrated = True
+        self.printer.hw.config.showWizard = False
         self.printer.hw.config.fanCheck = False
         self.printer.hw.config.coverCheck = False
         self.printer.hw.config.resinSensor = False
