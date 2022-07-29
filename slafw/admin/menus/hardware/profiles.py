@@ -107,7 +107,7 @@ class EditProfileItems(SafeAdminMenu):
             if isinstance(value, ProfileIndex):
                 yield AdminSelectionValue.from_value(value.key, self._temp, value.key, value.options, True, "edit_white")
             else:
-                yield AdminIntValue.from_value(value.key, self._temp, value.key, 1, "edit_white", unit=value.unit)
+                yield AdminIntValue.from_value(value.key, self._temp, value.key, 1, "edit_white")
 
     def on_leave(self):
         self._temp.commit(factory=True)

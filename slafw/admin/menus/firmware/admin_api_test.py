@@ -34,8 +34,8 @@ class ApiTestMenu(AdminMenu):
         self.add_label(
             "Long text Long text Long text Long text Long" " text Long text Long text Long text Long text Long text"
         )
-        self.add_item(AdminIntValue.from_property(self, ApiTestMenu.a, 1))
-        self.add_item(AdminIntValue.from_property(self, ApiTestMenu.b, 3))
+        self.add_item(AdminIntValue.from_property(self, ApiTestMenu.a, 1, minimum=0, maximum=48))
+        self.add_item(AdminIntValue.from_property(self, ApiTestMenu.b, 3, minimum=-48, maximum=42))
         self.add_item(AdminAction("Test 2", self.test2))
         self.add_label("<center>Centered</center><br/><h1>Headline</h1>")
         self.add_item(AdminAction("<b>Exit</b>", self.exit))
@@ -44,7 +44,7 @@ class ApiTestMenu(AdminMenu):
         self.add_item(AdminAction("Confirm", self.confirm))
         self.add_item(AdminAction("Wait", self.wait))
         self.add_item(AdminSelectionValue("Select (wrap)", self.get_index, self.set_index,
-            ["Elem1", "Elem2", "Elem3", "Elem4"], wrap_around=True))
+            ["First item", "Second item", "Third item", "Fourth item"], wrap_around=True))
 
         self._thread = Thread(target=self._runner)
 

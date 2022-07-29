@@ -145,3 +145,8 @@ class ConfigWriter:
         """
         self._changed = {}
         self._deleted = set()
+
+    def get_value_property(self, item: str, prop: str):
+        item = self._get_attribute_name(item)
+        value = self._config.get_values().get(item, None)
+        return getattr(value, prop, None)

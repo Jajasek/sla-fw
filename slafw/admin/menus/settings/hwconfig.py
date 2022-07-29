@@ -21,14 +21,16 @@ class HwConfigMenu(SettingsMenu):
     def __init__(self, control: AdminControl, printer: Printer):
         super().__init__(control, printer)
         self._config = printer.hw.config
-        self._warning = self.add_label("<b>WARNING! This is unrestricted raw edit of all config values.</b>", "warning_white")
+        self._warning = self.add_label(
+                "<b>WARNING! This is unrestricted raw edit of all config values.</b>",
+                "warning_white")
         self.add_items(self._get_config_items())
 
     def _get_config_items(self) -> Collection[AdminItem]:
         for name, value in self._config.get_values().items():
             if isinstance(value, IntValue):
                 step = self.NAME_STEP_MAP.get(name, 1)
-                yield AdminIntValue.from_value(name, self._temp, name, step, "edit_white", unit=value.unit)
+                yield AdminIntValue.from_value(name, self._temp, name, step, "edit_white")
             if isinstance(value, FloatValue):
                 step = self.NAME_STEP_MAP.get(name, 0.1)
                 yield AdminFloatValue.from_value(name, self._temp, name, step, "edit_white")

@@ -93,7 +93,37 @@ class AdminValue(AdminItem):
         setattr(type(obj), prop_name, new_prop)
 
 
-class AdminIntValue(AdminValue):
+class AdminMinMaxValue(AdminValue):
+    def __init__(
+            self,
+            name: str,
+            getter: Callable,
+            setter: Callable,
+            icon: str="",
+            enabled: bool=True,
+            minimum: int=None,
+            maximum: int=None):
+        super().__init__(name, getter, setter, icon, enabled)
+        self._minimum = -0x7fffffff if minimum is None else minimum
+        self._maximum = 0x7fffffff if maximum is None else maximum
+
+    @property
+    def minimum(self) -> int:
+        return self._minimum
+
+    @property
+    def maximum(self) -> int:
+        return self._maximum
+
+    @staticmethod
+    def _get_params_from_value(obj: object, prop: str):
+        valget = getattr(obj, "get_value_property", None)
+        if callable(valget):
+            return valget(prop, "unit"), valget(prop, "min"), valget(prop, "max")
+        return None, None, None
+
+
+class AdminIntValue(AdminMinMaxValue):
     def __init__(
             self,
             name: str,
@@ -102,10 +132,10 @@ class AdminIntValue(AdminValue):
             step: int,
             icon: str="",
             enabled: bool=True,
-            unit: type=None):
-        super().__init__(name, getter, setter, icon, enabled)
+            minimum: int=None,
+            maximum: int=None):
+        super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
         self._step = step
-        self._unit = unit
 
     @classmethod
     def from_value(
@@ -115,17 +145,18 @@ class AdminIntValue(AdminValue):
             prop: str,
             step: int,
             icon: str="",
-            enabled: bool=True,
-            unit: type=None) -> AdminIntValue:
+            enabled: bool=True) -> AdminIntValue:
+        unit, minimum, maximum = cls._get_params_from_value(obj, prop)
+
         def g():
             return getattr(obj, prop)
 
         def s(value):
-            if unit:
+            if callable(unit):
                 value = unit(value)
             setattr(obj, prop, value)
 
-        return AdminIntValue(name, g, s, step, icon, enabled)
+        return AdminIntValue(name, g, s, step, icon, enabled, minimum, maximum)
 
     @classmethod
     def from_property(
@@ -134,7 +165,9 @@ class AdminIntValue(AdminValue):
             prop: property,
             step: int,
             icon: str="",
-            enabled: bool=True) -> AdminIntValue:
+            enabled: bool=True,
+            minimum: int=None,
+            maximum: int=None) -> AdminIntValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminIntValue(
                 prop_name,
@@ -142,7 +175,9 @@ class AdminIntValue(AdminValue):
                 partial(prop.fset, obj),
                 step,
                 icon,
-                enabled)
+                enabled,
+                minimum,
+                maximum)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -151,7 +186,7 @@ class AdminIntValue(AdminValue):
         return self._step
 
 
-class AdminFixedValue(AdminValue):
+class AdminFixedValue(AdminMinMaxValue):
     def __init__(
             self,
             name: str,
@@ -160,8 +195,10 @@ class AdminFixedValue(AdminValue):
             step: int,
             fractions: int,
             icon: str="",
-            enabled: bool=True):
-        super().__init__(name, getter, setter, icon, enabled)
+            enabled: bool=True,
+            minimum: int=None,
+            maximum: int=None):
+        super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
         self._step = step
         self._fractions = fractions
 
@@ -175,13 +212,17 @@ class AdminFixedValue(AdminValue):
             fractions: int,
             icon: str="",
             enabled: bool=True) -> AdminFixedValue:
+        unit, minimum, maximum = cls._get_params_from_value(obj, prop)
+
         def g():
             return getattr(obj, prop)
 
         def s(value):
+            if callable(unit):
+                value = unit(value)
             setattr(obj, prop, value)
 
-        return AdminFixedValue(name, g, s, step, fractions, icon, enabled)
+        return AdminFixedValue(name, g, s, step, fractions, icon, enabled, minimum, maximum)
 
     @classmethod
     def from_property(
@@ -191,7 +232,9 @@ class AdminFixedValue(AdminValue):
             step: int,
             fractions: int,
             icon: str="",
-            enabled: bool=True) -> AdminFixedValue:
+            enabled: bool=True,
+            minimum: int=None,
+            maximum: int=None) -> AdminFixedValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminFixedValue(
                 prop_name,
@@ -200,7 +243,9 @@ class AdminFixedValue(AdminValue):
                 step,
                 fractions,
                 icon,
-                enabled)
+                enabled,
+                minimum,
+                maximum)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -213,7 +258,7 @@ class AdminFixedValue(AdminValue):
         return self._fractions
 
 
-class AdminFloatValue(AdminValue):
+class AdminFloatValue(AdminMinMaxValue):
     def __init__(
             self,
             name: str,
@@ -221,8 +266,10 @@ class AdminFloatValue(AdminValue):
             setter: Callable,
             step: float,
             icon: str="",
-            enabled: bool=True):
-        super().__init__(name, getter, setter, icon, enabled)
+            enabled: bool=True,
+            minimum: int=None,
+            maximum: int=None):
+        super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
         self._step = step
 
     @classmethod
@@ -234,13 +281,15 @@ class AdminFloatValue(AdminValue):
             step: float,
             icon: str="",
             enabled: bool=True) -> AdminFloatValue:
+        _, minimum, maximum = cls._get_params_from_value(obj, prop)
+
         def g():
             return getattr(obj, prop)
 
         def s(value):
             setattr(obj, prop, value)
 
-        return AdminFloatValue(name, g, s, step, icon, enabled)
+        return AdminFloatValue(name, g, s, step, icon, enabled, minimum, maximum)
 
     @classmethod
     def from_property(
@@ -249,7 +298,9 @@ class AdminFloatValue(AdminValue):
             prop: property,
             step: float,
             icon: str="",
-            enabled: bool=True) -> AdminFloatValue:
+            enabled: bool=True,
+            minimum: int=None,
+            maximum: int=None) -> AdminFloatValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminFloatValue(
                 prop_name,
@@ -257,7 +308,9 @@ class AdminFloatValue(AdminValue):
                 partial(prop.fset, obj),
                 step,
                 icon,
-                enabled)
+                enabled,
+                minimum,
+                maximum)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 

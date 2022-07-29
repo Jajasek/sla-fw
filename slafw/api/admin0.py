@@ -102,6 +102,16 @@ class Admin0IntValueItem:
     def step(self) -> int:
         return self._item.step
 
+    @auto_dbus
+    @property
+    def minimum(self) -> int:
+        return self._item.minimum
+
+    @auto_dbus
+    @property
+    def maximum(self) -> int:
+        return self._item.maximum
+
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
@@ -158,6 +168,16 @@ class Admin0FixedValueItem:
     def fractions(self) -> int:
         return self._item.fractions
 
+    @auto_dbus
+    @property
+    def minimum(self) -> int:
+        return self._item.minimum
+
+    @auto_dbus
+    @property
+    def maximum(self) -> int:
+        return self._item.maximum
+
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])
 
@@ -208,6 +228,16 @@ class Admin0FloatValueItem:
     @property
     def step(self) -> float:
         return self._item.step
+
+    @auto_dbus
+    @property
+    def minimum(self) -> int:
+        return self._item.minimum
+
+    @auto_dbus
+    @property
+    def maximum(self) -> int:
+        return self._item.maximum
 
     def _value_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"value": self.value}, [])

@@ -2,12 +2,13 @@
 # Copyright (C) 2020-2022 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import Dict
-from collections.abc import Callable
+from typing import Dict, Callable
 from threading import Thread
+from functools import partial
 from time import sleep
 
 from slafw.libPrinter import Printer
+from slafw.hardware.base.fan import Fan
 from slafw.admin.control import AdminControl
 from slafw.admin.items import AdminIntValue, AdminBoolValue, AdminLabel
 from slafw.admin.menus.settings.base import SettingsMenu
@@ -41,13 +42,15 @@ class FansMenu(SettingsMenu):
                 self._data[idx]["ac"] = ac
                 items.append(ac)
 
-            trpm = AdminIntValue.from_value(
+            trpm = AdminIntValue(
                     f"{fan.name} fan target RPM",
-                    fan,
-                    "default_rpm",
+                    partial(Fan.default_rpm.fget, fan), # type: ignore[attr-defined]
+                    partial(Fan.default_rpm.fset, fan), # type: ignore[attr-defined]
                     100,
                     "limit_color",
-                    enabled=fan.enabled and not fan.auto_control)
+                    enabled=fan.enabled and not fan.auto_control,
+                    minimum=fan.min_rpm,
+                    maximum=fan.max_rpm)
             self._data[idx]["trpm"] = trpm
             items.append(trpm)
 

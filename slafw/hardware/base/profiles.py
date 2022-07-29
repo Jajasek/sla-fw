@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
-from typing import Optional
-from collections.abc import Callable
+from typing import Optional, Callable
 from functools import cache # type: ignore
 from abc import abstractmethod
 
