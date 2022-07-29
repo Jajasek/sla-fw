@@ -23,6 +23,7 @@ class SystemInfoMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
         super().__init__(control)
         self._printer = printer
+        self._fans = {}
 
         self.add_back()
 
@@ -49,9 +50,8 @@ class SystemInfoMenu(AdminMenu):
         self.cpu_temp = self.add_label(None, "limit_color")
         self.uv_led_temp = self.add_label(None, "limit_color")
         self.ambient_temp = self.add_label(None, "limit_color")
-        self.uv_led_fan = self.add_label(None, "fan_color")
-        self.blower_fan = self.add_label(None, "fan_color")
-        self.rear_fan = self.add_label(None, "fan_color")
+        for fidx in self._printer.hw.fans.keys():
+            self._fans[fidx] = self.add_label(None, "fan_color")
         self.uv_led = self.add_label(None, "led_set_replacement")
         self.uv_counter = self.add_label(None, "led_set_replacement")
         self.display_counter = self.add_label(None, "display_replacement")
@@ -103,9 +103,8 @@ class SystemInfoMenu(AdminMenu):
                 self.cpu_temp.set(f"CPU temperature: {self._printer.hw.cpu_temp.value}")
                 self.uv_led_temp.set(f"UV LED temperature: {self._printer.hw.uv_led_temp.value}")
                 self.ambient_temp.set(f"Ambient temperature: {self._printer.hw.ambient_temp.value}")
-                self.uv_led_fan.set(f"UV LED fan RPM: {self._printer.hw.uv_led_fan.rpm}")
-                self.blower_fan.set(f"Blower fan RPM: {self._printer.hw.blower_fan.rpm}")
-                self.rear_fan.set(f"Rear fan RPM: {self._printer.hw.rear_fan.rpm}")
+                for fidx, fan in self._printer.hw.fans.items():
+                    self._fans[fidx].set(f"{fan.name} fan RPM: {fan.rpm}")
                 uv_led_info_list = [f'<li>{key}: {value}</li>' for key, value in self._printer.hw.uv_led.info.items()]
                 self.uv_led.set(f"UV LED: <ul>{''.join(uv_led_info_list)}</ul>")
                 self.uv_counter.set(f"UV LED counter: {timedelta(seconds=self._printer.hw.uv_led.usage_s)}")
