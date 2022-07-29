@@ -243,9 +243,13 @@ class TestSL1Hardware(SlafwTestCase):
             self.assertEqual(defines.fanMinRPM, value.target_rpm)
             self.assertEqual(True, value.enabled)
 
-            # below min RPM (exception)
-            with self.assertRaises(ValueError):
-                value.target_rpm = defines.fanMinRPM - 1
+            # below min RPM (adapted)
+            value.target_rpm = defines.fanMinRPM - 1
+            self.assertEqual(defines.fanMinRPM, value.target_rpm)
+
+            # above max RPM (adapted)
+            value.target_rpm = defines.fanMaxRPM[key] + 1
+            self.assertEqual(defines.fanMaxRPM[key], value.target_rpm)
 
     def test_uv_fan_rpm_control(self):
         self.hw.uv_led_fan.enabled = True

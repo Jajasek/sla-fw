@@ -58,10 +58,8 @@ class SL1Fan(Fan):
 
     @target_rpm.setter
     def target_rpm(self, value: int):
-        if not self.min_rpm <= value <= self.max_rpm:
-            raise ValueError("RPM out of range")
-        self._target_rpm = value
-        self._mcc.set_fan_rpm(self._index, value)
+        self._target_rpm = self._adapt_rpm(value)
+        self._mcc.set_fan_rpm(self._index, self._target_rpm)
 
     @property
     def error(self) -> bool:

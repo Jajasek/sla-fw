@@ -118,7 +118,7 @@ class Fan(HardwareComponent, ABC):
 
     @target_rpm.setter
     @abstractmethod
-    def target_rpm(self, rpm: int):
+    def target_rpm(self, value: int):
         ...
 
     @property
@@ -126,10 +126,10 @@ class Fan(HardwareComponent, ABC):
         return self._default_rpm
 
     @default_rpm.setter
-    def default_rpm(self, rpm: int):
-        self._default_rpm = rpm
+    def default_rpm(self, value: int):
+        self._default_rpm = self._adapt_rpm(value)
         if not self.auto_control:
-            self.target_rpm = rpm
+            self.target_rpm = self._default_rpm
 
     @property
     def min_rpm(self) -> int:
@@ -201,3 +201,13 @@ class Fan(HardwareComponent, ABC):
             self._logger.error("Failed")
         else:
             self._logger.info("Recovered")
+
+    def _adapt_rpm(self, value: int) -> int:
+        adapted = value
+        if value > self.max_rpm:
+            adapted = self.max_rpm
+        elif value < self.min_rpm:
+            adapted = self.min_rpm
+        if adapted != value:
+            self._logger.warning("Adapting rpm value from %s to %s", value, adapted)
+        return adapted
