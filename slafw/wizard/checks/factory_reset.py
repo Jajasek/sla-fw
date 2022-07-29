@@ -34,6 +34,7 @@ from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvp
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType, SyncCheck, DangerousCheck
+from slafw.wizard.setup import Configuration, Resource
 from slafw.wizard.wizards.self_test import SelfTestWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
 
@@ -197,7 +198,7 @@ class ResetHWConfig(ResetCheck):
 
 class EraseMCEeprom(ResetCheck):
     def __init__(self, hw: BaseHardware, *args, **kwargs):
-        super().__init__(WizardCheckType.ERASE_MC_EEPROM, *args, **kwargs)
+        super().__init__(WizardCheckType.ERASE_MC_EEPROM, Configuration(None, None), [Resource.MC], *args, **kwargs)
         self._hw = hw
 
     def reset_task_run(self, actions: UserActionBroker):
@@ -210,16 +211,19 @@ class ResetHomingProfiles(ResetCheck):
     """
 
     def __init__(self, hw: BaseHardware, *args, **kwargs):
-        super().__init__(WizardCheckType.RESET_HOMING_PROFILES, *args, **kwargs)
+        super().__init__(WizardCheckType.RESET_HOMING_PROFILES, Configuration(None, None), [Resource.MC], *args,
+                         **kwargs)
         self._hw = hw
 
     def reset_task_run(self, actions: UserActionBroker):
         self._hw.tower.profiles.factory_reset(True)
         self._hw.tower.profiles.write_factory()
         self._hw.tower.set_stepper_sensitivity(0)
+        self._hw.tower.apply_all_profiles()
         self._hw.tilt.profiles.factory_reset(True)
         self._hw.tilt.profiles.write_factory()
         self._hw.tilt.set_stepper_sensitivity(0)
+        self._hw.tilt.apply_all_profiles()
         self._hw.tilt.tune.factory_reset(True)
         self._hw.tilt.tune.write_factory()
 

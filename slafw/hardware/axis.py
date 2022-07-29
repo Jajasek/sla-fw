@@ -332,6 +332,10 @@ class Axis(ABC):
     def apply_profile(self, profile: SingleProfile):
         """update values of currently selected profile in MC"""
 
+    @abstractmethod
+    def apply_all_profiles(self) -> None:
+        """refresh stepper profiles in MC"""
+
     @cached_property
     @abstractmethod
     def sensitivity(self) -> int:

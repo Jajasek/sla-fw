@@ -82,12 +82,15 @@ class TiltSL1(Tilt, AxisSL1):
         self._tune = TuneTiltSL1(factory_file_path=TILT_TUNE_LOCAL, default_file_path=default_tune)
 
     def start(self):
+        self.apply_all_profiles()
+        self.actual_profile = self._profiles.homingFast    # type: ignore
+
+    def apply_all_profiles(self):
         try:
             self.set_stepper_sensitivity(self.sensitivity)
         except RuntimeError as e:
             self._logger.error("%s - ignored", e)
         self._profiles.apply_all()
-        self.actual_profile = self._profiles.homingFast    # type: ignore
 
     @property
     def position(self) -> Ustep:

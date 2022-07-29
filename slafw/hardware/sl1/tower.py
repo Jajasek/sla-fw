@@ -51,12 +51,15 @@ class TowerSL1(Tower, AxisSL1):
         }
 
     def start(self):
+        self.apply_all_profiles()
+        self.actual_profile = self._profiles.homingFast    # type: ignore
+
+    def apply_all_profiles(self):
         try:
             self.set_stepper_sensitivity(self.sensitivity)
         except RuntimeError as e:
             self._logger.error("%s - ignored", e)
         self._profiles.apply_all()
-        self.actual_profile = self._profiles.homingFast    # type: ignore
 
     @property
     def position(self) -> Nm:

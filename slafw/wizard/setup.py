@@ -30,6 +30,7 @@ class Resource(Enum):
     TOWER_DOWN = auto()
     UV = auto()
     FANS = auto()
+    MC = auto()
 
     def __lt__(self, other):
         return str(self) < str(other)

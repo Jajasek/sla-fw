@@ -80,6 +80,9 @@ class MockAxis(Axis):
     def apply_profile(self, profile: SingleProfile):
         pass
 
+    def apply_all_profiles(self) -> None:
+        pass
+
     @cached_property
     def sensitivity(self) -> int:
         return 0
