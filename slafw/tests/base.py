@@ -46,6 +46,12 @@ from slafw.wizard.wizard import Wizard
 import slafw.hardware.sl1.printer_model
 
 
+def get_printer_model():
+    try:
+        return PrinterModel()
+    except Exception:
+        return PrinterModel.SL1
+
 class SlafwTestCase(TestCase):
     # pylint: disable = too-many-instance-attributes
     LOGGER_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -86,10 +92,7 @@ class SlafwTestCase(TestCase):
         # Test overrides
         warnings.simplefilter("always")
         test_runtime.testing = True
-        try:
-            set_configured_printer_model(PrinterModel())  # Do not run UpgradeWizard by default),
-        except Exception:
-            pass
+        set_configured_printer_model(get_printer_model())   # Do not run UpgradeWizard by default)
 
     def patches(self) -> List[patch]:
         wizard_history_path = self.TEMP_DIR / "wizard_history" / "user_data"
@@ -125,7 +128,7 @@ class SlafwTestCase(TestCase):
             patch("slafw.defines.firstboot", self.TEMP_DIR / "firstboot"),
             patch("slafw.defines.expoPanelLogPath", self.TEMP_DIR / defines.expoPanelLogFileName),
             patch("slafw.defines.factory_enable", factory_enable_path),
-            patch("slafw.defines.exposure_panel_of_node", self.SAMPLES_DIR / "of_node" / PrinterModel().name.lower()),
+            patch("slafw.defines.exposure_panel_of_node", self.SAMPLES_DIR / "of_node" / get_printer_model().name.lower()),
             patch("slafw.defines.cpuSNFile", self.SAMPLES_DIR / "nvmem"),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", self.SAMPLES_DIR / "cputemp"),
         ]

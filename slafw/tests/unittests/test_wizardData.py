@@ -9,6 +9,7 @@ from slafw import defines
 from slafw.tests.base import SlafwTestCaseDBus
 from slafw.tests.mocks.hardware import HardwareMock
 from slafw.wizard.wizards.self_test import SelfTestWizard
+from slafw.hardware.printer_model import PrinterModel
 
 
 class TestSelfTestWizardDataPresent(SlafwTestCaseDBus):
@@ -21,7 +22,7 @@ class TestSelfTestWizardDataPresent(SlafwTestCaseDBus):
         except FileNotFoundError:
             pass
         defines.factoryMountPoint.mkdir(parents=True)
-        self.wizard = SelfTestWizard(HardwareMock(), Mock(), Mock())
+        self.wizard = SelfTestWizard(HardwareMock(printer_model=PrinterModel.SL1), Mock(), Mock())
 
     def tearDown(self) -> None:
         del self.wizard

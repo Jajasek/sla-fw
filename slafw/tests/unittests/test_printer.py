@@ -12,6 +12,7 @@ from slafw.states.printer import PrinterState
 from slafw.tests.base import RefCheckTestCase, SlafwTestCaseDBus
 
 
+@patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
 class TestPrinterSetup(SlafwTestCaseDBus):
     printer: Printer
 
@@ -22,14 +23,12 @@ class TestPrinterSetup(SlafwTestCaseDBus):
 
         super().tearDown()
 
-    @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
     @patch("slafw.libPrinter.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
     def test_setup_ok(self) -> None:
         self.printer = Printer()
         self.printer.setup()
         self.printer.hw.config.factory_reset()  # Ensure this tests does not depend on previous config
 
-    # FIXME not printer model independent
     @patch("slafw.hardware.sl1.hardware.SL1ExposureScreen.start", Mock(side_effect = UnknownPrinterModel()))
     def test_setup_fail(self) -> None:
         self.printer = Printer()

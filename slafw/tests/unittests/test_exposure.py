@@ -8,10 +8,9 @@ from pathlib import Path
 from time import sleep
 from typing import Optional
 
-from unittest.mock import Mock, MagicMock, AsyncMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock, call
 
 from slafw.tests.base import SlafwTestCaseDBus, RefCheckTestCase
-from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.printer_model import PrinterModel
 from slafw.image.exposure_image import ExposureImage
 from slafw import defines
@@ -23,59 +22,61 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import PrintingDirectlyFromMedia, ResinNotEnough
 from slafw.configs.runtime import RuntimeConfig
+from slafw.configs.unit import Nm
 from slafw.exposure.exposure import Exposure
 from slafw.states.exposure import ExposureState
 from slafw.tests.mocks.hardware import HardwareMock
+from slafw.project.project import ExposureUserProfile
+
+
+def change_dir(path: str):
+    return Path(defines.previousPrints) / Path(path).name
+
+def setupHw() -> HardwareMock:
+    hw = HardwareMock(printer_model = PrinterModel.SL1)
+    hw.connect()
+    hw.start()
+    hw.config.uvPwm = 250
+    hw.config.calibrated = True
+    return hw
 
 
 class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
     PROJECT = str(SlafwTestCaseDBus.SAMPLES_DIR / "numbers.sl1")
     PROJECT_LAYER_CHANGE = str(SlafwTestCaseDBus.SAMPLES_DIR / "layer_change.sl1")
     PROJECT_LAYER_CHANGE_SAFE = str(SlafwTestCaseDBus.SAMPLES_DIR / "layer_change_safe_profile.sl1")
-    PROJECT_RESIN_CALIB = str(SlafwTestCaseDBus.SAMPLES_DIR / "Resin_calibration_linear_object.sl1")
     BROKEN_EMPTY_PROJECT = str(SlafwTestCaseDBus.SAMPLES_DIR / "empty_file.sl1")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.exposure: Optional[Exposure] = None
 
-    @staticmethod
-    def _change_dir(path: str):
-        return Path(defines.previousPrints) / Path(path).name
-
     def setUp(self):
         super().setUp()
         defines.statsData = str(self.TEMP_DIR / "stats.toml")
         defines.previousPrints = str(self.TEMP_DIR)
-        defines.lastProjectHwConfig = self._change_dir(defines.lastProjectHwConfig)
-        defines.lastProjectFactoryFile = self._change_dir(
-            defines.lastProjectFactoryFile
-        )
-        defines.lastProjectConfigFile = self._change_dir(defines.lastProjectConfigFile)
-        defines.lastProjectPickler = self._change_dir(defines.lastProjectPickler)
+        defines.lastProjectHwConfig = change_dir(defines.lastProjectHwConfig)
+        defines.lastProjectFactoryFile = change_dir(defines.lastProjectFactoryFile)
+        defines.lastProjectConfigFile = change_dir(defines.lastProjectConfigFile)
+        defines.lastProjectPickler = change_dir(defines.lastProjectPickler)
 
-        self.hw = self.setupHw()
-        self._fake_calibration(self.hw)
+        self.hw = setupHw()
         self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()
         self.exposure_image.__class__ = ExposureImage
         self.exposure_image.__reduce__ = lambda x: (Mock, ())
         self.exposure_image.sync_preloader.return_value = 100
 
-    @staticmethod
-    def setupHw() -> HardwareMock:
-        hw = HardwareMock(printer_model = PrinterModel.SL1)
-        hw.connect()
-        hw.start()
-        return hw
-
     def tearDown(self):
         self.hw.exit()
         super().tearDown()
 
     def test_exposure_init_not_calibrated(self):
+        hw = HardwareMock(printer_model = PrinterModel.SL1)
+        hw.connect()
+        hw.start()
         with self.assertRaises(NotUVCalibrated):
-            exposure = Exposure(0, self.setupHw(), self.exposure_image, self.runtime_config)
+            exposure = Exposure(0, hw, self.exposure_image, self.runtime_config)
             exposure.read_project(TestExposure.PROJECT)
 
     def test_exposure_init(self):
@@ -93,24 +94,21 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self.assertIsNone(exposure.warning)
 
     def test_resin_enough(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         hw.get_resin_volume_async = AsyncMock(return_value = defines.resinMaxVolume)
         exposure = self._run_exposure(hw)
         self.assertNotEqual(exposure.state, ExposureState.FAILURE)
         self.assertIsNone(exposure.warning)
 
     def test_resin_warning(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         hw.get_resin_volume_async = AsyncMock(return_value = defines.resinMinVolume + 0.1)
         exposure = self._run_exposure(hw)
         self.assertIsInstance(exposure.fatal_error, WarningEscalation)
         self.assertIsInstance(exposure.fatal_error.warning, ResinNotEnough)  # pylint: disable=no-member
 
     def test_resin_error(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         hw.get_resin_volume_async = AsyncMock(return_value = defines.resinMinVolume - 0.1)
         exposure = self._run_exposure(hw)
         self.assertIsInstance(exposure.fatal_error, ResinTooLow)
@@ -122,8 +120,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self.assertIsInstance(exposure.fatal_error, ProjectErrorCantRead)
 
     def test_stuck_recovery_success(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         hw.tilt.layer_down_wait = MagicMock(side_effect=TiltHomeFailed())
         exposure = self._start_exposure(hw)
 
@@ -149,8 +146,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         raise TimeoutError("Waiting for exposure failed")
 
     def test_stuck_recovery_fail(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         hw.tilt.layer_down_wait = MagicMock(side_effect=TiltHomeFailed())
         exposure = self._start_exposure(hw)
 
@@ -176,8 +172,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         raise TimeoutError("Waiting for exposure failed")
 
     def test_resin_refilled(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         fake_resin_volume = 100.0
         hw.get_resin_volume_async = AsyncMock(return_value = fake_resin_volume)
         exposure = self._start_exposure(hw)
@@ -204,8 +199,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         raise TimeoutError("Waiting for exposure failed")
 
     def test_resin_not_refilled(self):
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         fake_resin_volume = 100.0
         hw.get_resin_volume.return_value = fake_resin_volume
         exposure = self._start_exposure(hw)
@@ -233,8 +227,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
     def test_exposure_force_slow_tilt(self):
         defines.livePreviewImage = str(self.TEMP_DIR / "live.png")
         defines.displayUsageData = str(self.TEMP_DIR / "display_usage.npz")
-        hw = self.setupHw()
-        self._fake_calibration(hw)
+        hw = setupHw()
         print(hw.config.limit4fast)
         hw.config.limit4fast = 45
         exposure_image = ExposureImage(hw)
@@ -307,10 +300,277 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         exposure.waitDone()
         return exposure
 
-    @staticmethod
-    def _fake_calibration(hw: BaseHardware):
-        hw.config.uvPwm = 250
-        hw.config.calibrated = True
+
+class TestLayers(SlafwTestCaseDBus):
+    PROJECT_LAYER_CHANGE = str(SlafwTestCaseDBus.SAMPLES_DIR / "layer_change.sl1")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exposure: Optional[Exposure] = None
+        self.sleep_mock = None
+
+    def setUp(self):
+        super().setUp()
+        defines.statsData = str(self.TEMP_DIR / "stats.toml")
+        defines.previousPrints = str(self.TEMP_DIR)
+        defines.lastProjectHwConfig = change_dir(defines.lastProjectHwConfig)
+        defines.lastProjectFactoryFile = change_dir(defines.lastProjectFactoryFile)
+        defines.lastProjectConfigFile = change_dir(defines.lastProjectConfigFile)
+        defines.lastProjectPickler = change_dir(defines.lastProjectPickler)
+
+        self.hw = setupHw()
+        self.runtime_config = RuntimeConfig()
+        self.exposure_image = Mock()
+        self.exposure_image.__class__ = ExposureImage
+        self.exposure_image.__reduce__ = lambda x: (Mock, ())
+        self.exposure_image.sync_preloader.return_value = 100
+
+        self.hw.tower.move_ensure = MagicMock()
+        self.hw.tilt.layer_up_wait = MagicMock()
+        self.hw.tilt.layer_down_wait = MagicMock()
+        self.exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config)
+        self.exposure.read_project(TestExposure.PROJECT_LAYER_CHANGE)
+        self.exposure.startProject()
+
+    def tearDown(self):
+        self.hw.exit()
+        super().tearDown()
+
+    @patch("slafw.exposure.exposure.sleep")
+    def test_layer_moves(self, sleep_mock):
+        self.sleep_mock = sleep_mock
+        # verify "input" parameters
+        self.assertTrue(self.hw.config.tilt)
+        self.assertEqual(Nm(50000), self.hw.config.calib_tower_offset_nm)
+        self.assertEqual(0, self.hw.config.delayBeforeExposure)
+        self.assertEqual(0, self.hw.config.delayAfterExposure)
+        self.assertEqual(5, self.hw.config.stirringDelay)
+        self.assertEqual(1290240, self.hw.white_pixels_threshold)
+        self.assertEqual(13, self.exposure.project.first_slow_layers)
+
+        # DEFAULT profile
+        expected_results = {
+            "start_inside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(1.0), call(100.0)],
+            },
+            "start_last" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.DEFAULT)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(False)],
+                "sleep" : [call(1.0), call(100.0)],
+            },
+            "start_outside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.DEFAULT)],
+#                "tilt_down_calls" : [call(TiltSpeed.DEFAULT)],
+                "tilt_up_calls" : [call(False)],
+                "tilt_down_calls" : [call(False)],
+                "sleep" : [call(100.0)]
+            },
+            "big_first" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.DEFAULT)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(False)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(100.0)],
+            },
+            "big_inside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(1.0), call(100.0)],
+            },
+            "big_last" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.DEFAULT)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(False)],
+                "sleep" : [call(1.0), call(100.0)],
+            },
+            "big_outside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.DEFAULT)],
+#                "tilt_down_calls" : [call(TiltSpeed.DEFAULT)],
+                "tilt_up_calls" : [call(False)],
+                "tilt_down_calls" : [call(False)],
+                "sleep" : [call(100.0)]
+            },
+        }
+        self._check_all_layer_variants(ExposureUserProfile.DEFAULT, expected_results)
+
+        # SAFE profile
+        expected_results = {
+            "start_inside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+            "start_last" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+            "start_outside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+            "big_first" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+            "big_inside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+            "big_last" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+            "big_outside" : {
+                "tower_move_calls" : [call(Nm(50000))],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SLOW)],
+                "tilt_up_calls" : [call(True)],
+                "tilt_down_calls" : [call(True)],
+                "sleep" : [call(3.0), call(100.0)],
+            },
+        }
+#        self._check_all_layer_variants(ExposureUserProfile.SAFE, expected_results)
+
+        # HIGH_VISCOSITY profile
+        expected_results = {
+            "start_inside" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+            "start_last" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+            "start_outside" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+            "big_first" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+            "big_inside" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+            "big_last" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+            "big_outside" : {
+                "tower_move_calls" : [call(4040), call(40)],
+#                "tilt_up_calls" : [call(tilt_speed=TiltSpeed.SUPERSLOW)],
+#                "tilt_down_calls" : [call(TiltSpeed.SUPERSLOW)],
+                "sleep" : [call(3.5), call(100.0)],
+            },
+        }
+#        self._check_all_layer_variants(ExposureUserProfile.HIGH_VISCOSITY, expected_results)
+
+        self.exposure = None
+
+    def _check_all_layer_variants(self, user_profile, expected_results):
+        self.exposure.project.exposure_user_profile = user_profile
+
+        # start - first layers (3 + numFade)
+#        test_parameters = { "tilt_speed" : TiltSpeed.SLOW, "actual_layer" : 0, "white_pixels" : 1000}
+        test_parameters = { "slow_move" : True, "actual_layer" : 0, "white_pixels" : 1000}
+        self._check_layer_variant(test_parameters, expected_results["start_inside"])
+        for _ in range(12):
+            self._check_layer_variant({}, expected_results["start_inside"])
+        self._check_layer_variant({}, expected_results["start_last"])
+        for _ in range(10):
+            self._check_layer_variant({}, expected_results["start_outside"])
+
+        # big exposured area (limit4fast and 1 mm after)
+        test_parameters = { "actual_layer" : 1000, "white_pixels" : 1300000}
+        self._check_layer_variant(test_parameters, expected_results["big_first"])
+        for _ in range(5):
+            self._check_layer_variant({}, expected_results["big_inside"])
+        self._check_layer_variant({"white_pixels" : 1000}, expected_results["big_inside"])
+        for _ in range(19):
+            self._check_layer_variant({}, expected_results["big_inside"])
+        self._check_layer_variant({}, expected_results["big_last"])
+        for _ in range(10):
+            self._check_layer_variant({}, expected_results["big_outside"])
+
+    def _check_layer_variant(self, test_parameters, expected_result):
+        # pylint: disable = protected-access
+        self.hw.tower.move_ensure.reset_mock()
+        self.hw.tilt.layer_up_wait.reset_mock()
+        self.hw.tilt.layer_down_wait.reset_mock()
+        self.sleep_mock.reset_mock()
+#        if "tilt_speed" in test_parameters:
+#            self.exposure._tilt_speed = test_parameters["tilt_speed"]
+        if "slow_move" in test_parameters:
+            self.exposure._slow_move = test_parameters["slow_move"]
+        if "actual_layer" in test_parameters:
+            self.exposure.actual_layer = test_parameters["actual_layer"]
+        else:
+            self.exposure.actual_layer += 1
+        if "white_pixels" in test_parameters:
+            self.exposure_image.sync_preloader.return_value = test_parameters["white_pixels"]
+        success, _ = self.exposure._do_frame((110000,), False, False, 50000)
+        self.assertTrue(success)
+#        print(f"move_ensure: {self.hw.tower.move_ensure.call_args_list}")
+#        print(f"layer_up_wait: {self.hw.tilt.layer_up_wait.call_args_list}")
+#        print(f"layer_down_wait: {self.hw.tilt.layer_down_wait.call_args_list}")
+#        print(f"sleep: {self.sleep_mock.call_args_list}")
+        # DO NOT USE assert_has_calls() - "There can be extra calls before or after the specified calls."
+        self.assertEqual(self.hw.tower.move_ensure.call_args_list, expected_result["tower_move_calls"])
+        self.assertEqual(self.hw.tilt.layer_up_wait.call_args_list, expected_result["tilt_up_calls"])
+        self.assertEqual(self.hw.tilt.layer_down_wait.call_args_list, expected_result["tilt_down_calls"])
+        self.assertEqual(self.sleep_mock.call_args_list, expected_result["sleep"])
 
 
 if __name__ == "__main__":

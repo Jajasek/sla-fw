@@ -6,6 +6,7 @@ from PySignal import Signal
 
 from slafw.configs.runtime import RuntimeConfig
 from slafw.states.printer import PrinterState
+from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.mocks.hardware import HardwareMock
 from slafw.tests.mocks.network import Network
 from slafw.tests.mocks.action_manager import ActionManager
@@ -19,7 +20,7 @@ class Printer:
         self.api_key_changed = Signal()
         self.data_privacy_changed = Signal()
         self.exception_changed = Signal()
-        self.hw = HardwareMock()
+        self.hw = HardwareMock(printer_model=PrinterModel.SL1)
         self.action_manager = ActionManager(exposure)
         self.runtime_config = RuntimeConfig()
         self.unboxed_changed = Signal()

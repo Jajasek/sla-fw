@@ -102,10 +102,10 @@ class MockTower(Tower, MockAxis):
 
 class MockTilt(Tilt, MockAxis):
     def get_tune_profile_up(self, slow_move: bool):
-        return None
+        return slow_move
 
     def get_tune_profile_down(self, slow_move: bool):
-        return None
+        return slow_move
 
     def layer_up_wait(self, profile: SingleProfile=None, tiltHeight: int=0) -> None:
         self.move(self._config.tiltHeight)
