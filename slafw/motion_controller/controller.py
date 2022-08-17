@@ -487,7 +487,7 @@ class MotionController:
 
                 with subprocess.Popen(
                     [defines.script_dir / "flashMC.sh",
-                        defines.dataPath,
+                        defines.firmwarePath,
                         str(mc_board_version),
                         defines.motionControlDevice],
                     stdout=subprocess.PIPE,

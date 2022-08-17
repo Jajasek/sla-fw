@@ -10,7 +10,7 @@ from pathlib import Path
 import slafw
 from slafw import test_runtime
 
-reqMcVersion = "1.1.8"
+reqMcVersion = "1.1.9"
 
 printerVariant = "default"
 
@@ -19,6 +19,7 @@ persistentStorage = "/var/sl1fw"
 
 swPath = os.path.dirname(slafw.__file__)
 dataPath = os.path.join(swPath, "data")
+firmwarePath = Path("/lib/firmware")
 ramdiskPath = "/run/slafw"
 mediaRootPath = "/run/media/system"
 configDir = Path("/etc/sl1fw")
