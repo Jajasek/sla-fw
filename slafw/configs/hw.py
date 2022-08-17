@@ -82,7 +82,6 @@ class HwConfig(IniConfig):
     stirringDelay = IntValue(5, minimum=0, maximum=300)
     measuringMoves = IntValue(3, minimum=1, maximum=10)
     pwrLedPwm = IntValue(100, minimum=0, maximum=100, doc="Power LED brightness. [%]")
-    MCBoardVersion = IntValue(6, minimum=5, maximum=6, doc="Motion controller board revision. Used to flash firmware.")
     towerSensitivity = IntValue(0, minimum=-2, maximum=2, factory=True, doc="Tower sensitivity adjustment")
     vatRevision = IntValue(0, minimum=0, maximum=1, doc="Resin vat revision: 0 = metalic (SL1); 1 = plastic (SL1S);")
     forceSlowTiltHeight = IntValue(1000000, minimum=0, maximum=10000000, doc="Force slow tilt after crossing limit4fast for defined height. [nm]")
@@ -220,4 +219,3 @@ class HwConfig(IniConfig):
                                    doc="Maximum tower height in mm")
     showWizard = BoolValue(True, doc="Display wizard at startup if True.")
     showUnboxing = BoolValue(True, doc="Display unboxing wizard at startup if True.")
-    showI18nSelect = BoolValue(True, doc="Display language select dialog at startup if True.")

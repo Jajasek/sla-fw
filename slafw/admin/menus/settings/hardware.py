@@ -42,7 +42,6 @@ class HardwareSettingsMenu(SettingsMenu):
                     minimum=self._temp.get_value_property("stirringDelay", "min") / 10,
                     maximum=self._temp.get_value_property("stirringDelay", "max") / 10),
                 AdminIntValue.from_value("Power LED intensity", self._temp, "pwrLedPwm", 1, "brightness_color"),
-                AdminIntValue.from_value("MC board version", self._temp, "MCBoardVersion", 1, "firmware-icon"),
             )
         )
 

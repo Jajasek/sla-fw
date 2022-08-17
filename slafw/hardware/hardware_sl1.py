@@ -186,7 +186,7 @@ class HardwareSL1(BaseHardware):
         self.tilt.movement_ended.connect(lambda: self._tilt_position_checker.set_rapid_update(False))
 
     def flashMC(self):
-        self.mcc.flash(self.config.MCBoardVersion)
+        self.mcc.flash()
 
     @property
     def white_pixels_threshold(self) -> int:

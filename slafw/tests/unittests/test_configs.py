@@ -257,10 +257,10 @@ class TestHardwareConfig(SlafwTestCase):
         self.assertEqual('tower_height_nm = 1024\nuvPwm = 222\n', self.get_config_content(self.writetest_config_path),
                          "Check file lines append",)
 
-        del hw_config.MCBoardVersion
+        del hw_config.uvPwm
         hw_config.write(self.test_config_path)
         print(self.get_config_content(self.writetest_config_path))
-        self.assertEqual('tower_height_nm = 1024\nuvPwm = 222\n', self.get_config_content(self.test_config_path),
+        self.assertEqual('tower_height_nm = 1024\n', self.get_config_content(self.test_config_path),
                          "Check file lines delete",)
 
     def test_uvledpwm1(self):

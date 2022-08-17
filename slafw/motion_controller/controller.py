@@ -480,7 +480,7 @@ class MotionController:
         except Exception as e:
             raise MotionControllerException("Ready read failed", self.trace) from e
 
-    def flash(self, mc_board_version) -> None:
+    def flash(self) -> None:
         with self._flash_lock:
             with self._raw_read_lock:
                 self.reset()
@@ -488,7 +488,6 @@ class MotionController:
                 with subprocess.Popen(
                     [defines.script_dir / "flashMC.sh",
                         defines.firmwarePath,
-                        str(mc_board_version),
                         defines.motionControlDevice],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
