@@ -80,7 +80,7 @@ class UVLEDSL1x(UVLED, ABC):
     def info(self) -> Dict[str, Any]:
         return {
             # UV PWM set during this check
-            "uvPwm": self.pwm,
+            "UV LED PWM": self.pwm,
         }
 
     @property
@@ -193,10 +193,12 @@ class SL1SUVLED(UVLEDSL1x):
 
     @property
     def info(self) -> Dict[str, Any]:
-        return {
-            "booster serial": self._booster.board_serial_no,
-            "status: ": self._booster.status(),
-        }
+        # booster serial is the only useful information
+        # booster status() heavily depends on PWM and UV LED state
+        # what about EEPROM content?
+        return super().info | {
+            "Booster serial": self._booster.board_serial_no,
+        }   # type: ignore[operator]
 
     @cached_property
     def parameters(self) -> UvLedParameters:

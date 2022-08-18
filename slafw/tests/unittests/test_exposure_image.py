@@ -6,6 +6,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
+from unittest.mock import Mock
 
 import numpy
 from PIL import Image
@@ -65,22 +66,20 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.ZABA))
 
     def test_mask(self):
-        project = Project(self.hw, self.NUMBERS)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.NUMBERS)
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
         self.assertFalse(project.warnings)
-        self.assertFalse(project.per_partes)
         white_pixels = self.exposure_image.sync_preloader()
         self.assertEqual(233600, white_pixels)
         self.exposure_image.blit_image()
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "mask.png"))
 
     def test_display_usage(self):
-        project = Project(self.hw, self.NUMBERS)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.NUMBERS)
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
         self.assertFalse(project.warnings)
-        self.assertFalse(project.per_partes)
         self.exposure_image.sync_preloader()
         self.exposure_image.save_display_usage()
         with numpy.load(self.display_usage) as npzfile:
@@ -89,27 +88,8 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
             example_data = npzfile['display_usage']
         self.assertTrue(numpy.array_equal(saved_data, example_data))
 
-    def test_per_partes(self):
-        project = Project(self.hw, self.NUMBERS)
-        project.per_partes = True
-        self.exposure_image.new_project(project)
-        self.exposure_image.preload_image(0)
-        self.assertFalse(project.warnings)
-        second = False
-        white_pixels = self.exposure_image.sync_preloader()
-        self.assertEqual(233600, white_pixels)
-        self.exposure_image.screenshot_rename(second)
-        self.exposure_image.blit_image(second)
-        self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "part1.png"))
-        self.assertSameImage(Image.open(defines.livePreviewImage), Image.open(self.SAMPLES_DIR / "live1.png"))
-        second = True
-        self.exposure_image.screenshot_rename(second)
-        self.exposure_image.blit_image(second)
-        self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "part2.png"))
-        self.assertSameImage(Image.open(defines.livePreviewImage), Image.open(self.SAMPLES_DIR / "live2.png"))
-
     def test_calibration_calib_pad(self):
-        project = Project(self.hw, self.CALIBRATION)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION)
         project.exposure_time_ms = 4000
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
@@ -120,7 +100,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_pad.png"))
 
     def test_calibration_calib(self):
-        project = Project(self.hw, self.CALIBRATION)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION)
         project.exposure_time_ms = 4000
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(10)
@@ -131,7 +111,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib.png"), threshold=40)
 
     def test_calibration_fill(self):
-        project = Project(self.hw, self.CALIBRATION)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION)
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
         self.assertFalse(project.warnings)
@@ -142,7 +122,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_fill.png"))
 
     def test_calibration_calib_pad_compact(self):
-        project = Project(self.hw, self.CALIBRATION)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION)
         project.calibrate_compact = True
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
@@ -153,7 +133,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_pad_compact.png"))
 
     def test_calibration_calib_compact(self):
-        project = Project(self.hw, self.CALIBRATION)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION)
         project.calibrate_compact = True
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(10)
@@ -165,7 +145,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
                              threshold=40)
 
     def test_calibration_fill_compact(self):
-        project = Project(self.hw, self.CALIBRATION)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION)
         project.calibrate_compact = True
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
@@ -177,7 +157,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_fill_compact.png"))
 
     def test_calibration_calib_pad_10(self):
-        project = Project(self.hw, self.CALIBRATION_LINEAR)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION_LINEAR)
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
         self.assertFalse(project.warnings)
@@ -187,7 +167,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_pad_10.png"))
 
     def test_calibration_calib_10(self):
-        project = Project(self.hw, self.CALIBRATION_LINEAR)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION_LINEAR)
         self.exposure_image.new_project(project)
         self.assertFalse(project.warnings)
         self.exposure_image.preload_image(10)
@@ -197,7 +177,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_10.png"), threshold=40)
 
     def test_calibration_fill_10(self):
-        project = Project(self.hw, self.CALIBRATION_LINEAR)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION_LINEAR)
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
         self.assertFalse(project.warnings)
@@ -208,7 +188,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_fill_10.png"))
 
     def test_calibration_calib_pad_10_compact(self):
-        project = Project(self.hw, self.CALIBRATION_LINEAR)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION_LINEAR)
         project.calibrate_compact = True
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)
@@ -219,7 +199,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_pad_10_compact.png"))
 
     def test_calibration_calib_10_compact(self):
-        project = Project(self.hw, self.CALIBRATION_LINEAR)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION_LINEAR)
         project.calibrate_compact = True
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(10)
@@ -230,7 +210,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         self.assertSameImage(self.exposure_image.buffer, Image.open(self.SAMPLES_DIR / "fbdev" / "calib_10_compact.png"), threshold=40)
 
     def test_calibration_fill_10_compact(self):
-        project = Project(self.hw, self.CALIBRATION_LINEAR)
+        project = Project(self.hw, [Mock()] * 3, [Mock()] * 4, self.CALIBRATION_LINEAR)
         project.calibrate_compact = True
         self.exposure_image.new_project(project)
         self.exposure_image.preload_image(0)

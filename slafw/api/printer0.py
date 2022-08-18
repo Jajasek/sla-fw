@@ -288,10 +288,10 @@ class Printer0:
         """
         with WarningAction(self.printer.hw.power_led):
             self.printer.hw.tilt.position = self.printer.hw.config.tiltMax
-            self.printer.hw.tilt.layer_down_wait()
+            self.printer.hw.tilt.layer_down_wait(self.printer.layer_profiles.fast)
             if not self.printer.hw.tilt.synced:
                 self.printer.hw.tilt.sync_ensure()
-            self.printer.hw.tilt.layer_up_wait()
+            self.printer.hw.tilt.layer_up_wait(self.printer.layer_profiles.fast)
 
     @auto_dbus
     @state_checked(Printer0State.IDLE)
@@ -663,6 +663,8 @@ class Printer0:
             self.printer.hw,
             self.printer.exposure_image,
             self.printer.runtime_config,
+            self.printer.exposure_profiles,
+            self.printer.layer_profiles,
             project_path,
         )
         if auto_advance:
@@ -692,6 +694,8 @@ class Printer0:
             self.printer.hw,
             self.printer.exposure_image,
             self.printer.runtime_config,
+            self.printer.exposure_profiles,
+            self.printer.layer_profiles,
         )
         if auto_advance:
             exposure.confirm_print_start()

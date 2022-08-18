@@ -2,7 +2,7 @@
 # Copyright (C) 2022 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import Collection
+from typing import Collection, Optional
 from pathlib import Path
 from time import sleep
 
@@ -10,22 +10,23 @@ from slafw.defines import dataPath
 from slafw.libPrinter import Printer
 from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 from slafw.admin.control import AdminControl
-from slafw.admin.items import AdminItem, AdminLabel, AdminAction, AdminIntValue, AdminSelectionValue
+from slafw.admin.items import AdminItem, AdminLabel, AdminAction, AdminIntValue, AdminSelectionValue, AdminBoolValue
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.admin.menu import AdminMenu
 from slafw.admin.menus.dialogs import Info, Wait, Error
 from slafw.hardware.axis import Axis
 from slafw.hardware.tower import MovingProfilesTower
 from slafw.hardware.tilt import MovingProfilesTilt
-from slafw.hardware.sl1.tilt import TuneTiltSL1
 from slafw.hardware.power_led_action import WarningAction
 from slafw.functions.files import get_save_path, usb_remount, get_export_file_name
 from slafw.errors.errors import NoExternalStorage, TiltHomeFailed
-from slafw.configs.value import ProfileIndex
+from slafw.configs.value import ProfileIndex, BoolValue
+from slafw.configs.unit import Nm
+from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 
 
 class Profiles(SafeAdminMenu):
-    def __init__(self, control: AdminControl, printer: Printer, axis: Axis, pset: ProfileSet):
+    def __init__(self, control: AdminControl, printer: Printer, pset: ProfileSet, axis: Optional[Axis] = None):
         super().__init__(control)
         self._printer = printer
         self._pset = pset
@@ -35,7 +36,7 @@ class Profiles(SafeAdminMenu):
             (
                 AdminAction(
                     f"Edit {pset.name}",
-                    lambda: self.enter(EditProfiles(self._control, printer, axis, pset)),
+                    lambda: self.enter(EditProfiles(self._control, printer, pset, axis)),
                     "edit_white"
                 ),
                 AdminAction(
@@ -68,28 +69,39 @@ class Profiles(SafeAdminMenu):
 
 
 class EditProfiles(AdminMenu):
-    def __init__(self, control: AdminControl, printer: Printer, axis: Axis, pset: ProfileSet):
+    def __init__(self, control: AdminControl, printer: Printer, pset: ProfileSet, axis: Optional[Axis] = None):
         super().__init__(control)
         self.add_back()
-        self.add_items(self._get_items(printer, axis, pset))
+        self.add_items(self._get_items(printer, pset, axis))
 
-    def _get_items(self, printer: Printer, axis: Axis, pset: ProfileSet) -> Collection[AdminItem]:
+    def _get_items(self, printer: Printer, pset: ProfileSet, axis: Optional[Axis] = None) -> Collection[AdminItem]:
         if isinstance(pset, (MovingProfilesTilt, MovingProfilesTower)):
             icon = "steppers_color"
-        elif isinstance(pset, TuneTiltSL1):
-            icon = "tilt_sensitivity_color"
+        elif isinstance(pset, ExposureProfilesSL1):
+            icon = "uv_calibration"
+        elif isinstance(pset, LayerProfilesSL1):
+            icon = "statistics_color"
         else:
             icon = ""
         for profile in pset:
-            yield AdminAction(profile.name, self._get_callback(printer, axis, pset, profile), icon)
+            yield AdminAction(profile.name, self._get_callback(printer, pset, profile, axis), icon)
 
-    def _get_callback(self, printer: Printer, axis: Axis, pset: ProfileSet, profile: SingleProfile):
-        return lambda: self._control.enter(EditProfileItems(self._control, printer, axis, pset, profile))
+    def _get_callback(self,
+            printer: Printer,
+            pset: ProfileSet,
+            profile: SingleProfile,
+            axis: Optional[Axis] = None):
+        return lambda: self._control.enter(EditProfileItems(self._control, printer, pset, profile, axis))
 
 
 class EditProfileItems(SafeAdminMenu):
     # pylint: disable = too-many-arguments
-    def __init__(self, control: AdminControl, printer: Printer, axis: Axis, pset: ProfileSet, profile: SingleProfile):
+    def __init__(self,
+            control: AdminControl,
+            printer: Printer,
+            pset: ProfileSet,
+            profile: SingleProfile,
+            axis: Optional[Axis] = None):
         super().__init__(control)
         self._printer = printer
         self._axis = axis
@@ -98,18 +110,26 @@ class EditProfileItems(SafeAdminMenu):
         self._temp_profile = None
         self._temp = profile.get_writer()
         self.add_back()
-        self.add_item(AdminAction("Test profile", self.test_profile, "touchscreen-icon"))
+        if isinstance(self._pset, (MovingProfilesTilt, MovingProfilesTower, LayerProfilesSL1)):
+            self.add_items(
+                (
+                    AdminAction("Test profile", self.test_profile, "touchscreen-icon"),
+                    AdminAction("Release motors", printer.hw.motors_release, "disable_steppers_color"),
+                )
+            )
         self.add_items(self._get_items(profile))
 
     def _get_items(self, profile: SingleProfile) -> Collection[AdminItem]:
         for value in profile:
             if isinstance(value, ProfileIndex):
                 yield AdminSelectionValue.from_value(value.key, self._temp, value.key, value.options, True, "edit_white")
+            elif isinstance(value, BoolValue):
+                yield AdminBoolValue.from_value(value.key, self._temp, value.key, "edit_white")
             else:
                 yield AdminIntValue.from_value(value.key, self._temp, value.key, 1, "edit_white")
 
     def on_leave(self):
-        self._temp.commit(factory=True)
+        self._temp.commit()
         self._pset.apply_all()
 
     @SafeAdminMenu.safe_call
@@ -122,48 +142,40 @@ class EditProfileItems(SafeAdminMenu):
         if isinstance(self._pset, (MovingProfilesTilt, MovingProfilesTower)):
             self._axis.actual_profile = self._temp_profile
             getattr(self._control, f"{self._axis.name}_moves")()
-        elif isinstance(self._pset, TuneTiltSL1):
-            if self._profile.name.find("_down_") != -1:
-                self._control.enter(Wait(self._control, self._do_tune_test_down))
-            elif self._profile.name.find("_up_") != -1:
-                self._control.enter(Wait(self._control, self._do_tune_test_up))
-            else:
-                raise RuntimeError(f"Unknown profile direction: {self._profile.name}")
+        elif isinstance(self._pset, LayerProfilesSL1):
+            self._control.enter(Wait(self._control, self._do_layer_profile_test))
         else:
             raise RuntimeError(f"Unknown profiles type: {type(self._pset)}")
 
-    def _sync(self):
-        if not self._axis.synced:
-            self._axis.actual_profile = self._axis.profiles.homingFast    # type: ignore
+    def _sync(self, axis: Axis):
+        if not axis.synced:
             try:
-                self._axis.sync_ensure()
+                axis.sync_ensure()
             except TiltHomeFailed:
-                self._control.enter(Error(self._control, text=f"Failed to home {self._axis.name}"))
+                self._control.enter(Error(self._control, text=f"Failed to home {axis.name}"))
                 return False
-        self._axis.actual_profile = self._axis.profiles.moveFast    # type: ignore
         return True
 
-    def _do_tune_test_down(self, status: AdminLabel):
-        status.set(f"Testing {self._profile.name}")
-        with WarningAction(self._printer.hw.power_led):
-            if self._sync():
-                self._axis.move_ensure(self._axis.config_height_position)
-                self._printer.hw.beepEcho()
+    def _do_layer_profile_test(self, status: AdminLabel):
+        status.set("Moving to start positions")
+        hw = self._printer.hw
+        with WarningAction(hw.power_led):
+            if self._sync(hw.tower) and self._sync(hw.tilt):
+                tower_position = Nm(100_000_000)
+                hw.tower.actual_profile = hw.tower.profiles.moveFast
+                hw.tower.move(tower_position)
+                hw.tilt.actual_profile = hw.tilt.profiles.moveFast
+                hw.tilt.move(hw.tilt.config_height_position)
+                while hw.tower.moving or hw.tilt.moving:
+                    sleep(0.25)
+                status.set(f"Testing profile {self._profile.name}")
                 sleep(1)
-                self._printer.hw.tilt.layer_down_wait(self._temp_profile)
-                self._printer.hw.beepEcho()
+                hw.beepEcho()
+                hw.tilt.layer_peel_moves(self._temp_profile, tower_position + Nm(50000), last_layer=False)
+                hw.beepEcho()
+                status.set("Done")
                 sleep(1)
-
-    def _do_tune_test_up(self, status: AdminLabel):
-        status.set(f"Testing {self._profile.name}")
-        with WarningAction(self._printer.hw.power_led):
-            if self._sync():
-                self._axis.move_ensure(self._axis.minimal_position)
-                self._printer.hw.beepEcho()
-                sleep(1)
-                self._printer.hw.tilt.layer_up_wait(self._temp_profile)
-                self._printer.hw.beepEcho()
-                sleep(1)
+                hw.tower.move(tower_position)
 
 
 class ImportProfiles(SafeAdminMenu):

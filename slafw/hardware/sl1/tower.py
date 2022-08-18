@@ -8,30 +8,15 @@ from typing import List
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Nm
-from slafw.configs.value import DictOfConfigs
 from slafw.errors.errors import TowerPositionFailed
 from slafw.hardware.printer_model import PrinterModel
 from slafw.hardware.axis import HomingStatus
 from slafw.hardware.power_led import PowerLed
-from slafw.hardware.tower import MovingProfilesTower, Tower
-from slafw.hardware.sl1.axis import SingleProfileSL1, AxisSL1
+from slafw.hardware.sl1.axis import AxisSL1
+from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1, TOWER_CFG_LOCAL
+from slafw.hardware.tower import Tower
 from slafw.motion_controller.controller import MotionController
-
-
-TOWER_CFG_LOCAL = defines.configDir / "profiles_tower.json"
-
-
-class MovingProfilesTowerSL1(MovingProfilesTower):
-    # pylint: disable=too-many-ancestors
-    homingFast = DictOfConfigs(SingleProfileSL1)  # type: ignore
-    homingSlow = DictOfConfigs(SingleProfileSL1)  # type: ignore
-    moveFast = DictOfConfigs(SingleProfileSL1)    # type: ignore
-    moveSlow = DictOfConfigs(SingleProfileSL1)    # type: ignore
-    layer = DictOfConfigs(SingleProfileSL1)       # type: ignore
-    layerMove = DictOfConfigs(SingleProfileSL1)   # type: ignore
-    superSlow = DictOfConfigs(SingleProfileSL1)   # type: ignore
-    resinSensor = DictOfConfigs(SingleProfileSL1) # type: ignore
-    __definition_order__ = tuple(locals())
+from slafw.exposure.profiles import SingleLayerProfileSL1
 
 
 class TowerSL1(Tower, AxisSL1):
@@ -134,3 +119,6 @@ class TowerSL1(Tower, AxisSL1):
 
     def _write_profile_data(self):
         self._mcc.do("!twcf", *self._actual_profile.dump())
+
+    async def layer_peel_moves_async(self, layer_profile: SingleLayerProfileSL1, position_nm: Nm, last_layer: bool) -> None:
+        pass

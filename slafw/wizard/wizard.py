@@ -11,6 +11,7 @@ from shutil import copyfile
 from tempfile import NamedTemporaryFile
 from threading import Thread
 from typing import Iterable, Optional, Dict, Any
+from dataclasses import fields
 
 import json as serializer
 from PySignal import Signal
@@ -44,7 +45,7 @@ class Wizard(Thread, UserActionBroker):
         self._logger = logging.getLogger(__name__)
         Thread.__init__(self)
         UserActionBroker.__init__(self, package.hw)
-        self._config_writer = package.config_writer
+        self._config_writers = package.config_writers
         self.__state = WizardState.INIT
         self.__cancelable = cancelable
         self.__groups = groups
@@ -161,8 +162,8 @@ class Wizard(Thread, UserActionBroker):
                 for check in group.checks:
                     self._logger.debug("Running wizard finished for %s", type(check).__name__)
             self.wizard_finished()
-            if self._config_writer is not None:
-                self._config_writer.commit()
+            for field in fields(self._config_writers):
+                getattr(self._config_writers, field.name).commit()
             self._store_data()
         except CancelledError:
             self._logger.debug("Wizard group canceled successfully")

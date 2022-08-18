@@ -52,7 +52,7 @@ class MovingProfilesTilt(ProfileSet):
 
     @property
     @abstractmethod
-    def reserved(self) -> SingleProfile:
+    def superSlow(self) -> SingleProfile:
         pass
 
 
@@ -78,30 +78,25 @@ class Tilt(Axis):
     def minimal_position(self) -> Ustep:
         return self.home_position
 
-    @abstractmethod
-    def get_tune_profile_up(self, slow_move: bool) -> SingleProfile:
-        """get profile for up move"""
+    def layer_up_wait(self, layer_profile: SingleProfile, tilt_height: Ustep=Ustep(0)) -> None:
+        asyncio.run(self.layer_up_wait_async(layer_profile, tilt_height))
 
     @abstractmethod
-    def get_tune_profile_down(self, slow_move: bool) -> SingleProfile:
-        """get profile for up move"""
-
-    @abstractmethod
-    def layer_up_wait(self, profile: SingleProfile=None, tiltHeight: Ustep=Ustep(0)) -> None:
+    async def layer_up_wait_async(self, layer_profile: SingleProfile, tilt_height: Ustep=Ustep(0)) -> None:
         """tilt up during the print"""
 
-    def layer_down_wait(self, profile: SingleProfile=None) -> None:
-        asyncio.run(self.layer_down_wait_async(profile=profile))
+    def layer_down_wait(self, layer_profile: SingleProfile) -> None:
+        asyncio.run(self.layer_down_wait_async(layer_profile))
 
     @abstractmethod
-    async def layer_down_wait_async(self, profile: SingleProfile=None) -> None:
+    async def layer_down_wait_async(self, layer_profile: SingleProfile) -> None:
         """tilt up during the print"""
 
-    def stir_resin(self) -> None:
-        asyncio.run(self.stir_resin_async())
+    def stir_resin(self, layer_profile: SingleProfile) -> None:
+        asyncio.run(self.stir_resin_async(layer_profile))
 
     @abstractmethod
-    async def stir_resin_async(self) -> None:
+    async def stir_resin_async(self, layer_profile: SingleProfile) -> None:
         """stiring moves of tilt."""
 
     def _move_api_min(self) -> None:
@@ -122,8 +117,3 @@ class Tilt(Axis):
     @abstractmethod
     def profiles(self) -> MovingProfilesTilt:
         """all tilt profiles"""
-
-    @property
-    @abstractmethod
-    def tune(self) -> ProfileSet:
-        """tilt tune profiles"""

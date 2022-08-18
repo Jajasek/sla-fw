@@ -30,19 +30,9 @@ class AxisMenu(SafeAdminMenu):
                 AdminAction(f"Manual {axis.name} move", self.manual_move, "control_color"),
                 AdminAction(
                     f"{axis.name.capitalize()} profiles",
-                    lambda: self.enter(Profiles(self._control, printer, axis, axis.profiles)),
+                    lambda: self.enter(Profiles(self._control, printer, axis.profiles, axis)),
                     "steppers_color"
                  ),
-            )
-        )
-        if hasattr(axis, "tune"):
-            self.add_item(AdminAction(
-                f"Tune {axis.name}",
-                lambda: self.enter(Profiles(self._control, printer, axis, axis.tune)),  # type: ignore
-                f"{axis.name}_sensitivity_color"
-                ))
-        self.add_items(
-            (
                 AdminAction("Home calibration", self.home_calib, "calibration_color"),
                 AdminAction(f"Test {axis.name}", self.test, "limit_color"),
             )

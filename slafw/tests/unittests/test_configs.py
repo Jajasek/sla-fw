@@ -226,7 +226,7 @@ class TestHardwareConfig(SlafwTestCase):
         self.assertFalse(hw_config.showUnboxing, "Test show unboxing read")
         self.assertTrue(hw_config.coverCheck, "Test cover check read")
         self.assertFalse(hw_config.calibrated, "Test calibrated read")
-        self.assertEqual(hw_config.layerTowerHop, Ustep(0), "Default Ustep read")
+        self.assertEqual(hw_config.upAndDownZoffset, Ustep(0), "Default Ustep read")
         self.assertEqual(hw_config.tiltHeight, Ustep(2624), "Config Ustep read")
 
     @staticmethod
@@ -323,16 +323,16 @@ class TestConfigHelper(SlafwTestCase):
         self.assertIsInstance(self.helper.uvWarmUpTime, int)
 
     def test_floatValueStore(self):
-        self.helper.tiltFastTime = 4.2
+        self.helper.uvCurrent = 4.2
 
-        self.assertAlmostEqual(self.helper.tiltFastTime, 4.2)
-        self.assertIsInstance(self.helper.tiltFastTime, float)
+        self.assertAlmostEqual(self.helper.uvCurrent, 4.2)
+        self.assertIsInstance(self.helper.uvCurrent, float)
 
     def test_commit(self):
         # Fresh helper is not changed
         self.assertFalse(self.helper.changed())
         self.assertFalse(self.helper.changed("autoOff"))
-        self.assertFalse(self.helper.changed("tiltFastTime"))
+        self.assertFalse(self.helper.changed("uvCurrent"))
 
         self.helper.autoOff = False
 
@@ -342,7 +342,7 @@ class TestConfigHelper(SlafwTestCase):
         # Changed behaviour before commit
         self.assertTrue(self.helper.changed())
         self.assertTrue(self.helper.changed("autoOff"))
-        self.assertFalse(self.helper.changed("tiltFastTime"))
+        self.assertFalse(self.helper.changed("uvCurrent"))
 
         self.helper.commit()
 
@@ -352,7 +352,7 @@ class TestConfigHelper(SlafwTestCase):
         # Changed behaviour after commit
         self.assertFalse(self.helper.changed())
         self.assertFalse(self.helper.changed("autoOff"))
-        self.assertFalse(self.helper.changed("tiltFastTime"))
+        self.assertFalse(self.helper.changed("uvCurrent"))
 
     def test_changed(self):
         self.assertFalse(self.helper.changed(), "Fresh config is not changed")

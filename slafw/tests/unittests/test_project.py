@@ -13,10 +13,11 @@ from slafw.errors.errors import ProjectErrorNotFound, ProjectErrorNotEnoughLayer
                                 ProjectErrorCantRead, ProjectErrorCalibrationInvalid
 from slafw.errors.warnings import PrintingDirectlyFromMedia
 from slafw.hardware.sl1.hardware import HardwareSL1
-from slafw.project.project import Project, ProjectLayer, LayerCalibrationType, ExposureUserProfile
+from slafw.project.project import Project, ProjectLayer, LayerCalibrationType
 from slafw.tests.base import SlafwTestCase
 from slafw.utils.bounding_box import BBox
 from slafw.hardware.printer_model import PrinterModel
+from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 
 
 def _layer_generator(name, count, height_nm, times_ms, layer_times_ms):
@@ -46,30 +47,32 @@ class TestProject(SlafwTestCase):
         self.file2copy = self.SAMPLES_DIR / "Resin_calibration_object.sl1"
         (dummy, filename) = os.path.split(self.file2copy)
         self.destfile = defines.previousPrints / filename
+        self.ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
+        self.lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
 
     def test_notfound(self):
         with self.assertRaises(ProjectErrorNotFound):
-            Project(self.hw, "bad_file")
+            Project(self.hw, self.ep, self.lp, "bad_file")
 
     def test_empty(self):
         with self.assertRaises(ProjectErrorCantRead):
-            Project(self.hw, str(self.SAMPLES_DIR / "empty_file.sl1"))
+            Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "empty_file.sl1"))
 
     def test_truncated(self):
         with self.assertRaises(ProjectErrorCantRead):
-            Project(self.hw, str(self.SAMPLES_DIR / "test_truncated.sl1"))
+            Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "test_truncated.sl1"))
 
     def test_nolayers(self):
         with self.assertRaises(ProjectErrorNotEnoughLayers):
-            Project(self.hw, str(self.SAMPLES_DIR / "test_nolayer.sl1"))
+            Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "test_nolayer.sl1"))
 
     def test_corrupted(self):
-        project = Project(self.hw, str(self.SAMPLES_DIR / "test_corrupted.sl1"))
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "test_corrupted.sl1"))
         with self.assertRaises(ProjectErrorCorrupted):
             project.copy_and_check()
 
     def test_copy_and_check(self):
-        project = Project(self.hw, str(self.file2copy))
+        project = Project(self.hw, self.ep, self.lp, str(self.file2copy))
         project.copy_and_check()
         self.assertFalse(PrintingDirectlyFromMedia() in project.warnings, "Printed directly warning issued")
         self.destfile.unlink()
@@ -78,7 +81,7 @@ class TestProject(SlafwTestCase):
         statvfs = os.statvfs(defines.previousPrints.parent)
         backup = defines.internalReservedSpace
         defines.internalReservedSpace = statvfs.f_frsize * statvfs.f_bavail
-        project = Project(self.hw, str(self.file2copy))
+        project = Project(self.hw, self.ep, self.lp, str(self.file2copy))
         project.copy_and_check()
         self.assertTrue(PrintingDirectlyFromMedia() in project.warnings, "Printed directly warning not issued")
         defines.internalReservedSpace = backup
@@ -89,7 +92,7 @@ class TestProject(SlafwTestCase):
         backup2 = defines.internalProjectPath
         defines.internalReservedSpace = statvfs.f_frsize * statvfs.f_bavail
         defines.internalProjectPath = str(self.SAMPLES_DIR)
-        project = Project(self.hw, str(self.file2copy))
+        project = Project(self.hw, self.ep, self.lp, str(self.file2copy))
         project.copy_and_check()
         self.assertFalse(PrintingDirectlyFromMedia() in project.warnings, "Printed directly warning issued")
         self.destfile.unlink()
@@ -99,10 +102,10 @@ class TestProject(SlafwTestCase):
     def test_printer_model(self):
         hw = HardwareSL1(self.hw_config, PrinterModel.SL1S)
         with self.assertRaises(ProjectErrorWrongPrinterModel):
-            Project(hw, str(self.SAMPLES_DIR / "numbers.sl1"))
+            Project(hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
 
     def test_read(self):
-        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
         print(project)
 
         self.assertEqual(project.name, "numbers", "Check project name")
@@ -124,7 +127,7 @@ class TestProject(SlafwTestCase):
         #self.assertAlmostEqual(consumed_resin_slicer, project.used_material_nl / 1e6, delta=0.1, msg="Resin count")
 
     def test_read_calibration(self):
-        project = Project(self.hw, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
         print(project)
 
         self.assertEqual(project.total_layers, 20, "Check total layers count")
@@ -146,7 +149,7 @@ class TestProject(SlafwTestCase):
         # TODO analyze check
 
     def test_project_modification(self):
-        project = Project(self.hw, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
         with self.assertRaises(ProjectErrorCalibrationInvalid):
             project.calibrate_regions = 3
 
@@ -158,21 +161,15 @@ class TestProject(SlafwTestCase):
         # project.config.write("projectconfig.txt")
 
 
-    def test_project_remaining_time_estimate_with_tilt(self):
-        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
+    def test_project_remaining_time_estimate(self):
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
         self.assertEqual(13740, project.count_remain_time(0, 0))
 
-    def test_project_remaining_time_estimate_without_tilt(self):
-        self.hw.config.tilt = False
-        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
-        self.assertEqual(2740, project.count_remain_time(0, 0))
-
-    def test_project_exposure_user_profile(self):
-        project = Project(self.hw, str(self.SAMPLES_DIR / "layer_change.sl1"))
-        self.assertEqual(ExposureUserProfile.DEFAULT, project.exposure_user_profile)
-
-        project = Project(self.hw, str(self.SAMPLES_DIR / "layer_change_safe_profile.sl1"))
-        self.assertEqual(ExposureUserProfile.SAFE, project.exposure_user_profile)
+    def test_project_exposure_profile(self):
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "layer_change.sl1"))
+        self.assertEqual(self.ep.default, project.exposure_profile)
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "layer_change_safe_profile.sl1"))
+        self.assertEqual(self.ep.safe, project.exposure_profile)
 
 if __name__ == '__main__':
     unittest.main()

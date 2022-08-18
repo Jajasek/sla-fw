@@ -4,11 +4,11 @@
 
 import asyncio
 from abc import ABC
-from time import time
+from time import monotonic
 from typing import Optional, Dict, Any
 
 from slafw import defines
-from slafw.configs.unit import Ustep
+from slafw.configs.unit import Nm, Ustep
 from slafw.errors.errors import (
     TiltHomeCheckFailed,
     TiltEndstopNotReached,
@@ -122,48 +122,46 @@ class TiltTimingTest(DangerousCheck):
 
     async def async_task_run(self, actions: UserActionBroker):
         hw = self._package.hw
-        hw.tower.sync()
-        while not hw.tower.synced:
+        await hw.tower.sync_ensure_async()
+        await hw.tilt.sync_ensure_async()   # FIXME MC cant properly home tilt while tower is moving
+        tower_position = Nm(100_000_000)    # safe position for Z top
+        hw.tower.actual_profile = hw.tower.profiles.moveFast
+        hw.tower.move(tower_position)
+        hw.tilt.actual_profile = hw.tilt.profiles.moveFast
+        hw.tilt.move(hw.tilt.config_height_position)
+        while hw.tower.moving or hw.tilt.moving:
             await asyncio.sleep(0.25)
 
-        await hw.tilt.sync_ensure_async()  # FIXME MC cant properly home tilt while tower is moving
-        self._package.config_writer.tiltSlowTime = await self._get_tilt_time_sec(slow_move=True)
-        self._package.config_writer.tiltFastTime = await self._get_tilt_time_sec(slow_move=False)
-        hw.tower.actual_profile = hw.tower.profiles.homingFast
-        hw.tilt.actual_profile = hw.tilt.profiles.moveFast
-        self.progress = 1
-        await hw.tilt.move_ensure_async(hw.config.tiltHeight)
-
-    async def _get_tilt_time_sec(self, slow_move: bool) -> float:
-        """
-        Get tilt time in seconds
-        :param slow_move: Whenever to do slow tilts
-        :return: Tilt time in seconds
-        """
-        hw = self._package.hw
-        tilt_time: float = 0
-        total = hw.config.measuringMoves
-        for i in range(total):
-            self.progress = (i + (3 * (1 - slow_move))) / total / 2
-            self._logger.info(
-                "Slow move %(count)d/%(total)d" % {"count": i + 1, "total": total}
-                if slow_move
-                else "Fast move %(count)d/%(total)d" % {"count": i + 1, "total": total}
-            )
-            await asyncio.sleep(0)
-            tilt_start_time = time()
-            hw.tilt.layer_up_wait(hw.tilt.get_tune_profile_up(slow_move), self._package.config_writer.tiltHeight)
-            await asyncio.sleep(0)
-            await hw.tilt.layer_down_wait_async(hw.tilt.get_tune_profile_down(slow_move))
-            tilt_time += time() - tilt_start_time
-
-        return tilt_time / total
+        measure_moves = hw.config.measuringMoves
+        progress_total = len(self._package.layer_profiles) * measure_moves
+        p = 0
+        for layer_profile in self._package.layer_profiles:
+            run_time = 0.0
+            for i in range(measure_moves):
+                p += 1
+                await asyncio.sleep(0)
+                start_time = monotonic()
+                await hw.tilt.layer_peel_moves_async(layer_profile, tower_position + Nm(50000), last_layer=False)
+                run_time += monotonic() - start_time
+                await asyncio.sleep(0)
+                await hw.tower.move_ensure_async(tower_position)
+                self._logger.debug("%s moves %d/%d, time mean: %d",
+                        layer_profile.name, i + 1, measure_moves, run_time * 1000 / (i + 1))
+                self.progress = p / progress_total
+            moves_time_ms = int(run_time * 1000 / measure_moves)
+            self._logger.info("Moves time for profile '%s': %d ms", layer_profile.name, moves_time_ms)
+            getattr(self._package.config_writers, layer_profile.name).moves_time_ms = moves_time_ms
 
     def get_result_data(self) -> Dict[str, Any]:
-        return {
-            "tilt_slow_time_ms": int(self._package.config_writer.tiltSlowTime * 1000),
-            "tilt_fast_time_ms": int(self._package.config_writer.tiltFastTime * 1000),
-        }
+        tilt_times_dict = {}
+        for ep in self._package.exposure_profiles:
+            sname = self._package.layer_profiles[ep.small_fill_layer_profile].name
+            lname = self._package.layer_profiles[ep.large_fill_layer_profile].name
+            tilt_times_dict[ep.name] = {
+                "small_fill": getattr(self._package.config_writers, sname).moves_time_ms,
+                "large_fill": getattr(self._package.config_writers, lname).moves_time_ms,
+            }
+        return {"moving_times_ms": tilt_times_dict}
 
 
 class TiltCalibrationStartTest(DangerousCheck):
@@ -210,7 +208,7 @@ class TiltAlignTest(Check):
         if position is None:
             self._package.hw.beepAlarm(3)
             raise InvalidTiltAlignPosition(position)
-        self._package.config_writer.tiltHeight = position
+        self._package.config_writers.hw_config.tiltHeight = position
         self._loop.call_soon_threadsafe(self.tilt_aligned_event.set)
 
     def tilt_move(self, direction: int):
@@ -218,4 +216,4 @@ class TiltAlignTest(Check):
         self._package.hw.tilt.move_api(direction, fullstep=True)
 
     def get_result_data(self) -> Dict[str, Any]:
-        return {"tiltHeight": int(self._package.config_writer.tiltHeight)}
+        return {"tiltHeight": int(self._package.config_writers.hw_config.tiltHeight)}

@@ -10,7 +10,7 @@ class Project:
     # pylint: disable = too-many-instance-attributes
     def __init__(self):
         self.path_changed = Signal()
-        self.exposure_user_profile = 0
+        self.exposure_profile_by_id = 0
         self.used_material_nl = 45242420
         self.total_layers = 4242
         self.layer_height_nm = 50000

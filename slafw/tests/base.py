@@ -30,6 +30,7 @@ from slafw.api.exposure0 import Exposure0
 from slafw.api.printer0 import Printer0
 from slafw.api.wizard0 import Wizard0
 from slafw.exposure.exposure import Exposure
+from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL
 from slafw.exposure.persistance import (
     LAST_PROJECT_HW_CONFIG,
     LAST_PROJECT_FACTORY_FILE,
@@ -50,6 +51,8 @@ from slafw.tests.mocks.dbus.systemd import Systemd
 from slafw.tests.mocks.dbus.timedate import TimeDate
 from slafw.wizard.wizard import Wizard
 import slafw.hardware.sl1.printer_model
+from slafw.hardware.sl1.tilt_profiles import TILT_CFG_LOCAL
+from slafw.hardware.sl1.tower_profiles import TOWER_CFG_LOCAL
 
 
 def get_printer_model():
@@ -105,9 +108,6 @@ class SlafwTestCase(TestCase):
         wizard_history_path.mkdir(exist_ok=True, parents=True)
         factory_enable_path = self.TEMP_DIR / "factory_mode_enabled"
         factory_enable_path.touch()
-        tilt_profiles = self.TEMP_DIR / "profiles_tilt.json"
-        tilt_tune = self.TEMP_DIR / "tune_tilt.json"
-        tower_profiles = self.TEMP_DIR / "profiles_tower.json"
 
         return [
             patch("slafw.motion_controller.controller.chip"),
@@ -118,14 +118,15 @@ class SlafwTestCase(TestCase):
             patch("slafw.libUvLedMeterMulti.serial.tools.list_ports"),
             patch("slafw.hardware.base.exposure_screen.Wayland", Mock()),
             patch("slafw.hardware.sl1.hardware.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),
-            patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
-            patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
-            patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
+            patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.TEMP_DIR / TILT_CFG_LOCAL.name),
+            patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.TEMP_DIR / TOWER_CFG_LOCAL.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_HW_CONFIG", self.TEMP_DIR / LAST_PROJECT_HW_CONFIG.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_FACTORY_FILE", self.TEMP_DIR / LAST_PROJECT_FACTORY_FILE.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_CONFIG_FILE", self.TEMP_DIR / LAST_PROJECT_CONFIG_FILE.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_PICKLER", self.TEMP_DIR / LAST_PROJECT_PICKLER.name),
             patch("slafw.exposure.exposure.LAST_PROJECT_PICKLER", self.TEMP_DIR / LAST_PROJECT_PICKLER.name),
+            patch("slafw.exposure.profiles.LAYER_PROFILES_LOCAL", self.TEMP_DIR / LAYER_PROFILES_LOCAL.name),
+            patch("slafw.exposure.profiles.EXPOSURE_PROFILES_LOCAL", self.TEMP_DIR / EXPOSURE_PROFILES_LOCAL.name),
             patch("slafw.defines.ramdiskPath", str(self.TEMP_DIR)),
             patch("slafw.defines.previousPrints", self.TEMP_DIR),
             patch("slafw.defines.statsData", self.TEMP_DIR / "stats.toml"),

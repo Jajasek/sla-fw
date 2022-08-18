@@ -5,6 +5,8 @@
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from unittest.mock import Mock
+
 from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.base import SlafwTestCase
 from slafw.image.resin_calibration import Area, AreaWithLabel, AreaWithLabelStripe, Calibration
@@ -202,7 +204,7 @@ class TestResinCalibration(SlafwTestCase):
         hw_config = HwConfig(HW_CONFIG)
         hw_config.read_file()
         hw = HardwareMock(hw_config, PrinterModel.SL1)
-        project = Project(hw, NUMBERS)
+        project = Project(hw, [Mock()] * 3, [Mock()] * 4, NUMBERS)
         project.calibrate_regions = 9
         project.analyze()
         #  project bbox: (605, 735, 835, 1825)

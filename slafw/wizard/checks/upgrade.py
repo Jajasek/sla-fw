@@ -15,10 +15,10 @@ class ResetUVPWM(Check):
         self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        del self._package.config_writer.uvCurrent
-        del self._package.config_writer.uvPwmTune
+        del self._package.config_writers.hw_config.uvCurrent
+        del self._package.config_writers.hw_config.uvPwmTune
         pwm = self._package.hw.uv_led.parameters.safe_default_pwm
-        self._package.config_writer.uvPwm = pwm
+        self._package.config_writers.hw_config.uvPwm = pwm
         set_factory_uvpwm(pwm)
 
 
@@ -28,7 +28,7 @@ class ResetSelfTest(Check):
         self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        self._package.config_writer.showWizard = True
+        self._package.config_writers.hw_config.showWizard = True
 
 
 class ResetMechanicalCalibration(Check):
@@ -37,10 +37,10 @@ class ResetMechanicalCalibration(Check):
         self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        del self._package.config_writer.tower_height_nm
-        del self._package.config_writer.towerHeight
-        del self._package.config_writer.tiltHeight
-        self._package.config_writer.calibrated = False
+        del self._package.config_writers.hw_config.tower_height_nm
+        del self._package.config_writers.hw_config.towerHeight
+        del self._package.config_writers.hw_config.tiltHeight
+        self._package.config_writers.hw_config.calibrated = False
 
 
 class ResetHwCounters(Check):
@@ -62,4 +62,4 @@ class MarkPrinterModel(Check):
     async def async_task_run(self, actions: UserActionBroker):
         self._logger.info("Setting printer model to %s", self._model)
         set_configured_printer_model(self._model)
-        self._package.config_writer.vatRevision = self._model.options.vat_revision  # type: ignore[attr-defined]
+        self._package.config_writers.hw_config.vatRevision = self._model.options.vat_revision  # type: ignore[attr-defined]

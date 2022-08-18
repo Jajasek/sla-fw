@@ -195,10 +195,6 @@ class HardwareSL1(BaseHardware):
         self.mcc.flash()
 
     @property
-    def white_pixels_threshold(self) -> int:
-        return self.exposure_screen.parameters.width_px * self.exposure_screen.parameters.height_px * self.config.limit4fast // 100
-
-    @property
     def mcFwVersion(self):
         return self.mcc.fw["version"]
 

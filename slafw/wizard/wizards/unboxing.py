@@ -53,7 +53,7 @@ class UnboxingWizard(Wizard):
         super().__init__(identifier, groups, package, cancelable=False)
 
     def wizard_finished(self):
-        self._config_writer.showUnboxing = False
+        self._config_writers.hw_config.showUnboxing = False
 
 
 class CompleteUnboxingWizard(UnboxingWizard):

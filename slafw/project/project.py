@@ -35,6 +35,7 @@ from slafw.hardware.base.hardware import BaseHardware
 from slafw.project.functions import get_white_pixels
 from slafw.utils.bounding_box import BBox
 from slafw.api.decorators import range_checked
+from slafw.exposure.profiles import SingleExposureProfileSL1, ExposureProfilesSL1, LayerProfilesSL1
 
 
 @unique
@@ -42,12 +43,6 @@ class LayerCalibrationType(IntEnum):
     NONE = 0
     LABEL_PAD = 1
     LABEL_TEXT = 2
-@unique
-class ExposureUserProfile(IntEnum):
-    DEFAULT = 0
-    SAFE = 1
-    #CUSTOM = 2
-    #CUSTOM2 = 3
 
 class ProjectLayer:
     def __init__(self, image: str, height_nm: int):
@@ -87,11 +82,17 @@ class ProjectLayer:
 
 
 class Project:
-    def __init__(self, hw: BaseHardware, project_file: str):
+    def __init__(self,
+            hw: BaseHardware,
+            exposure_profiles: ExposureProfilesSL1,
+            layer_profiles: LayerProfilesSL1,
+            project_file: str):
         self.logger = logging.getLogger(__name__)
         self.params_changed = Signal()
         self.path_changed = Signal()
         self._hw = hw
+        self._exposure_profiles = exposure_profiles
+        self._layer_profiles = layer_profiles
         self.warnings: Set[PrinterWarning] = set()
         # Origin path: `local` or `usb`
         self.origin_path = project_file
@@ -109,7 +110,6 @@ class Project:
         self.bbox = BBox()
         self.used_material_nl = 0
         self.modification_time = 0.0
-        self.per_partes = hw.config.perPartes
         self._zf: Optional[ZipFile] = None
         self._mode_warn = True
         self._exposure_time_ms = 0
@@ -119,7 +119,7 @@ class Project:
         self._calibrate_time_ms = 0
         self._calibrate_time_ms_exact: List[int] = []
         self._calibrate_regions = 0
-        self._exposure_user_profile = ExposureUserProfile.DEFAULT
+        self.exposure_profile: Optional[SingleExposureProfileSL1] = None
         namelist = self._read_toml_config()
         self._parse_config()
         self._build_layers_description(self._check_filenames(namelist))
@@ -148,7 +148,7 @@ class Project:
             'calibrate_time_ms': self._calibrate_time_ms,
             'calibrate_time_ms_exact': self._calibrate_time_ms_exact,
             'calibrate_regions': self._calibrate_regions,
-            'exposure_user_profile': self._exposure_user_profile
+            'exposure_profile': self.exposure_profile
             }
         pp = pprint.PrettyPrinter(width=200)
         return "Project:\n" + pp.pformat(items)
@@ -198,7 +198,7 @@ class Project:
         self.calibrate_penetration_px = int(self._config.calibratePenetration * 1e6 // pixel_size_nm)
         self.calibrate_compact = self._config.calibrateCompact
         self.used_material_nl = int(self._config.usedMaterial * 1e6)
-        self.exposure_user_profile = self._config.expUserProfile
+        self.exposure_profile_by_id = self._config.expUserProfile
         if self._calibrate_regions:
             # labels and pads consumption is ignored
             self.used_material_nl *= self._calibrate_regions
@@ -362,17 +362,18 @@ class Project:
             self._times_changed()
 
     @property
-    def exposure_user_profile(self) -> int:
-        return self._exposure_user_profile.value
+    def exposure_profile_by_id(self) -> int:
+        return self.exposure_profile.idx
 
-    @range_checked(ExposureUserProfile.DEFAULT, ExposureUserProfile.SAFE)
-    @exposure_user_profile.setter
-    def exposure_user_profile(self, value: int) -> None:
-        if ExposureUserProfile(value) != self._exposure_user_profile:
-            self._exposure_user_profile = ExposureUserProfile(value)
-            self.logger.info("Exposure user profile changed to %s", self._exposure_user_profile)
-            self.count_remain_time.cache_clear()
-            self.params_changed.emit()
+    @exposure_profile_by_id.setter
+    def exposure_profile_by_id(self, value: int) -> None:
+        try:
+            self.exposure_profile = self._exposure_profiles[value]
+        except IndexError as e:
+            raise ValueError(f"Value: {value} out of range") from e
+        self.logger.info("Exposure profile set to '%s'", self.exposure_profile.name)
+        self.count_remain_time.cache_clear()
+        self.params_changed.emit()
 
     # FIXME compatibility with api/standard0
     @property
@@ -492,29 +493,19 @@ class Project:
         slow_layers = max(slow_layers, 0)
         fast_layers = total_layers - layers_done - slow_layers
 
-        # Fast and slow tilt times
-        if self._hw.config.tilt:
-            if self._exposure_user_profile == ExposureUserProfile.SAFE:
-                time_remain_ms += (fast_layers + slow_layers) * self._hw.config.tiltSlowTime * 1000
-            else:
-                time_remain_ms += fast_layers * self._hw.config.tiltFastTime * 1000
-                time_remain_ms += slow_layers * self._hw.config.tiltSlowTime * 1000
+        # Fast and slow layer times
+        sfp = self._layer_profiles[self.exposure_profile.small_fill_layer_profile]
+        hfp = self._layer_profiles[self.exposure_profile.large_fill_layer_profile]
+        time_remain_ms += fast_layers * (sfp.moves_time_ms + sfp.delay_before_exposure_ms + sfp.delay_after_exposure_ms)
+        time_remain_ms += slow_layers * (hfp.moves_time_ms + hfp.delay_before_exposure_ms + hfp.delay_after_exposure_ms)
 
-        # Per layer times
-        delay_before_exposure = self._hw.config.delayBeforeExposure
-        if self._exposure_user_profile == ExposureUserProfile.SAFE:
-            delay_before_exposure = defines.exposure_safe_delay_before
-        else:
-            time_remain_ms += slow_layers * defines.exposure_slow_move_delay_before * 100
         time_remain_ms += (total_layers - layers_done) * (
-                self.layer_height_nm * 5000 / 1000 / 1000  # tower move
-                + delay_before_exposure * 100
-                + self._hw.config.delayAfterExposure * 100
+                self.layer_height_nm * 5000 // 1000 // 1000  # tower move
                 + self._hw.exposure_screen.parameters.refresh_delay_ms * 5  # ~ 5x frame display wait
                 + 120  # Magical constant to compensate remaining computation delay in exposure thread
         )
-        self.logger.debug("time_remain_ms: %f", time_remain_ms)
-        return int(time_remain_ms)
+        self.logger.debug("time_remain_ms: %d", time_remain_ms)
+        return time_remain_ms
 
     def set_timings_reference(self, project: Project):
         """
@@ -523,11 +514,12 @@ class Project:
         Used for reprint. As we load times from projects without checking there needs to be a way how to reprint using
         the same settings.
         """
-        self.logger.debug("Passing exposure times for reprint: %f, %f, %f", project.exposure_time_ms, project.exposure_time_first_ms, project.calibrate_time_ms)
+        self.logger.debug("Passing exposure times for reprint: %f, %f, %f",
+                project.exposure_time_ms, project.exposure_time_first_ms, project.calibrate_time_ms)
         self.exposure_time_ms = project.exposure_time_ms
         self.exposure_time_first_ms = project.exposure_time_first_ms
         self.calibrate_time_ms = project.calibrate_time_ms
-        self.exposure_user_profile = project.exposure_user_profile
+        self.exposure_profile = project.exposure_profile
 
     @property
     def is_open(self):

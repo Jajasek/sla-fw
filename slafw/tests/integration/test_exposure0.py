@@ -54,6 +54,7 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
         self._wait_for_state(Exposure0State.CHECKS, 5)
         self._wait_for_state(Exposure0State.PRINTING, 60)
         self.assertEqual(self.exposure0.failure_reason, PrinterException.as_dict(None))
+        self._wait_for_state(Exposure0State.GOING_UP, 30)
         self._wait_for_state(Exposure0State.FINISHED, 30)
         self.assertEqual(100, self.exposure0.progress)
 
@@ -119,7 +120,7 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
         for _ in range(timeout_s):
             if self.exposure0.state == state.value:
                 break
-            sleep(1)
+            sleep(0.5)
         self.assertEqual(state, Exposure0State(self.exposure0.state))
 
 

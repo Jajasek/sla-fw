@@ -335,8 +335,8 @@ class BoolValue(Value):
     Just sets bool type to base Value class constructor. Bools do not require special handling.
     """
 
-    def __init__(self, default: Optional[bool], **kwargs):
-        super().__init__([bool], default, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__([bool], *args, **kwargs)
         self.__doc__ = self.base_doc()
 
 

@@ -17,6 +17,12 @@ from slafw.configs.project import ProjectConfig
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.image.exposure_image import ExposureImage
 from slafw.utils.traceable_collections import TraceableDict, TraceableList
+from slafw.exposure.profiles import (
+    SingleExposureProfileSL1,
+    ExposureProfilesSL1,
+    SingleLayerProfileSL1,
+    LayerProfilesSL1,
+)
 
 LAST_PROJECT_HW_CONFIG = defines.previousPrints / defines.hwConfigFileName
 LAST_PROJECT_FACTORY_FILE = defines.previousPrints / defines.hwConfigFileNameFactory
@@ -36,26 +42,36 @@ class ExposurePickler(pickle.Pickler):
         Event,
         type(Lock()),
         Task,
+        ExposureProfilesSL1,
+        LayerProfilesSL1,
+        SingleLayerProfileSL1,
     )
 
     def persistent_id(self, obj):
         if isinstance(obj, self.IGNORED_CLASSES):
-            return "ignore"
+            return ("ignore", None)
         if isinstance(obj, HwConfig):
             obj.write(LAST_PROJECT_HW_CONFIG)
             obj.write_factory(LAST_PROJECT_FACTORY_FILE)
-            return "HwConfig"
+            return ("HwConfig", None)
         if isinstance(obj, ProjectConfig):
             obj.write(LAST_PROJECT_CONFIG_FILE)
-            return "ProjectConfig"
+            return ("ProjectConfig", None)
+        if isinstance(obj, SingleExposureProfileSL1):
+            return ("ExposureProfileId", obj.idx)
         return None
 
 
 class ExposureUnpickler(pickle.Unpickler):
+    def __init__(self, pickle_io, exposure_profiles: ExposureProfilesSL1):
+        super().__init__(pickle_io)
+        self._exposure_profiles = exposure_profiles
+
     def persistent_load(self, pid):
-        if pid == "ignore":
+        key, val = pid
+        if key == "ignore":
             return None
-        if pid == "HwConfig":
+        if key == "HwConfig":
             hw_config = HwConfig(
                 file_path=LAST_PROJECT_HW_CONFIG,
                 factory_file_path=LAST_PROJECT_FACTORY_FILE,
@@ -63,11 +79,13 @@ class ExposureUnpickler(pickle.Unpickler):
             )
             hw_config.read_file()
             return hw_config
-        if pid == "ProjectConfig":
+        if key == "ProjectConfig":
             project_config = ProjectConfig()
             project_config.read_file(file_path=LAST_PROJECT_CONFIG_FILE)
             return project_config
-        raise pickle.UnpicklingError(f"unsupported persistent object {str(pid)}")
+        if key == "ExposureProfileId":
+            return self._exposure_profiles[val]
+        raise pickle.UnpicklingError(f"unsupported persistent object {str(key)}")
 
 
 def cleanup_last_data(logger: Logger, clear_all=False) -> None:

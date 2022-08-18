@@ -158,8 +158,6 @@ class Config0:
         "screwMm": {"microStepsMM"},
         "raw_calibrated": {"calibrated"},
         "tiltHeight": {"calibrated"},
-        "tiltFastTime": {"tiltFastTime"},
-        "tiltSlowTime": {"tiltSlowTime"},
         "limit4fast": {"limit4fast"},
         "tankCleaningExposureTime": {"tankCleaningExposureTime"}
     }

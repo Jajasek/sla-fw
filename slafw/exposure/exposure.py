@@ -41,6 +41,7 @@ from slafw.configs.runtime import RuntimeConfig
 from slafw.configs.stats import TomlConfigStats
 from slafw.errors import tests
 from slafw.errors.errors import (
+    TiltHomeFailed,
     TiltFailed,
     TowerFailed,
     TowerMoveFailed,
@@ -65,9 +66,10 @@ from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.power_led_action import WarningAction, ErrorAction
 from slafw.image.exposure_image import ExposureImage
 from slafw.project.functions import check_ready_to_print
-from slafw.project.project import Project, ExposureUserProfile
+from slafw.project.project import Project
 from slafw.states.exposure import ExposureState, ExposureCheck, ExposureCheckResult
 from slafw.utils.traceable_collections import TraceableDict
+from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1, SingleLayerProfileSL1
 
 
 class ExposureCheckRunner:
@@ -274,9 +276,9 @@ class StirringCheck(ExposureCheckRunner):
         super().__init__(ExposureCheck.STIRRING, *args, **kwargs)
 
     async def run(self):
-        if not self.expo.hw.config.tilt:
+        if not self.expo.actual_layer_profile.use_tilt:
             raise ExposureCheckDisabled()
-        await self.expo.hw.tilt.stir_resin_async()
+        await self.expo.hw.tilt.stir_resin_async(self.expo.actual_layer_profile)
 
 
 class Exposure:
@@ -286,6 +288,8 @@ class Exposure:
         hw: BaseHardware,
         exposure_image: ExposureImage,
         runtime_config: RuntimeConfig,
+        exposure_profiles: ExposureProfilesSL1,
+        layer_profiles: LayerProfilesSL1,
     ):
         self.change = Signal()
         self.logger = logging.getLogger(__name__)
@@ -293,6 +297,8 @@ class Exposure:
         self.project: Optional[Project] = None
         self.hw = hw
         self.exposure_image = weakref.proxy(exposure_image)
+        self.exposure_profiles = exposure_profiles
+        self.layer_profiles = layer_profiles
         self.resin_count = 0.0
         self.resin_volume = None
         self.tower_position_nm = self.hw.tower.minimal_position
@@ -320,18 +326,18 @@ class Exposure:
         self.estimated_total_time_ms = -1
         weak_run = WeakMethod(self.run)
         self._thread = Thread(target=lambda: weak_run()())  # pylint: disable = unnecessary-lambda
-        self._slow_move: bool = True  # slow tilt up before first layer
-        self._force_slow_remain_nm: int = 0
+        self._large_fill_remain_nm: int = 0
         self.hw.uv_led_fan.error_changed.connect(self._on_uv_led_fan_error)
         self.hw.blower_fan.error_changed.connect(self._on_blower_fan_error)
         self.hw.rear_fan.error_changed.connect(self._on_rear_fan_error)
         self._checks_task: Optional[Task] = None
+        self.actual_layer_profile: Optional[SingleLayerProfileSL1] = None
 
     def read_project(self, project_file: str):
         check_ready_to_print(self.hw.config, self.hw.uv_led.parameters)
         try:
             # Read project
-            self.project = Project(self.hw, project_file)
+            self.project = Project(self.hw, self.exposure_profiles, self.layer_profiles, project_file)
             self.estimated_total_time_ms = self.estimate_total_time_ms()
             self.state = ExposureState.CONFIRM
             # Signal project change on its parameter change. This lets Exposure0 emit
@@ -411,16 +417,18 @@ class Exposure:
             self.change.emit(key, value)
 
     def startProject(self):
-        self.tower_position_nm = self.hw.tower.minimal_position
         self.actual_layer = 0
         self.resin_count = 0.0
         self.slow_layers_done = 0
         self.exposure_image.new_project(self.project)
+        self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.large_fill_layer_profile]
 
     def prepare(self):
         self.exposure_image.preload_image(0)
-        self.hw.tower.actual_profile = self.hw.tower.profiles.layer
-        self.hw.tower.move_ensure(self.hw.tower.minimal_position)  # first layer will move up
+        # set tower for the first layer, tilt should be leveled
+        self.hw.tower.actual_profile = self.hw.tower.profiles[self.actual_layer_profile.tower_profile]
+        self.tower_position_nm = Nm(self.project.layers[0].height_nm) + self.hw.config.calib_tower_offset_nm
+        self.hw.tower.move_ensure(self.tower_position_nm)
 
         self.exposure_image.blank_screen()
         self.hw.uv_led.pwm = self.hw.config.uvPwmPrint
@@ -507,13 +515,19 @@ class Exposure:
             ExposurePickler(pickle_io).dump(self)
 
     @staticmethod
-    def load(logger: Logger, hw: BaseHardware) -> Optional[Exposure]:
+    def load(
+            logger: Logger,
+            hw: BaseHardware,
+            exposure_profiles: ExposureProfilesSL1,
+            layer_profiles: LayerProfilesSL1) -> Optional[Exposure]:
         try:
             with open(LAST_PROJECT_PICKLER, "rb") as pickle_io:
-                exposure = ExposureUnpickler(pickle_io).load()
+                exposure = ExposureUnpickler(pickle_io, exposure_profiles).load()
                 # Fix missing (and still required attributes of exposure)
                 exposure.change = Signal()
                 exposure.hw = hw
+                exposure.exposure_profiles = exposure_profiles
+                exposure.layer_profiles = layer_profiles
                 return exposure
         except FileNotFoundError:
             logger.info("Last exposure data not present")
@@ -557,41 +571,20 @@ class Exposure:
                 self.logger.warning("Exposure end delayed %f ms", abs(diff) / 1e6)
         self.hw.uv_led.off()
 
-    def _do_frame(self, times_ms, was_stirring, second, layer_height_nm):
-        position_nm = self.tower_position_nm + self.hw.config.calib_tower_offset_nm
-
-        if self.hw.config.tilt:
-            self.logger.info("%s tilt up", "Slow" if self._slow_move else "Fast")
-            if self.hw.config.layer_tower_hop_nm:
-                self.hw.tower.move_ensure(position_nm + self.hw.config.layer_tower_hop_nm)
-                self.hw.tilt.layer_up_wait(self.hw.tilt.get_tune_profile_up(self._slow_move))
-                self.hw.tower.move_ensure(position_nm)
-            else:
-                self.hw.tower.move_ensure(position_nm)
-                self.hw.tilt.layer_up_wait(self.hw.tilt.get_tune_profile_up(self._slow_move))
-        else:
-            self.hw.tower.move_ensure(position_nm + self.hw.config.layer_tower_hop_nm)
-            self.hw.tower.move_ensure(position_nm)
-
+    def _do_frame(self, times_ms, was_stirring, layer_height_nm, last_layer):
         white_pixels = self.exposure_image.sync_preloader()
-        self.exposure_image.screenshot_rename(second)
+        self.exposure_image.screenshot_rename()
 
-        if self.project.exposure_user_profile == ExposureUserProfile.SAFE:
-            delay_before = defines.exposure_safe_delay_before
-        elif self._slow_move:
-            delay_before = defines.exposure_slow_move_delay_before
-        else:
-            delay_before = self.hw.config.delayBeforeExposure
-
+        delay_before = self.actual_layer_profile.delay_before_exposure_ms
         if delay_before:
-            self.logger.info("delayBeforeExposure [s]: %f", delay_before / 10.0)
-            sleep(delay_before / 10.0)
+            self.logger.info("Delay before exposure [s]: %f", delay_before / 1000)
+            sleep(delay_before / 1000)
 
         if was_stirring:
-            self.logger.info("stirringDelay [s]: %f", self.hw.config.stirringDelay / 10.0)
+            self.logger.info("Stirring delay [s]: %f", self.hw.config.stirringDelay / 10.0)
             sleep(self.hw.config.stirringDelay / 10.0)
 
-        self.exposure_image.blit_image(second)
+        self.exposure_image.blit_image()
 
         exp_time_ms = sum(times_ms)
         self.exposure_end = datetime.now(tz=timezone.utc) + timedelta(seconds=exp_time_ms / 1e3)
@@ -602,35 +595,42 @@ class Exposure:
         else:
             self._exposure_calibration(times_ms)
 
-        self.logger.info("exposure done")
+        self.logger.info("Exposure done")
         self.exposure_image.preload_image(self.actual_layer + 1)
 
-        if self.hw.config.delayAfterExposure:
-            self.logger.info("delayAfterExposure [s]: %f", self.hw.config.delayAfterExposure / 10.0)
-            sleep(self.hw.config.delayAfterExposure / 10.0)
+        delay_after = self.actual_layer_profile.delay_after_exposure_ms
+        if delay_after:
+            self.logger.info("Delay after exposure [s]: %f", delay_after / 1000)
+            sleep(delay_after / 1000)
 
-        if self.hw.config.tilt:
-            self._slow_move = white_pixels > self.hw.white_pixels_threshold  # current layer
-            # Force slow tilt for forceSlowTiltHeight if current layer area > limit4fast
-            if self._slow_move:
-                self._force_slow_remain_nm = self.hw.config.forceSlowTiltHeight
-            elif self._force_slow_remain_nm > 0:
-                self._force_slow_remain_nm -= layer_height_nm
-                self._slow_move = True
-            # Force slow tilt on first layers or if user selected safe print profile
-            if (
-                self.actual_layer < self.project.first_slow_layers
-                or self.project.exposure_user_profile == ExposureUserProfile.SAFE
-            ):
-                self._slow_move = True
+        large_fill = white_pixels > self.hw.white_pixels_threshold
+        self.logger.debug("large_fill:%s (pixels:%d threshold:%d)",
+                large_fill, white_pixels, self.hw.white_pixels_threshold)
 
-            if self._slow_move:
-                self.slow_layers_done += 1
-            try:
-                self.logger.info("%s tilt down", "Slow" if self._slow_move else "Fast")
-                self.hw.tilt.layer_down_wait(self.hw.tilt.get_tune_profile_down(self._slow_move))
-            except Exception:
-                return False, white_pixels
+        # Force large fill by height
+        if large_fill:
+            self._large_fill_remain_nm = self.hw.config.forceSlowTiltHeight
+        elif self._large_fill_remain_nm > 0:
+            self._large_fill_remain_nm -= layer_height_nm
+            large_fill = True
+            self.logger.debug("large_fill forced by height, remain[nm]: %d", self._large_fill_remain_nm)
+
+        # Force large fill on first layers
+        if self.actual_layer < self.project.first_slow_layers:
+            self.logger.debug("large_fill forced by first layers, %d/%d",
+                    self.actual_layer + 1, self.project.first_slow_layers)
+            large_fill = True
+
+        if large_fill:
+            self.slow_layers_done += 1
+            self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.large_fill_layer_profile]
+        else:
+            self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.small_fill_layer_profile]
+
+        try:
+            self.hw.tilt.layer_peel_moves(self.actual_layer_profile, self.tower_position_nm, last_layer)
+        except TiltHomeFailed:
+            return False, white_pixels
 
         return True, white_pixels
 
@@ -654,9 +654,9 @@ class Exposure:
                         sleep(1)
                     self.state = ExposureState.WAITING
 
-            if self.hw.config.tilt:
+            if self.actual_layer_profile.use_tilt:
                 self.state = ExposureState.STIRRING
-                self.hw.tilt.stir_resin()
+                self.hw.tilt.stir_resin(self.actual_layer_profile)
 
             self.state = ExposureState.GOING_DOWN
             position_nm = self.hw.config.up_and_down_z_offset_nm
@@ -709,7 +709,6 @@ class Exposure:
             return None
 
     def doStuckRelease(self):
-
         self.state = ExposureState.STUCK
 
         with WarningAction(self.hw.power_led):
@@ -720,7 +719,7 @@ class Exposure:
             self.state = ExposureState.STUCK_RECOVERY
             self.hw.tilt.sync_ensure()
             self.state = ExposureState.STIRRING
-            self.hw.tilt.stir_resin()
+            self.hw.tilt.stir_resin(self.actual_layer_profile)
 
         self.state = ExposureState.PRINTING
 
@@ -728,7 +727,8 @@ class Exposure:
         try:
             self.logger.info("Started exposure thread")
             self.logger.info("Motion controller tilt profiles: %s", self.hw.tilt.profiles)
-            self.logger.info("Printer tune tilt profiles: %s", self.hw.tilt.tune)
+            self.logger.info("Layer profiles: %s", self.layer_profiles)
+            self.logger.info("Exposure profiles: %s", self.exposure_profiles)
 
             while not self.done:
                 command = self.commands.get()
@@ -861,8 +861,6 @@ class Exposure:
 
                 if command == "feedme" or self.low_resin:
                     with ErrorAction(self.hw.power_led):
-                        if self.hw.config.tilt:
-                            self.hw.tilt.layer_up_wait()
                         self.state = ExposureState.FEED_ME
                         sub_command = self.doWait(self.low_resin)
 
@@ -874,10 +872,9 @@ class Exposure:
                         self._wait_cover_close()
 
                         # Stir resin before resuming print
-                        if self.hw.config.tilt:
+                        if self.actual_layer_profile.use_tilt:
                             self.state = ExposureState.STIRRING
-                            self.hw.tilt.sync_ensure()
-                            self.hw.tilt.stir_resin()
+                            self.hw.tilt.stir_resin(self.actual_layer_profile)
                         was_stirring = True
 
                     # Resume print
@@ -893,8 +890,6 @@ class Exposure:
                     exposure_compensation = self.hw.config.upAndDownExpoComp * 100
 
                 layer = project.layers[self.actual_layer]
-
-                self.tower_position_nm += Nm(layer.height_nm)
 
                 self.logger.info(
                     "Layer started » {"
@@ -914,7 +909,7 @@ class Exposure:
                     layer.image.replace(project.name, project_hash),
                     str(layer.times_ms),
                     self.slow_layers_done,
-                    int(self.tower_position_nm) / 1e6,
+                    int(self.tower_position_nm - self.hw.config.calib_tower_offset_nm) / 1e6,
                     project.total_height_nm / 1e6,
                     int(round((datetime.now(tz=timezone.utc) - self.printStartTime).total_seconds() / 60)),
                     self.estimate_remain_time_ms(),
@@ -926,18 +921,16 @@ class Exposure:
 
                 times_ms = list(layer.times_ms)
                 times_ms[0] += exposure_compensation
+                last_layer = self.actual_layer + 1 == project.total_layers
 
-                success, white_pixels = self._do_frame(times_ms, was_stirring, False, layer.height_nm)
+                # _do_frame() will move tower to NEXT layer
+                if not last_layer:
+                    self.tower_position_nm += Nm(project.layers[self.actual_layer + 1].height_nm)
+
+                success, white_pixels = self._do_frame(times_ms, was_stirring, layer.height_nm, last_layer)
                 if not success:
                     with ErrorAction(self.hw.power_led):
                         self.doStuckRelease()
-
-                # exposure of the second part
-                if project.per_partes and white_pixels > self.hw.white_pixels_threshold:
-                    success, dummy = self._do_frame(times_ms, was_stirring, True, layer.height_nm)
-                    if not success:
-                        with ErrorAction(self.hw.power_led):
-                            self.doStuckRelease()
 
                 was_stirring = False
                 exposure_compensation = 0
@@ -955,6 +948,9 @@ class Exposure:
                     # sleep(self.hw.config.trigger / 10.0)
 
                 self.actual_layer += 1
+
+        if self.canceled:
+            self.hw.tilt.layer_down_wait(self.actual_layer_profile)
 
         self._final_go_up()
 
@@ -982,7 +978,7 @@ class Exposure:
             self.resin_count,
             self.remain_resin_ml if self.remain_resin_ml else -1,
             exposure_times,
-            int(self.tower_position_nm) / 1e6,
+            int(self.tower_position_nm - self.hw.config.calib_tower_offset_nm) / 1e6,
         )
 
         self.exposure_image.save_display_usage()

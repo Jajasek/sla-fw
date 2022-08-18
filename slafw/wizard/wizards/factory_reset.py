@@ -19,7 +19,7 @@ from slafw.wizard.checks.factory_reset import (
     RemoveSlicerProfiles,
     ResetHWConfig,
     EraseMCEeprom,
-    ResetHomingProfiles,
+    ResetMovingProfiles,
     EraseProjects,
     SendPrinterData,
     InitiatePackingMoves,
@@ -93,7 +93,7 @@ class FinishResetSettingsGroup(CheckGroup):
     """
     def __init__(self, package: WizardDataPackage, hard_errors: bool = False):
         super().__init__(Configuration(None, None), [
-            ResetHomingProfiles(package, hard_errors=hard_errors),
+            ResetMovingProfiles(package, hard_errors=hard_errors),
             EraseMCEeprom(package, hard_errors=hard_errors),
         ])
 

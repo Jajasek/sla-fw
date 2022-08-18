@@ -98,15 +98,6 @@ def inverse(ctx: cairo.Context, width: int, height: int):
     _inverse(ctx)
 
 @draftsman
-def draw_perpartes_mask(ctx: cairo.Context, width: int, height: int, stripes: int):
-    _fill_white(ctx)
-    ctx.set_operator(cairo.Operator.DEST_OUT)
-    size = height // stripes
-    for y in range(0, height, 2 * size):
-        ctx.rectangle(0, y, width, size)
-    ctx.fill()
-
-@draftsman
 def draw_svg_expand(ctx: cairo.Context, width: int, height: int, image_path: str, invert: bool):
     _fill_black(ctx)
     ctx.set_operator(cairo.Operator.XOR)

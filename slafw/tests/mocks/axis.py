@@ -4,10 +4,10 @@
 
 from functools import cached_property
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import MagicMock
 
 from slafw.configs.hw import HwConfig
-from slafw.configs.unit import Unit
+from slafw.configs.unit import Unit, Nm
 from slafw.hardware.axis import Axis, HomingStatus
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.tilt import Tilt
@@ -93,33 +93,26 @@ class MockAxis(Axis):
     def _move_api_get_profile(self, speed: int) -> SingleProfile:
         pass
 
+    async def layer_peel_moves_async(self, layer_profile: SingleProfile, position_nm: Nm, last_layer: bool) -> None:
+        pass
+
 
 class MockTower(Tower, MockAxis):
     @property
     def profiles(self) -> MovingProfilesTower:
-        return Mock()
+        return MagicMock()
 
 
 class MockTilt(Tilt, MockAxis):
-    def get_tune_profile_up(self, slow_move: bool):
-        return slow_move
-
-    def get_tune_profile_down(self, slow_move: bool):
-        return slow_move
-
-    def layer_up_wait(self, profile: SingleProfile=None, tiltHeight: int=0) -> None:
+    async def layer_up_wait_async(self, layer_profile: SingleProfile, tilt_height: int=0) -> None:
         self.move(self._config.tiltHeight)
 
-    async def layer_down_wait_async(self, profile: SingleProfile=None) -> None:
+    async def layer_down_wait_async(self, layer_profile: SingleProfile) -> None:
         self._move_api_min()
 
-    async def stir_resin_async(self) -> None:
+    async def stir_resin_async(self, layer_profile: SingleProfile) -> None:
         pass
 
     @property
     def profiles(self) -> MovingProfilesTilt:
-        return Mock()
-
-    @property
-    def tune(self):
-        return Mock()
+        return MagicMock()

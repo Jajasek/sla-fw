@@ -76,13 +76,6 @@ class TestCairo(SlafwTestCaseDBus):
         img = Image.frombytes("L", size, data)
         self.assertSameImage(img, Image.open(self.SAMPLES_DIR / "cairo" / "inverse_fhd.png"))
 
-    def test_perpartes_mask(self):
-        size = self.SL1S_SIZE
-        data = numpy.empty(shape=size, dtype=numpy.uint8)
-        cairo.draw_perpartes_mask(data, *size, 20)
-        img = Image.frombytes("L", size, data)
-        self.assertSameImage(img, Image.open(self.SAMPLES_DIR / "cairo" / "ppm_sl1s.png"))
-
     def test_logo(self):
         size = self.SL1_SIZE
         data = numpy.empty(shape=size, dtype=numpy.uint8)

@@ -21,6 +21,7 @@ from slafw.api.wizard0 import Wizard0
 from slafw.configs.runtime import RuntimeConfig
 from slafw.exposure.exposure import Exposure
 from slafw.exposure.persistance import cleanup_last_data
+from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.image.exposure_image import ExposureImage
 from slafw.states.wizard import WizardState
@@ -45,12 +46,15 @@ class ActionManager:
         self._wizard_dbus_name = None
         self._exited = False
 
-    def new_exposure(
-        self, hw: BaseHardware, exposure_image: ExposureImage, runtime_config:
-            RuntimeConfig, project: str
-    ) -> Exposure:
+    def new_exposure(self,
+            hw: BaseHardware,
+            exposure_image: ExposureImage,
+            runtime_config: RuntimeConfig,
+            exposure_profiles: ExposureProfilesSL1,
+            layer_profiles: LayerProfilesSL1,
+            project: str) -> Exposure:
         # Create new exposure object and apply passed settings
-        exposure = Exposure(self._get_job_id(), hw, exposure_image, runtime_config)
+        exposure = Exposure(self._get_job_id(), hw, exposure_image, runtime_config, exposure_profiles, layer_profiles)
         self.logger.info("Created new exposure id: %s", exposure.instance_id)
         # Register properties changed signal of the new exposure as current exposure signal source
         path = self._register_exposure(exposure)
@@ -68,8 +72,11 @@ class ActionManager:
 
         return exposure
 
-    def load_exposure(self, hw: BaseHardware) -> Optional[Exposure]:
-        exposure = Exposure.load(self.logger, hw)
+    def load_exposure(self,
+            hw: BaseHardware,
+            exposure_profiles: ExposureProfilesSL1,
+            layer_profiles: LayerProfilesSL1) -> Optional[Exposure]:
+        exposure = Exposure.load(self.logger, hw, exposure_profiles, layer_profiles)
         if not exposure:
             return None
 
@@ -81,11 +88,14 @@ class ActionManager:
         self.exposure_change.emit()
         return exposure
 
-    def reprint_exposure(
-        self, reference: Exposure, hw: BaseHardware, exposure_image:
-            ExposureImage, runtime_config: RuntimeConfig
-    ):
-        exposure = Exposure(self._get_job_id(), hw, exposure_image, runtime_config)
+    def reprint_exposure(self,
+            reference: Exposure,
+            hw: BaseHardware,
+            exposure_image: ExposureImage,
+            runtime_config: RuntimeConfig,
+            exposure_profiles: ExposureProfilesSL1,
+            layer_profiles: LayerProfilesSL1):
+        exposure = Exposure(self._get_job_id(), hw, exposure_image, runtime_config, exposure_profiles, layer_profiles)
         exposure.read_project(reference.project.path)
         exposure.project.set_timings_reference(reference.project)
         self.logger.info("Created reprint exposure id: %s", exposure.instance_id)

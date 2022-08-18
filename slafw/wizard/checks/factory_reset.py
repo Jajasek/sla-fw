@@ -203,27 +203,34 @@ class EraseMCEeprom(ResetCheck):
         self._hw.eraseEeprom()
 
 
-class ResetHomingProfiles(ResetCheck):
+class ResetMovingProfiles(ResetCheck):
     """
-    Set homing profiles to factory defaults
+    Set moving profiles to factory defaults
     """
 
     def __init__(self, package: WizardDataPackage, *args, **kwargs):
-        super().__init__(WizardCheckType.RESET_HOMING_PROFILES, Configuration(None, None), [Resource.MC], *args,
+        super().__init__(WizardCheckType.RESET_MOVING_PROFILES,
+                         Configuration(None, None),
+                         [Resource.MC],
+                         *args,
                          **kwargs)
-        self._hw = package.hw
+        self._package = package
 
     def reset_task_run(self, actions: UserActionBroker):
-        self._hw.tower.profiles.factory_reset(True)
-        self._hw.tower.profiles.write_factory()
-        self._hw.tower.set_stepper_sensitivity(0)
-        self._hw.tower.apply_all_profiles()
-        self._hw.tilt.profiles.factory_reset(True)
-        self._hw.tilt.profiles.write_factory()
-        self._hw.tilt.set_stepper_sensitivity(0)
-        self._hw.tilt.apply_all_profiles()
-        self._hw.tilt.tune.factory_reset(True)
-        self._hw.tilt.tune.write_factory()
+        tower = self._package.hw.tower
+        tower.profiles.factory_reset(True)
+        tower.profiles.write()
+        tower.set_stepper_sensitivity(0)
+        tower.apply_all_profiles()
+        tilt = self._package.hw.tilt
+        tilt.profiles.factory_reset(True)
+        tilt.profiles.write()
+        tilt.set_stepper_sensitivity(0)
+        tilt.apply_all_profiles()
+        self._package.layer_profiles.factory_reset(True)
+        self._package.layer_profiles.write()
+        self._package.exposure_profiles.factory_reset(True)
+        self._package.exposure_profiles.write()
 
 
 class DisableFactory(SyncCheck):

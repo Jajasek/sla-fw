@@ -42,6 +42,9 @@ from slafw.tests import samples
 from slafw.tests.mocks.dbus.rauc import Rauc
 from slafw.tests.mocks.sl1s_uvled_booster import BoosterMock
 from slafw.tests.mocks.wayland import WaylandMock
+from slafw.hardware.sl1.tilt_profiles import TILT_CFG_LOCAL
+from slafw.hardware.sl1.tower_profiles import TOWER_CFG_LOCAL
+from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL
 from slafw.exposure.persistance import (
     LAST_PROJECT_HW_CONFIG,
     LAST_PROJECT_FACTORY_FILE,
@@ -84,9 +87,6 @@ class Virtual:
         hardware_file = self.temp / "slafw.hardware.cfg"
         hardware_file_factory = self.temp / "slafw.hardware.cfg.factory"
         prev_prints = self.temp / "previous_prints"
-        tilt_profiles = self.temp / "profiles_tilt.json"
-        tilt_tune = self.temp / "tune_tilt.json"
-        tower_profiles = self.temp / "profiles_tower.json"
 
         patches: List[patch] = [
             patch("slafw.motion_controller.controller.serial", slafw.tests.mocks.mc_port),
@@ -102,14 +102,15 @@ class Virtual:
                 AsyncMock(return_value=100),
             ),
             patch("slafw.hardware.sl1.hardware.Booster", BoosterMock),
-            patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
-            patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
-            patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
+            patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.temp / TILT_CFG_LOCAL.name),
+            patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.temp / TOWER_CFG_LOCAL.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_HW_CONFIG", self.temp / LAST_PROJECT_HW_CONFIG.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_FACTORY_FILE", self.temp / LAST_PROJECT_FACTORY_FILE.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_CONFIG_FILE", self.temp / LAST_PROJECT_CONFIG_FILE.name),
             patch("slafw.exposure.persistance.LAST_PROJECT_PICKLER", self.temp / LAST_PROJECT_PICKLER.name),
             patch("slafw.exposure.exposure.LAST_PROJECT_PICKLER", self.temp / LAST_PROJECT_PICKLER.name),
+            patch("slafw.exposure.profiles.LAYER_PROFILES_LOCAL", self.temp / LAYER_PROFILES_LOCAL.name),
+            patch("slafw.exposure.profiles.EXPOSURE_PROFILES_LOCAL", self.temp / EXPOSURE_PROFILES_LOCAL.name),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", SAMPLES_DIR / "cputemp"),
             patch("slafw.defines.hwConfigPath", hardware_file),
             patch("slafw.defines.hwConfigPathFactory", hardware_file_factory),

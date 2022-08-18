@@ -18,7 +18,7 @@ from PIL import Image
 from slafw import defines
 from slafw.hardware.base.exposure_screen import ExposureScreenParameters
 from slafw.image.resin_calibration import Calibration
-from slafw.image.cairo import draw_perpartes_mask, inverse
+from slafw.image.cairo import inverse
 from slafw.project.functions import get_white_pixels
 from slafw.utils.bounding_box import BBox
 
@@ -26,19 +26,17 @@ from slafw.utils.bounding_box import BBox
 class ProjectFlags(IntFlag):
     NONE = 0
     CALIBRATE_COMPACT = 1
-    PER_PARTES = 2
-    USE_MASK = 4
+    USE_MASK = 2
 
 @unique
 class SHMIDX(IntEnum):
     PROJECT_IMAGE = 0
     PROJECT_MASK = 1
-    OUTPUT_IMAGE1 = 2
-    OUTPUT_IMAGE2 = 3
-    DISPLAY_USAGE = 4
-    PROJECT_BBOX = 5
-    PROJECT_FL_BBOX = 6
-    PROJECT_TIMES_MS = 7
+    OUTPUT_IMAGE = 2
+    DISPLAY_USAGE = 3
+    PROJECT_BBOX = 4
+    PROJECT_FL_BBOX = 5
+    PROJECT_TIMES_MS = 6
 
 @unique
 class SLIDX(IntEnum):
@@ -72,7 +70,6 @@ class Preloader(Process):
         )
         self._black_image = Image.new("L", self._params.apparent_size_px)
         data = numpy.empty(shape=self._params.apparent_size_px, dtype=numpy.uint8)
-        draw_perpartes_mask(data, self._params.apparent_width_px, self._params.apparent_height_px, 20)
         self._ppm1 = Image.frombytes("L", self._params.apparent_size_px, data)
         inverse(data, self._params.apparent_width_px, self._params.apparent_height_px)
         self._ppm2 = Image.frombytes("L", self._params.apparent_size_px, data)
@@ -81,8 +78,7 @@ class Preloader(Process):
         self._shm = [
                 shared_memory.SharedMemory(name=shm_prefix+SHMIDX.PROJECT_IMAGE.name),
                 shared_memory.SharedMemory(name=shm_prefix+SHMIDX.PROJECT_MASK.name),
-                shared_memory.SharedMemory(name=shm_prefix+SHMIDX.OUTPUT_IMAGE1.name),
-                shared_memory.SharedMemory(name=shm_prefix+SHMIDX.OUTPUT_IMAGE2.name),
+                shared_memory.SharedMemory(name=shm_prefix+SHMIDX.OUTPUT_IMAGE.name),
                 shared_memory.SharedMemory(name=shm_prefix+SHMIDX.DISPLAY_USAGE.name),
                 shared_memory.ShareableList(name=shm_prefix+SHMIDX.PROJECT_BBOX.name),
                 shared_memory.ShareableList(name=shm_prefix+SHMIDX.PROJECT_FL_BBOX.name),
@@ -157,7 +153,7 @@ class Preloader(Process):
                         self._sl[SLIDX.PROJECT_CALIBRATE_PAD_SPACING_PX]):
                     self._logger.warning("Calibration is invalid!")
         input_image = Image.frombuffer("L", self._params.apparent_size_px, self._shm[SHMIDX.PROJECT_IMAGE].buf, "raw", "L", 0, 1)
-        output_image = Image.frombuffer("L", self._params.apparent_size_px, self._shm[SHMIDX.OUTPUT_IMAGE1].buf, "raw", "L", 0, 1)
+        output_image = Image.frombuffer("L", self._params.apparent_size_px, self._shm[SHMIDX.OUTPUT_IMAGE].buf, "raw", "L", 0, 1)
         output_image.readonly = False
         if self._calibration and self._calibration.areas:
             start_time = monotonic()
@@ -174,7 +170,7 @@ class Preloader(Process):
             output_image.paste(self._black_image, mask=mask)
         start_time = monotonic()
         pixels = numpy.memmap(
-                filename=self._dev_shm_prefix+SHMIDX.OUTPUT_IMAGE1.name,
+                filename=self._dev_shm_prefix+SHMIDX.OUTPUT_IMAGE.name,
                 dtype=numpy.uint8,
                 mode='r',
                 order='C')
@@ -189,24 +185,17 @@ class Preloader(Process):
         white_pixels = get_white_pixels(output_image)
         self._logger.debug("pixels manipulations done in %f ms, white pixels: %d",
                 1e3 * (monotonic() - start_time), white_pixels)
-        if self._sl[SLIDX.PROJECT_FLAGS] & ProjectFlags.PER_PARTES and white_pixels > self._sl[SLIDX.WHITE_PIXELS_THRESHOLD]:
-            output_image_second = Image.frombuffer("L", self._params.apparent_size_px, self._shm[SHMIDX.OUTPUT_IMAGE2].buf, "raw", "L", 0, 1)
-            output_image_second.readonly = False
-            output_image_second.paste(output_image)
-            output_image.paste(self._black_image, mask=self._ppm1)
-            output_image_second.paste(self._black_image, mask=self._ppm2)
-            self._screenshot(output_image_second, "2")
-        self._screenshot(output_image, "1")
+        self._screenshot(output_image)
         self._logger.debug("whole preload done in %f ms", 1e3 * (monotonic() - start_time_first))
         return white_pixels
 
-    def _screenshot(self, image: Image, number: str):
+    def _screenshot(self, image: Image):
         try:
             start_time = monotonic()
             preview = image.resize(self._params.live_preview_size_px, Image.BICUBIC)
             self._logger.debug("resize done in %f ms", 1e3 * (monotonic() - start_time))
             start_time = monotonic()
-            preview.save(f"{defines.livePreviewImage}-tmp{number}.png")
+            preview.save(f"{defines.livePreviewImage}-tmp.png")
             self._logger.debug("screenshot done in %f ms", 1e3 * (monotonic() - start_time))
         except Exception:
             self._logger.exception("Screenshot exception:")

@@ -27,7 +27,6 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import PrinterWarning
 from slafw.exposure.exposure import Exposure
-from slafw.project.project import ExposureUserProfile
 from slafw.states.exposure import ExposureState
 
 
@@ -579,13 +578,12 @@ class Exposure0:
 
     @property
     def user_profile(self) -> int:
-        return self.exposure.project.exposure_user_profile
+        return self.exposure.project.exposure_profile_by_id
 
     @auto_dbus
-    @range_checked(ExposureUserProfile.DEFAULT.value, ExposureUserProfile.SAFE.value)
     @user_profile.setter
     def user_profile(self, value: int) -> None:
-        self.exposure.project.exposure_user_profile = value
+        self.exposure.project.exposure_profile_by_id = value
 
     @property
     def exposure_time_first_ms(self) -> int:

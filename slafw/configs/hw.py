@@ -67,7 +67,6 @@ class HwConfig(IniConfig):
         return (self.screwMm * 1000 * 1000) // (200 * 16)
 
     # tilt related
-    tilt = BoolValue(True, doc="Use tilt to tear off the layers.")
     tiltSensitivity = IntValue(0, minimum=-2, maximum=2, doc="Tilt sensitivity adjustment")
     tiltHeight = IntValue(defines.defaultTiltHeight, unit=Ustep, doc="Position of the leveled tilt. [ustep]")
     tiltMax = IntValue(defines.tiltMax, unit=Ustep,
@@ -75,8 +74,6 @@ class HwConfig(IniConfig):
     tiltMin = IntValue(defines.tiltMin, unit=Ustep,
                        doc="Position used to ensure the tilt ends at the bottom. [ustep]")
     limit4fast = IntValue(35, minimum=0, maximum=100, doc="Fast tearing is used if layer area is under this value. [%]")
-    tiltFastTime = FloatValue(5.5, doc="Time necessary to perform fast tear off. [seconds]")
-    tiltSlowTime = FloatValue(8.0, doc="Time necessary to perform slow tear off. [seconds]")
 
     stirringMoves = IntValue(3, minimum=1, maximum=10, doc="Number of stirring moves")
     stirringDelay = IntValue(5, minimum=0, maximum=300)
@@ -99,28 +96,10 @@ class HwConfig(IniConfig):
     )
 
     # Exposure setup
-    perPartes = BoolValue(False, doc="Expose areas larger than layerFill in two steps.")
     upAndDownUvOn = BoolValue(False)
 
     trigger = IntValue(
         0, minimum=0, maximum=20, doc="Duration of electronic trigger durint the layer change, currently discarded. [tenths of a second]"
-    )
-    # Deprecated - use layer_tower_hop_nm
-    layerTowerHop = IntValue(0, unit=Ustep, minimum=0, maximum=80000,
-                             doc="How much to rise the tower during layer change. [microsteps]"
-    )
-    layer_tower_hop_nm = IntValue(
-        lambda self: self.tower_microsteps_to_nm(self.layerTowerHop),
-        unit=Nm,
-        minimum=0,
-        maximum=100_000_000,
-        doc = "How much to rise the tower during layer change. [nm]"
-    )
-    delayBeforeExposure = IntValue(
-        0, minimum=0, maximum=300, doc="Delay between tear off and exposure. [tenths of a second]"
-    )
-    delayAfterExposure = IntValue(
-        0, minimum=0, maximum=300, doc="Delay between exposure and tear off. [tenths of a second]"
     )
     upAndDownWait = IntValue(10, minimum=0, maximum=600, doc="Up&Down wait time. [seconds]")
     upAndDownEveryLayer = IntValue(0, minimum=0, maximum=500, doc="Do Up&Down every N layers, 0 means never.")

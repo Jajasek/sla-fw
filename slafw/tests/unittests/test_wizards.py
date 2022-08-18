@@ -10,6 +10,7 @@ from shutil import copyfile
 from tempfile import NamedTemporaryFile
 from typing import Optional
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from dataclasses import dataclass
 import time
 import pydbus
 import toml
@@ -33,7 +34,7 @@ from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration, PlatformSetup, TankSetup
 from slafw.wizard.wizard import Wizard
 from slafw.wizard.wizard import serializer
-from slafw.wizard.data_package import WizardDataPackage
+from slafw.wizard.data_package import WizardDataPackage, make_config_writers
 from slafw.wizard.wizards.calibration import CalibrationWizard
 from slafw.wizard.wizards.displaytest import DisplayTestWizard
 from slafw.wizard.wizards.factory_reset import FactoryResetWizard, PackingWizard
@@ -42,6 +43,17 @@ from slafw.wizard.wizards.sl1s_upgrade import SL1SUpgradeWizard
 from slafw.wizard.wizards.unboxing import CompleteUnboxingWizard, KitUnboxingWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
 from slafw.wizard.wizards.tank_surface_cleaner import TankSurfaceCleaner
+from slafw.exposure.profiles import LayerProfilesSL1, ExposureProfilesSL1
+
+
+LAYER_PROFILES_FILE = "profiles_layer.json"
+EXPOSURE_PROFILES_FILE = "profiles_exposure.json"
+
+
+@dataclass
+class MockDataclass:
+    first: Mock = Mock()
+    second: Mock = Mock()
 
 
 class TestGroup(CheckGroup):
@@ -56,12 +68,16 @@ class TestGroup(CheckGroup):
 class TestWizardInfrastructure(SlafwTestCaseDBus):
     # pylint: disable=no-self-use
 
+    def setUp(self) -> None:
+        super().setUp()
+        self.package = WizardDataPackage(Mock(), MockDataclass(), Mock(), Mock(), Mock())
+
     def test_wizard_group_run(self):
         group = AsyncMock()
         group.checks = []
         # group.setup.return_value = None
 
-        wizard = Wizard(WizardId.SELF_TEST, [group], Mock(), Mock())
+        wizard = Wizard(WizardId.SELF_TEST, [group], self.package)
         self.assertEqual(WizardState.INIT, wizard.state)
         wizard.start()
         wizard.join()
@@ -85,7 +101,7 @@ class TestWizardInfrastructure(SlafwTestCaseDBus):
         task_body = AsyncMock()
         task_body.side_effect = exception
         check.async_task_run = task_body
-        wizard = Wizard(WizardId.SELF_TEST, [TestGroup(Mock(), [check])], Mock(), Mock())
+        wizard = Wizard(WizardId.SELF_TEST, [TestGroup(Mock(), [check])], self.package)
         wizard.start()
         wizard.join()
 
@@ -103,7 +119,7 @@ class TestWizardInfrastructure(SlafwTestCaseDBus):
                 super().__init__(WizardCheckType.UNKNOWN, Mock(), [])
 
         check = Test()
-        wizard = Wizard(WizardId.SELF_TEST, [TestGroup(Mock(), [check])], Mock(), Mock())
+        wizard = Wizard(WizardId.SELF_TEST, [TestGroup(Mock(), [check])], self.package)
         wizard.start()
         wizard.join()
 
@@ -156,11 +172,17 @@ class TestWizardsBase(SlafwTestCaseDBus):
         hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
         hw_config.tankCleaningExposureTime = 5  # Avoid waiting for long exposures
         self.hw = HardwareMock(hw_config, PrinterModel.SL1)
+        self.layer_profiles = LayerProfilesSL1(factory_file_path=self.TEMP_DIR / LAYER_PROFILES_FILE,
+                                               default_file_path=self.SAMPLES_DIR / LAYER_PROFILES_FILE)
+        self.exposure_profiles = ExposureProfilesSL1(factory_file_path=self.TEMP_DIR / EXPOSURE_PROFILES_FILE,
+                                                     default_file_path=self.SAMPLES_DIR / EXPOSURE_PROFILES_FILE)
         self.package = WizardDataPackage(
                 hw=self.hw,
-                config_writer=self.hw.config.get_writer(),
+                config_writers=make_config_writers(self.hw.config, self.layer_profiles),
                 runtime_config=RuntimeConfig(),
                 exposure_image=Mock(),
+                layer_profiles=self.layer_profiles,
+                exposure_profiles=self.exposure_profiles,
         )
 
     def _run_wizard(self, wizard: Wizard, limit_s: int = 5, expected_state=WizardState.DONE):
@@ -221,7 +243,7 @@ class TestUpgradeWizard(TestWizardsBase):
             HwConfig(defines.hwConfigPath, defines.hwConfigPathFactory, is_master=True), PrinterModel.SL1S
         )
         self.package.hw = self.hw
-        self.package.config_writer = self.hw.config.get_writer()
+        self.package.config_writers.hw_config = self.hw.config.get_writer()
         set_configured_printer_model(PrinterModel.SL1)
 
     def tearDown(self) -> None:
@@ -530,9 +552,10 @@ class TestWizards(TestWizardsBase):
         runtime_config.factory_mode = False
         package = WizardDataPackage(
                 hw=hw,
-                config_writer=Mock(),
+                config_writers=make_config_writers(hw.config, self.layer_profiles),
                 runtime_config=runtime_config,
-                exposure_image=Mock(),
+                exposure_image=self.layer_profiles,
+                exposure_profiles=self.exposure_profiles,
         )
         self._run_wizard(FactoryResetWizard(package, True))
         self._check_factory_reset(hw, unboxing=False, factory_mode=False)
@@ -544,9 +567,10 @@ class TestWizards(TestWizardsBase):
         runtime_config.factory_mode = False
         package = WizardDataPackage(
                 hw=hw,
-                config_writer=Mock(),
+                config_writers=make_config_writers(hw.config, self.layer_profiles),
                 runtime_config=runtime_config,
-                exposure_image=Mock(),
+                exposure_image=self.layer_profiles,
+                exposure_profiles=self.exposure_profiles,
         )
         self._run_wizard(FactoryResetWizard(package, True))
         self._check_factory_reset(hw, unboxing=False, factory_mode=False)
@@ -626,6 +650,13 @@ class TestWizards(TestWizardsBase):
         wizard.state_changed.connect(on_state_changed)
         self._run_wizard(wizard)
         self._assert_final_state(item="calibrated", expected_value=True)
+        with open(self.TEMP_DIR / LAYER_PROFILES_FILE, encoding="utf-8") as o:
+            self.assertEqual({
+                "fast": {"moves_time_ms": 0},
+                "slow": {"moves_time_ms": 0},
+                "super_fast": {"moves_time_ms": 0},
+                "super_slow": {"moves_time_ms": 0},
+            }, json.load(o))
 
     def test_calibration_fail(self):
         wizard = CalibrationWizard(self.package)

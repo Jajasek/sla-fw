@@ -71,6 +71,14 @@ from slafw.wizard.wizards.self_test import SelfTestWizard
 from slafw.wizard.wizards.sl1s_upgrade import SL1SUpgradeWizard, SL1DowngradeWizard
 from slafw.wizard.wizards.unboxing import CompleteUnboxingWizard, KitUnboxingWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
+from slafw.exposure.profiles import (
+    LayerProfilesSL1,
+    LAYER_PROFILES_LOCAL,
+    LAYER_PROFILES_DEFAULT_NAME,
+    ExposureProfilesSL1,
+    EXPOSURE_PROFILES_LOCAL,
+    EXPOSURE_PROFILES_DEFAULT_NAME
+)
 
 
 class Printer:
@@ -78,7 +86,7 @@ class Printer:
     # pylint: disable = too-many-public-methods
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.logger.info("SLA firmware initializing")
+        self.logger.info("Printer initializing")
         self._printer_identifier: Optional[str] = None
         init_time = monotonic()
         self.exception_occurred = Signal()  # Use this one to emit recoverable errors
@@ -121,11 +129,13 @@ class Printer:
         self._system_bus = SystemBus()
         self.inet: Optional[Network] = None
         self.exposure_image: Optional[ExposureImage] = None
+        self.exposure_profiles: Optional[ExposureProfilesSL1] = None
+        self.layer_profiles: Optional[LayerProfilesSL1] = None
         self.config0_dbus = None
         self.logs0_dbus = None
         self.hw: Optional[BaseHardware] = None
 
-        self.logger.info("SLA firmware initialized in %.03f", monotonic() - init_time)
+        self.logger.info("Printer initialized in %.03f seconds", monotonic() - init_time)
 
     @property
     def state(self) -> PrinterState:
@@ -157,7 +167,8 @@ class Printer:
             self.enter_fatal_error(exception)
 
     def do_setup(self):
-        self.logger.info("SLA firmware starting, PID: %d", os.getpid())
+        # pylint: disable = too-many-statements
+        self.logger.info("Printer starting, PID: %d", os.getpid())
         self.logger.info("System version: %s", distro.version())
         start_time = monotonic()
 
@@ -219,9 +230,21 @@ class Printer:
             self.exception_occurred.emit(NoFactoryUvCalib())
         self._compute_uv_pwm()
 
+        # Load layer and exposure profiles
+        layer_profiles_path = Path(defines.dataPath) / self.hw.printer_model.name / LAYER_PROFILES_DEFAULT_NAME  # type: ignore[attr-defined]
+        self.layer_profiles = LayerProfilesSL1(
+                factory_file_path=LAYER_PROFILES_LOCAL,
+                default_file_path=layer_profiles_path)
+        self.logger.info(str(self.layer_profiles))
+        exposure_profiles_path = Path(defines.dataPath) / self.hw.printer_model.name / EXPOSURE_PROFILES_DEFAULT_NAME  # type: ignore[attr-defined]
+        self.exposure_profiles = ExposureProfilesSL1(
+                factory_file_path=EXPOSURE_PROFILES_LOCAL,
+                default_file_path=exposure_profiles_path)
+        self.logger.info(str(self.exposure_profiles))
+
         # Past exposures
         save_all_remain_wizard_history()
-        self.action_manager.load_exposure(self.hw)
+        self.action_manager.load_exposure(self.hw, self.exposure_profiles, self.layer_profiles)
 
         # Set the default exposure for tank cleaning
         if not self.hw.config.tankCleaningExposureTime:
@@ -233,7 +256,7 @@ class Printer:
 
         # Finish startup
         self.set_state(PrinterState.RUNNING)
-        self.logger.info("SLA firmware started in %.03f seconds", monotonic() - start_time)
+        self.logger.info("Printer started in %.03f seconds", monotonic() - start_time)
 
     def stop(self):
         self.action_manager.exit()
@@ -457,7 +480,13 @@ class Printer:
                 last_exposure = self.action_manager.exposure
                 if last_exposure:
                     last_exposure.try_cancel()
-                self.action_manager.new_exposure(self.hw, self.exposure_image, self.runtime_config, path)
+                self.action_manager.new_exposure(
+                        self.hw,
+                        self.exposure_image,
+                        self.runtime_config,
+                        self.exposure_profiles,
+                        self.layer_profiles,
+                        path)
         except (NotUVCalibrated, NotMechanicallyCalibrated):
             self.run_make_ready_to_print()
         except Exception:

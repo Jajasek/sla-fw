@@ -2,39 +2,21 @@
 
 - set of all tilt/tower profiles
 - values are copied to MC
-- see `slafw/hardware/sl1/tilt.py:MovingProfilesTiltSL1` to get the names of Tilt profiles
-- see `slafw/hardware/sl1/tower.py:MovingProfilesTowerSL1` to get the names of Tower profiles
+- see `slafw/hardware/sl1/tilt_profiles.py:MovingProfilesTiltSL1` to get the names of Tilt profiles
+- see `slafw/hardware/sl1/tower_profiles.py:MovingProfilesTowerSL1` to get the names of Tower profiles
 
 
-# Tune tilt profiles
+# Layer and exposure profiles
 
-- set of values for tilt movement while printing
-```
-[
-    [tilt_down_large_fill],
-    [tilt_down_small_fill],
-    [tilt_up_large_fill],
-    [tilt_up_small_fill],
-]
-```
-- the movement is split on slow and fast by `limit for fast tilt` parameter
+- set of values for exposure management
 - values are stored in A64
-- tilt down procedure:
-    1. set `initial profile` (see Tilt moving Profiles)
-    2. go number of `offset steps` [usteps]
-    3. wait `offset delay` [ms]
-    4. set `finish profile`
-    5. split rest of the distence to X `tilt cycles`
-    6. wait `tilt delay` between `tilt cycles`
-    7. home (`homing cycles` defines number of retries, `homing tolerance` ???)
-
-## Structure of the file
-
-```
-[
-    [initial profile, offset steps, offset delay, finish profile, tilt cycles, tilt delay, homing tolerance, homing cycles], # tilt down large fill (area > limit for fast tilt)
-    [...], # tilt down small fill (area < limit for fast tilt)
-    [...], # tilt up large fill (area > limit for fast tilt)
-    [...]  # tilt up small fill (area < limit for fast tilt)
-]
-```
+- tilt move procedure:
+    1. set `initial_profile` (see Tilt moving Profiles)
+    2. go number of `offset_steps`
+    3. wait `offset_delay_ms`
+    4. set `finish_profile`
+    5. split rest of the distence to X `cycles`
+    6. wait `delay_ms` between `cycles`
+    7. home when moving down
+- see `slafw/exposure/profiles.py:LayerProfilesSL1` to get the names of the profiles
+- see `slafw/exposure/profiles.py:SingleLayerProfileSL1` to get profile items description

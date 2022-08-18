@@ -34,7 +34,7 @@ class TowerHomeTest(DangerousCheck):
                         raise e
                     hw.tower.set_stepper_sensitivity(sensitivity)
                     hw.tower.profiles.apply_all()
-                    self._package.config_writer.towerSensitivity = sensitivity   # FIXME this should only be done upon success
+                    self._package.config_writers.hw_config.towerSensitivity = sensitivity   # FIXME this should only be done upon success
                     break
             if sensitivity_failed is False:
                 break
@@ -42,7 +42,7 @@ class TowerHomeTest(DangerousCheck):
     def get_result_data(self) -> Dict[str, Any]:
         return {
             # measured fake resin volume in wizard (without resin with rotated platform)
-            "towerSensitivity": self._package.config_writer.towerSensitivity
+            "towerSensitivity": self._package.config_writers.hw_config.towerSensitivity
         }
 
 
@@ -145,12 +145,12 @@ class TowerAlignTest(DangerousCheck):
 
         tower_position_nm = hw.tower.position
         self._logger.info("tower position: %d nm", tower_position_nm)
-        self._package.config_writer.tower_height_nm = -tower_position_nm
+        self._package.config_writers.hw_config.tower_height_nm = -tower_position_nm
 
         hw.tower.actual_profile = hw.tower.profiles.homingFast
         # TODO: Allow to repeat align step on exception
 
     def get_result_data(self) -> Dict[str, Any]:
         return {
-            "tower_height_nm": int(self._package.config_writer.tower_height_nm),
+            "tower_height_nm": int(self._package.config_writers.hw_config.tower_height_nm),
         }

@@ -105,7 +105,7 @@ class CalibrationWizard(Wizard):
         return "calibration"
 
     def wizard_finished(self):
-        self._config_writer.calibrated = True
+        self._config_writers.hw_config.calibrated = True
 
     def wizard_failed(self):
         writer = self._package.hw.config.get_writer()

@@ -62,13 +62,13 @@
 		"stallguard_threshold": 40,
 		"coolstep_threshold": 2000
 	},
-	"reserved": {
-		"starting_steprate": 3840,
-		"maximum_steprate": 5120,
-		"acceleration": 200,
-		"deceleration": 200,
-		"current": 15,
-		"stallguard_threshold": 3,
-		"coolstep_threshold": 1150
+	"superSlow": {
+		"starting_steprate": 100,
+		"maximum_steprate": 600,
+		"acceleration": 150,
+		"deceleration": 150,
+		"current": 20,
+		"stallguard_threshold": 0,
+		"coolstep_threshold": 1500
 	}
 }

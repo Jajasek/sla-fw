@@ -65,7 +65,7 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
                 'calibrate_time_ms': 1000,
                 'calibration_regions': 0,
                 'exposure_time_first_ms': 1000,
-                'exposure_user_profile': 0
+                'exposure_profile_by_id': 0
             },
             self.standard0.project_get_properties(["exposure_times"])
         )

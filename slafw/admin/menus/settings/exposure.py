@@ -4,8 +4,9 @@
 
 from slafw.libPrinter import Printer
 from slafw.admin.control import AdminControl
-from slafw.admin.items import AdminIntValue, AdminBoolValue, AdminFloatValue, AdminFixedValue
+from slafw.admin.items import AdminAction, AdminIntValue, AdminBoolValue, AdminFixedValue
 from slafw.admin.menus.settings.base import SettingsMenu
+from slafw.admin.menus.hardware.profiles import Profiles
 
 
 class ExposureSettingsMenu(SettingsMenu):
@@ -13,16 +14,16 @@ class ExposureSettingsMenu(SettingsMenu):
         super().__init__(control, printer)
         self.add_items(
             (
-                AdminBoolValue.from_value(
-                    "Per-partes exposure",
-                    self._temp,
-                    "perPartes",
-                    "display_test_color"),
-                AdminBoolValue.from_value(
-                    "Use tilt",
-                    self._temp,
-                    "tilt",
-                    "tank_reset_color"),
+                AdminAction(
+                    "Layer change profiles",
+                    lambda: self.enter(Profiles(self._control, printer, printer.layer_profiles)),
+                    "statistics_color"
+                 ),
+                AdminAction(
+                    "Exposure profiles",
+                    lambda: self.enter(Profiles(self._control, printer, printer.exposure_profiles)),
+                    "uv_calibration"
+                 ),
                 AdminFixedValue.from_value(
                     "Force slow tilt height [mm]",
                     self._temp,
@@ -41,29 +42,6 @@ class ExposureSettingsMenu(SettingsMenu):
                     self._temp,
                     "upAndDownUvOn",
                     "tower_offset_color"),
-                AdminFixedValue.from_value(
-                    "Layer tower hop [mm]",
-                    self._temp,
-                    "layer_tower_hop_nm",
-                    1,
-                    6,
-                    "calibration_color"),
-                AdminFloatValue(
-                    "Delay before exposure [s]",
-                    self.get_delay_before_expo,
-                    self.set_delay_before_expo,
-                    0.1,
-                    "exposure_times_color",
-                    minimum=self._temp.get_value_property("delayBeforeExposure", "min") / 10,
-                    maximum=self._temp.get_value_property("delayBeforeExposure", "max") / 10),
-                AdminFloatValue(
-                    "Delay after exposure [s]",
-                    self.get_delay_after_expo,
-                    self.set_delay_after_expo,
-                    0.1,
-                    "exposure_times_color",
-                    minimum=self._temp.get_value_property("delayAfterExposure", "min") / 10,
-                    maximum=self._temp.get_value_property("delayAfterExposure", "max") / 10),
                 AdminIntValue.from_value(
                     "Up&down wait [s]",
                     self._temp,
@@ -92,15 +70,3 @@ class ExposureSettingsMenu(SettingsMenu):
                     "exposure_times_color"),
             )
         )
-
-    def set_delay_before_expo(self, value):
-        self._temp.delayBeforeExposure = int(round(value * 10, ndigits=1))
-
-    def get_delay_before_expo(self):
-        return self._temp.delayBeforeExposure / 10
-
-    def set_delay_after_expo(self, value):
-        self._temp.delayAfterExposure = int(round(value * 10, ndigits=1))
-
-    def get_delay_after_expo(self):
-        return self._temp.delayAfterExposure / 10

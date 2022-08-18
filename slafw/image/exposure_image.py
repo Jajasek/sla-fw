@@ -73,8 +73,7 @@ class ExposureImage:
         self._shm = [
                 shared_memory.SharedMemory(create=True, size=image_bytes_count, name=shm_prefix+SHMIDX.PROJECT_IMAGE.name),
                 shared_memory.SharedMemory(create=True, size=image_bytes_count, name=shm_prefix+SHMIDX.PROJECT_MASK.name),
-                shared_memory.SharedMemory(create=True, size=image_bytes_count, name=shm_prefix+SHMIDX.OUTPUT_IMAGE1.name),
-                shared_memory.SharedMemory(create=True, size=image_bytes_count, name=shm_prefix+SHMIDX.OUTPUT_IMAGE2.name),
+                shared_memory.SharedMemory(create=True, size=image_bytes_count, name=shm_prefix+SHMIDX.OUTPUT_IMAGE.name),
                 shared_memory.SharedMemory(create=True, size=temp_usage.nbytes, name=shm_prefix+SHMIDX.DISPLAY_USAGE.name),
                 shared_memory.ShareableList(range(5), name=shm_prefix+SHMIDX.PROJECT_BBOX.name),
                 shared_memory.ShareableList(range(5), name=shm_prefix+SHMIDX.PROJECT_FL_BBOX.name),
@@ -125,8 +124,6 @@ class ExposureImage:
                 order='C',
                 buffer=self._shm[SHMIDX.DISPLAY_USAGE].buf)
         usage.fill(0.0)
-        if self._project.per_partes:
-            project_flags |= ProjectFlags.PER_PARTES
         try:
             mask = Image.frombuffer("L", self._hw.exposure_screen.parameters.apparent_size_px, self._shm[SHMIDX.PROJECT_MASK].buf, "raw", "L", 0, 1)
             mask.readonly = False
@@ -205,10 +202,7 @@ class ExposureImage:
         self._buffer = self._open_image(filename_with_path)
         self._hw.exposure_screen.show(self._buffer)
 
-    def preload_image(self, layer_index: int, second=False):
-        if second:
-            self.logger.debug("second part of image - no preloading")
-            return
+    def preload_image(self, layer_index: int):
         if layer_index >= self._project.total_layers:
             self.logger.debug("layer_index is beyond the layers count - no preloading")
             return
@@ -238,15 +232,15 @@ class ExposureImage:
             raise PreloadFailed() from e
 
     @measure_time("get result and blit")
-    def blit_image(self, second=False):
-        source_shm = self._shm[SHMIDX.OUTPUT_IMAGE2].buf if second else self._shm[SHMIDX.OUTPUT_IMAGE1].buf
+    def blit_image(self):
+        source_shm = self._shm[SHMIDX.OUTPUT_IMAGE].buf
         self._buffer = Image.frombuffer("L", self._hw.exposure_screen.parameters.apparent_size_px, source_shm, "raw", "L", 0, 1).copy()
         self._hw.exposure_screen.show(self._buffer)
 
     @measure_time("rename")
-    def screenshot_rename(self, second=False):
+    def screenshot_rename(self):
         try:
-            os.rename(f"{defines.livePreviewImage}-tmp{2 if second else 1}.png", defines.livePreviewImage)
+            os.rename(f"{defines.livePreviewImage}-tmp.png", defines.livePreviewImage)
         except Exception:
             self.logger.exception("Screenshot rename exception:")
 

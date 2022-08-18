@@ -76,9 +76,10 @@ class TiltUp(DangerousCheck):
         super().__init__(
             package, WizardCheckType.TILT_LEVEL, Configuration(None, None), [Resource.TILT, Resource.TOWER_DOWN]
         )
+        self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        self._package.hw.tilt.layer_up_wait()
+        await self._package.hw.tilt.layer_up_wait_async(self._package.layer_profiles.fast)
 
 
 class TowerSafeDistance(DangerousCheck):
@@ -162,20 +163,20 @@ class GentlyUp(Check):
 
     def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.TOWER_GENTLY_UP, Configuration(None, None), [Resource.TILT, Resource.TOWER])
-        self._hw = package.hw
+        self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        up_profile = GentlyUpProfile(self._hw.config.tankCleaningGentlyUpProfile)
-        tower_profile = up_profile.map_to_tower_profile(self._hw.tower.profiles)
+        up_profile = GentlyUpProfile(self._package.hw.config.tankCleaningGentlyUpProfile)
+        tower_profile = up_profile.map_to_tower_profile(self._package.hw.tower.profiles)
         self._logger.info("GentlyUp with %s -> %s", up_profile.name, tower_profile.idx)
-        self._hw.tower.actual_profile = tower_profile
+        self._package.hw.tower.actual_profile = tower_profile
 
-        await self._hw.tilt.layer_down_wait_async(self._hw.tilt.get_tune_profile_down(True))
+        await self._package.hw.tilt.layer_down_wait_async(self._package.layer_profiles.slow)
         # TODO: constant in code !!!
         target_position = Nm(50_000_000)
         for _ in range(3):
-            self._hw.tower.move(target_position)
-            while self._hw.tower.moving:
+            self._package.hw.tower.move(target_position)
+            while self._package.hw.tower.moving:
                 await asyncio.sleep(0.25)
-            if abs(target_position - self._hw.tower.position) < Nm(10):
+            if abs(target_position - self._package.hw.tower.position) < Nm(10):
                 break

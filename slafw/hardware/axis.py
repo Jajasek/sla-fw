@@ -13,7 +13,7 @@ from typing import List, Dict, Any
 from PySignal import Signal
 
 from slafw.configs.hw import HwConfig
-from slafw.configs.unit import Unit
+from slafw.configs.unit import Unit, Nm
 from slafw.errors.errors import MotionControllerException
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.power_led_action import WarningAction
@@ -357,3 +357,10 @@ class Axis(ABC):
         """
         if not isinstance(value, unit):
             raise TypeError(f"Incompatible units {type(value)}, {unit}")
+
+    @abstractmethod
+    async def layer_peel_moves_async(self, layer_profile: SingleProfile, position_nm: Nm, last_layer: bool) -> None:
+        """do the moves to peel the layer (layer change)"""
+
+    def layer_peel_moves(self, layer_profile: SingleProfile, position_nm: Nm, last_layer: bool) -> None:
+        asyncio.run(self.layer_peel_moves_async(layer_profile, position_nm, last_layer))

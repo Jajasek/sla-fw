@@ -26,11 +26,13 @@ class ValueConfigCommon(ValueConfig):
     _add_dict_type = None
 
     def __init__(
+        # pylint: disable=too-many-arguments
         self,
         file_path: Optional[Path] = None,
         factory_file_path: Optional[Path] = None,
         default_file_path: Optional[Path] = None,
-        is_master: bool = False
+        is_master: bool = False,
+        force_factory: bool = False,
     ):
         """
         Configuration constructor
@@ -39,6 +41,7 @@ class ValueConfigCommon(ValueConfig):
         :param factory_file_path: Factory configuration file path
         :param default_file_path: default configuration file path (used instead of hardcoded values)
         :param is_master: If True this instance in master, can write to the configuration file
+        :param force_factory: If True all writes will be treated as factory writes regardless of other flags
         """
         if factory_file_path is None and file_path is None:
             is_master = True
@@ -46,6 +49,7 @@ class ValueConfigCommon(ValueConfig):
         self._file_path = file_path
         self._factory_file_path = factory_file_path
         self._default_file_path = default_file_path
+        self._force_factory = force_factory
 
     def __str__(self) -> str:
         res = [f"{self.__class__.__name__}: {self._file_path} ({self._factory_file_path}) ({self._default_file_path}):"]
@@ -189,6 +193,8 @@ class ValueConfigCommon(ValueConfig):
         :param factory: write as factory config
         """
         with self._lock.gen_rlock():
+            if self._force_factory:
+                factory = True
             if file_path is None:
                 file_path = self._factory_file_path if factory else self._file_path
             self._logger.info("Writing config to %s", file_path)

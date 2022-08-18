@@ -99,7 +99,7 @@ class Standard0:
     PROPERTIES_ALLOWED = {
         "exposure_time_ms": True,
         "exposure_time_first_ms": True,
-        "exposure_user_profile": True,
+        "exposure_profile_by_id": True,
         "calibration_regions": False,
         "calibrate_time_ms": True,
     }
@@ -108,7 +108,7 @@ class Standard0:
         "exposure_times": {
             "exposure_time_ms",
             "exposure_time_first_ms",
-            "exposure_user_profile",
+            "exposure_profile_by_id",
             "calibration_regions",
             "calibrate_time_ms",
         }
@@ -342,7 +342,7 @@ class Standard0:
             "remaining_time": exposure.estimate_remain_time_ms() / 1000,
             "exposureTime": project.exposure_time_ms,
             "exposureTimeFirst": project.exposure_time_first_ms,
-            "exposureUserProfile": project.exposure_user_profile,
+            "exposureUserProfile": project.exposure_profile_by_id,
             "path": str(project.origin_path),
         }
         if exposure.printStartTime.microsecond == 0:
@@ -449,7 +449,7 @@ class Standard0:
                 "exposure_time_ms": 1000,
                 "exposure_time_first_ms": 1000,
                 "calibrate_time_ms": 1000,
-                "exposure_user_profile": 1
+                "exposure_profile_by_id": 1
             })
 
         :raises KeyError: If the property does not exists.
@@ -490,6 +490,8 @@ class Standard0:
                 self._printer.hw,
                 self._printer.exposure_image,
                 self._printer.runtime_config,
+                self._printer.exposure_profiles,
+                self._printer.layer_profiles,
                 project_path,
             )
 

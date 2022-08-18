@@ -79,7 +79,8 @@ class ProfileSet(JsonConfig):
                 file_path=file_path,
                 factory_file_path=factory_file_path,
                 default_file_path=default_file_path,
-                is_master=True
+                is_master=True,
+                force_factory=True,
         )
         self._ordered_profiles: List[SingleProfile] = []
         self.read_file()
@@ -109,6 +110,9 @@ class ProfileSet(JsonConfig):
     def __iter__(self):
         for profile in self._ordered_profiles:
             yield profile
+
+    def __len__(self):
+        return len(self._ordered_profiles)
 
     @cache
     def __getitem__(self, idx):

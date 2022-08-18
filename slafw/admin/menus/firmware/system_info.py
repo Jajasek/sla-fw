@@ -35,7 +35,6 @@ class SystemInfoMenu(AdminMenu):
         self.mc_sn = self.add_label(None, "firmware-icon")
         self.mc_sw = self.add_label(None, "firmware-icon")
         self.mc_rev = self.add_label(None, "firmware-icon")
-        self.boost_sn = self.add_label(None, "firmware-icon")
         self.expo_panel_sn = self.add_label(None, "display_replacement")
         self.expo_panel_resolution = self.add_label(None, "display_replacement")
         self.expo_panel_transmittance = self.add_label(None, "display_replacement")
@@ -43,8 +42,7 @@ class SystemInfoMenu(AdminMenu):
         self.net_state = self.add_label(None, "lan_color")
         self.net_dev = self.add_label(None, "lan_color")
         self.api_key = self.add_label(None, "key_color")
-        self.slow_tilt = self.add_label(None, "tank_reset_color")
-        self.fast_tilt = self.add_label(None, "tank_reset_color")
+        self.tilt_times = self.add_label(None, "tank_reset_color")
         self.resin_sensor = self.add_label(None, "refill_color")
         self.cover = self.add_label(None, "cover_color")
         self.cpu_temp = self.add_label(None, "limit_color")
@@ -74,30 +72,44 @@ class SystemInfoMenu(AdminMenu):
         self._thread.join()
 
     def _run(self):
+        self.os_version.set(f"OS version: {distro.version()}")
+        self.a64_sn.set(f"A64 serial: {self._printer.hw.cpuSerialNo}")
+        self.emmc_sn.set(f"eMMC serial: {self._printer.hw.emmc_serial}")
+        self.mc_sn.set(f"MC serial: {self._printer.hw.mcSerialNo}")
+        self.mc_sw.set(f"MC SW version: {self._printer.hw.mcFwVersion}")
+        self.mc_rev.set(f"MC revision: {self._printer.hw.mcBoardRevision}")
+        self.expo_panel_sn.set(f"Exposure panel serial: {self._printer.hw.exposure_screen.serial_number}")
+        self.expo_panel_resolution.set(f"Exposure panel resolution: {self._printer.hw.exposure_screen.parameters.width_px}x{self._printer.hw.exposure_screen.parameters.height_px} px")
+        self.expo_panel_transmittance.set(f"Exposure panel transmittance: {self._printer.hw.exposure_screen.transmittance} %")
+        self.printer_model.set(f"Printer model: {self._printer.hw.printer_model.name}")
+        self.api_key.set(f"API key: {get_octoprint_auth(self.logger)}")
+        tilt_times_list = []
+        lp = self._printer.layer_profiles
+        for ep in self._printer.exposure_profiles:
+            tilt_times_list.append(f"<li><ul>{ep.name}:"
+                f"<li>small fill: {lp[ep.small_fill_layer_profile].moves_time_ms / 1000} s</li>"
+                f"<li>large fill: {lp[ep.large_fill_layer_profile].moves_time_ms / 1000} s</li>"
+                "</ul></li>")
+        self.tilt_times.set(f"Tilt times: <ul>{''.join(tilt_times_list)}</ul>")
+        self.uv_counter.set(f"UV LED counter: {timedelta(seconds=self._printer.hw.uv_led.usage_s)}")
+        self.display_counter.set(f"Display counter: {timedelta(seconds=self._printer.hw.exposure_screen.usage_s)}")
+        sys_stats = TomlConfigStats(defines.statsData, self._printer.hw)
+        self.started_projects.set(f"Total started projects: {sys_stats['started_projects']}")
+        self.finished_projects.set(f"Total finished projects: {sys_stats['finished_projects']}")
+        self.total_layers.set(f"Total layers: {sys_stats['layers']}")
+        self.total_print_time.set(f"Total print time: {timedelta(seconds=sys_stats['total_seconds'])}")
+        self.total_resin.set(f"Total resin used: {sys_stats['total_resin']} ml")
+
         self._printer.hw.resinSensor(True)
-        loop = 0
+        loop = 5
         while self._running:
             loop += 1
-            if loop >= 10:
+            if loop >= 5:
                 self.logger.debug("Updating system information")
                 self.system_time.set(f"System time: {datetime.now().strftime('%x %X')}")
                 self.system_uptime.set(f"System uptime: {':'.join(str(datetime.now() - datetime.fromtimestamp(psutil.boot_time())).split('.')[:1])}")
-                self.os_version.set(f"OS version: {distro.version()}")
-                self.a64_sn.set(f"A64 serial: {self._printer.hw.cpuSerialNo}")
-                self.emmc_sn.set(f"eMMC serial: {self._printer.hw.emmc_serial}")
-                self.mc_sn.set(f"MC serial: {self._printer.hw.mcSerialNo}")
-                self.mc_sw.set(f"MC SW version: {self._printer.hw.mcFwVersion}")
-                self.mc_rev.set(f"MC revision: {self._printer.hw.mcBoardRevision}")
-                self.boost_sn.set(f"Booster serial: {self._printer.hw.sl1s_booster.board_serial_no}")
-                self.expo_panel_sn.set(f"Exposure panel serial: {self._printer.hw.exposure_screen.serial_number}")
-                self.expo_panel_resolution.set(f"Exposure panel resolution: {self._printer.hw.exposure_screen.parameters.width_px}x{self._printer.hw.exposure_screen.parameters.height_px} px")
-                self.expo_panel_transmittance.set(f"Exposure panel transmittance: {self._printer.hw.exposure_screen.transmittance} %")
-                self.printer_model.set(f"Printer model: {self._printer.hw.printer_model.name}")
                 self.net_state.set(f"Network state: {'online' if self._printer.inet.ip else 'offline'}")
                 self.net_dev.set(f"Net devices: {self._printer.inet.devices}")
-                self.api_key.set(f"API key: {get_octoprint_auth(self.logger)}")
-                self.slow_tilt.set(f"Slow tilt time: {self._printer.hw.config.tiltSlowTime:0.1f} s")
-                self.fast_tilt.set(f"Fast tilt time: {self._printer.hw.config.tiltFastTime:0.1f} s")
                 self.resin_sensor.set(f"Resin sensor triggered: {self._printer.hw.getResinSensorState()}")
                 self.cover.set(f"Cover closed: {self._printer.hw.isCoverClosed()}")
                 self.cpu_temp.set(f"CPU temperature: {self._printer.hw.cpu_temp.value}")
@@ -105,16 +117,8 @@ class SystemInfoMenu(AdminMenu):
                 self.ambient_temp.set(f"Ambient temperature: {self._printer.hw.ambient_temp.value}")
                 for fidx, fan in self._printer.hw.fans.items():
                     self._fans[fidx].set(f"{fan.name} fan RPM: {fan.rpm}")
-                uv_led_info_list = [f'<li>{key}: {value}</li>' for key, value in self._printer.hw.uv_led.info.items()]
+                uv_led_info_list = [f"<li>{key}: {value}</li>" for key, value in self._printer.hw.uv_led.info.items()]
                 self.uv_led.set(f"UV LED: <ul>{''.join(uv_led_info_list)}</ul>")
-                self.uv_counter.set(f"UV LED counter: {timedelta(seconds=self._printer.hw.uv_led.usage_s)}")
-                self.display_counter.set(f"Display counter: {timedelta(seconds=self._printer.hw.exposure_screen.usage_s)}")
-                sys_stats = TomlConfigStats(defines.statsData, self._printer.hw)
-                self.started_projects.set(f"Total started projects: {sys_stats['started_projects']}")
-                self.finished_projects.set(f"Total finished projects: {sys_stats['finished_projects']}")
-                self.total_layers.set(f"Total layers: {sys_stats['layers']}")
-                self.total_print_time.set(f"Total print time: {timedelta(seconds=sys_stats['total_seconds'])}")
-                self.total_resin.set(f"Total resin used: {sys_stats['total_resin']} ml")
                 loop = 0
             sleep(.1)
 

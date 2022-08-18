@@ -99,7 +99,7 @@ class SelfTestWizard(Wizard):
         return names
 
     def wizard_finished(self):
-        self._config_writer.showWizard = False
+        self._config_writers.hw_config.showWizard = False
 
     def wizard_failed(self):
         writer = self._package.hw.config.get_writer()
