@@ -20,7 +20,6 @@ from slafw.hardware.tilt import MovingProfilesTilt
 from slafw.hardware.sl1.tilt import TuneTiltSL1
 from slafw.hardware.power_led_action import WarningAction
 from slafw.functions.files import get_save_path, usb_remount, get_export_file_name
-from slafw.functions.system import get_configured_printer_model
 from slafw.errors.errors import NoExternalStorage, TiltHomeFailed
 from slafw.configs.value import ProfileIndex
 
@@ -55,7 +54,7 @@ class Profiles(SafeAdminMenu):
         if save_path is None or not save_path.parent.exists():
             raise NoExternalStorage()
         usb_remount(str(save_path))
-        model_name = get_configured_printer_model().name    # type: ignore[attr-defined]
+        model_name = self._printer.hw.printer_model.name    # type: ignore[attr-defined]
         fn = f"{self._pset.name.replace(' ', '_')}-{model_name}.{get_export_file_name(self._printer.hw)}.json"
         self._pset.write_factory(save_path / fn, nondefault=True)
         self._control.enter(Info(self._control, headline=f"{self._pset.name.capitalize()} saved to:", text=fn))

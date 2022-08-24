@@ -10,7 +10,7 @@ from time import sleep
 from typing import List
 
 from slafw.configs.hw import HwConfig
-from slafw.hardware.hardware_sl1 import HardwareSL1
+from slafw.hardware.sl1.hardware import HardwareSL1
 from slafw.hardware.printer_model import PrinterModel
 
 logging.basicConfig(format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s", level = logging.DEBUG)

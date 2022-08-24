@@ -34,7 +34,10 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
 
         # Resolve standard printer and open project
         self.standard0: Standard0 = bus.get("cz.prusa3d.sl1.standard0")
-        self.standard0.cmd_select(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False, False)
+        self.standard0.cmd_select(
+                str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),
+                False,
+                False)
 
     def tearDown(self):
         self.standard0_dbus.unpublish()
@@ -53,7 +56,9 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
         # self.assertEqual(type,  type(self.standard0.net_ip))
 
     def test_read_project_values(self):
-        self.assertEqual("numbers" + self.printer.model.extension,  os.path.basename(self.standard0.project_path))
+        self.assertEqual(
+                "numbers" + self.printer.hw.printer_model.extension,
+                os.path.basename(self.standard0.project_path))
         self.assertDictEqual(
             {
                 'exposure_time_ms': 1000,

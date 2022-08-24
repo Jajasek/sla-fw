@@ -92,7 +92,7 @@ class SystemInfoMenu(AdminMenu):
                 self.expo_panel_sn.set(f"Exposure panel serial: {self._printer.hw.exposure_screen.serial_number}")
                 self.expo_panel_resolution.set(f"Exposure panel resolution: {self._printer.hw.exposure_screen.parameters.width_px}x{self._printer.hw.exposure_screen.parameters.height_px} px")
                 self.expo_panel_transmittance.set(f"Exposure panel transmittance: {self._printer.hw.exposure_screen.transmittance} %")
-                self.printer_model.set(f"Printer model: {self._printer.model.name}")
+                self.printer_model.set(f"Printer model: {self._printer.hw.printer_model.name}")
                 self.net_state.set(f"Network state: {'online' if self._printer.inet.ip else 'offline'}")
                 self.net_dev.set(f"Net devices: {self._printer.inet.devices}")
                 self.api_key.set(f"API key: {get_octoprint_auth(self.logger)}")

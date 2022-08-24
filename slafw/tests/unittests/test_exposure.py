@@ -8,7 +8,7 @@ from pathlib import Path
 from time import sleep
 from typing import Optional
 
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import Mock, MagicMock, AsyncMock
 
 from slafw.tests.base import SlafwTestCaseDBus, RefCheckTestCase
 from slafw.hardware.base.hardware import BaseHardware
@@ -28,7 +28,6 @@ from slafw.states.exposure import ExposureState
 from slafw.tests.mocks.hardware import HardwareMock
 
 
-@patch("slafw.project.project.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
 class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
     PROJECT = str(SlafwTestCaseDBus.SAMPLES_DIR / "numbers.sl1")
     PROJECT_LAYER_CHANGE = str(SlafwTestCaseDBus.SAMPLES_DIR / "layer_change.sl1")
@@ -65,7 +64,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
 
     @staticmethod
     def setupHw() -> HardwareMock:
-        hw = HardwareMock()
+        hw = HardwareMock(printer_model = PrinterModel.SL1)
         hw.connect()
         hw.start()
         return hw
@@ -238,7 +237,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self._fake_calibration(hw)
         print(hw.config.limit4fast)
         hw.config.limit4fast = 45
-        exposure_image = ExposureImage(hw, PrinterModel.SL1S)
+        exposure_image = ExposureImage(hw)
         exposure_image.start()
 
         hw.config.forceSlowTiltHeight = 0  # do not force any extra slow tilts

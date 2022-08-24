@@ -18,7 +18,6 @@ from PIL import Image, ImageOps
 from slafw import defines
 from slafw.errors.errors import PreloadFailed
 from slafw.hardware.base.hardware import BaseHardware
-from slafw.hardware.printer_model import PrinterModel
 from slafw.project.project import Project
 from slafw.project.functions import get_white_pixels
 from slafw.image.resin_calibration import Calibration
@@ -40,9 +39,8 @@ def measure_time(what: str):
 
 class ExposureImage:
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, hardware: BaseHardware, model: PrinterModel):
+    def __init__(self, hardware: BaseHardware):
         self._hw = hardware
-        self._model = model
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing")
         self._project: Optional[Project] = None

@@ -46,7 +46,7 @@ class BaseHardware:
     def __init__(self, hw_config: HwConfig, printer_model: PrinterModel):
         self.logger = logging.getLogger(__name__)
         self.config = hw_config
-        self._printer_model = printer_model
+        self.printer_model = printer_model
 
         self.resin_sensor_state_changed = Signal()
         self.cover_state_changed = Signal()

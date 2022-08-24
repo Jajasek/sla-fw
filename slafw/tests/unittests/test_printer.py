@@ -22,12 +22,15 @@ class TestPrinterSetup(SlafwTestCaseDBus):
 
         super().tearDown()
 
+    @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
+    @patch("slafw.libPrinter.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
     def test_setup_ok(self) -> None:
         self.printer = Printer()
         self.printer.setup()
         self.printer.hw.config.factory_reset()  # Ensure this tests does not depend on previous config
 
-    @patch("slafw.hardware.hardware_sl1.SL1ExposureScreen.start", Mock(side_effect = UnknownPrinterModel()))
+    # FIXME not printer model independent
+    @patch("slafw.hardware.sl1.hardware.SL1ExposureScreen.start", Mock(side_effect = UnknownPrinterModel()))
     def test_setup_fail(self) -> None:
         self.printer = Printer()
         observer = Mock(__name__="mock")
@@ -46,6 +49,7 @@ class TestPrinter(SlafwTestCaseDBus, RefCheckTestCase):
         super().__init__(*args, **kwargs)
 
     @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
+    @patch("slafw.libPrinter.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
     def setUp(self) -> None:
         super().setUp()
 

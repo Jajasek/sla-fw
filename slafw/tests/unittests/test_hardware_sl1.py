@@ -12,10 +12,10 @@ from unittest.mock import PropertyMock, patch
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.hardware.a64.temp_sensor import A64CPUTempSensor
-from slafw.hardware.hardware_sl1 import HardwareSL1
+from slafw.hardware.sl1.hardware import HardwareSL1
+from slafw.hardware.sl1.uv_led import SL1UVLED
 from slafw.hardware.power_led import PowerLedActions
 from slafw.hardware.printer_model import PrinterModel
-from slafw.hardware.sl1.uv_led import SL1UVLED
 from slafw.tests.base import SlafwTestCase
 
 

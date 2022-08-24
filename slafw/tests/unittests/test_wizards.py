@@ -172,7 +172,7 @@ class TestWizardsBase(SlafwTestCaseDBus):
 
 class TestDisplayTest(TestWizardsBase):
     def test_display_test(self):
-        wizard = DisplayTestWizard(HardwareMock(), self.exposure_image, RuntimeConfig())
+        wizard = DisplayTestWizard(HardwareMock(printer_model=PrinterModel.SL1), self.exposure_image, RuntimeConfig())
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_DISPLAY_TEST:
@@ -186,7 +186,7 @@ class TestDisplayTest(TestWizardsBase):
         self._run_wizard(wizard)
 
     def test_display_test_fail(self):
-        wizard = DisplayTestWizard(HardwareMock(), self.exposure_image, RuntimeConfig())
+        wizard = DisplayTestWizard(HardwareMock(printer_model=PrinterModel.SL1), self.exposure_image, RuntimeConfig())
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_DISPLAY_TEST:
@@ -261,9 +261,10 @@ class TestWizards(TestWizardsBase):
         self.hw_config_factory_file = self.TEMP_DIR / "reset_config_factory.toml"
 
         hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
-        self.hw = HardwareMock(hw_config)
+        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
         self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()  # wizards use weakly-reference to exposure_image
+        set_configured_printer_model(PrinterModel.SL1)
 
         # Mock factory data
         self.hw.config.uvPwm = 210
@@ -503,41 +504,43 @@ class TestWizards(TestWizardsBase):
 
         wizard.state_changed.connect(state_callback)
         self._run_wizard(wizard)
-        self._check_factory_reset(unboxing=True, factory_mode=True)
+        self._check_factory_reset(self.hw, unboxing=True, factory_mode=True)
 
     def test_packing_kit(self):
         self.hw.config.showWizard = False
         self.runtime_config.factory_mode = True
         self.hw.mock_is_kit = True
         self._run_wizard(PackingWizard(self.hw, self.runtime_config))
-        self._check_factory_reset(unboxing=True, factory_mode=True)
+        self._check_factory_reset(self.hw, unboxing=True, factory_mode=True)
 
     def test_factory_reset_complete(self):
         self.runtime_config.factory_mode = False
         self._run_wizard(FactoryResetWizard(self.hw, self.runtime_config, True))
-        self._check_factory_reset(unboxing=False, factory_mode=False)
+        self._check_factory_reset(self.hw, unboxing=False, factory_mode=False)
 
     def test_factory_reset_complete_sl1s(self):
         set_configured_printer_model(PrinterModel.SL1S)
+        hw = HardwareMock(HwConfig(self.hw_config_file, is_master=True), PrinterModel.SL1S)
         self.runtime_config.factory_mode = False
-        self._run_wizard(FactoryResetWizard(self.hw, self.runtime_config, True))
-        self._check_factory_reset(unboxing=False, factory_mode=False)
+        self._run_wizard(FactoryResetWizard(hw, self.runtime_config, True))
+        self._check_factory_reset(hw, unboxing=False, factory_mode=False)
 
     def test_factory_reset_complete_m1(self):
         set_configured_printer_model(PrinterModel.M1)
+        hw = HardwareMock(HwConfig(self.hw_config_file, is_master=True), PrinterModel.M1)
         self.runtime_config.factory_mode = False
-        self._run_wizard(FactoryResetWizard(self.hw, self.runtime_config, True))
-        self._check_factory_reset(unboxing=False, factory_mode=False)
+        self._run_wizard(FactoryResetWizard(hw, self.runtime_config, True))
+        self._check_factory_reset(hw, unboxing=False, factory_mode=False)
 
     def test_factory_reset_kit(self):
         self.runtime_config.factory_mode = False
         self.hw.mock_is_kit = True
         self._run_wizard(FactoryResetWizard(self.hw, self.runtime_config, True))
-        self._check_factory_reset(unboxing=False, factory_mode=False)
+        self._check_factory_reset(self.hw, unboxing=False, factory_mode=False)
 
-    def _check_factory_reset(self, unboxing: bool, factory_mode: bool):
+    def _check_factory_reset(self, hw, unboxing: bool, factory_mode: bool):
         # Assert factory reset was performed
-        self.assertEqual(unboxing, self.hw.config.showUnboxing)
+        self.assertEqual(unboxing, hw.config.showUnboxing)
         self.assertFalse(defines.apikeyFile.exists(), "API-Key file deleted")
 
         self.assertFalse(defines.slicerProfilesFile.exists(), "Slicer profiles removed")
@@ -563,8 +566,7 @@ class TestWizards(TestWizardsBase):
         self.assertNotEqual(self.hostname.Hostname, "")
         self.assertNotEqual(self.hostname.StaticHostname, "")
         self.assertEqual(self.hostname.StaticHostname, self.hostname.Hostname)
-        printer_model = get_configured_printer_model()
-        self.assertEqual(self.hostname.Hostname, defines.default_hostname + printer_model.name.lower())
+        self.assertEqual(self.hostname.Hostname, defines.default_hostname + hw.printer_model.name.lower())
         self.assertTrue(self.time_date.is_default_ntp(), "NTP reset to default")
         print(self.locale.Locale)
         self.assertTrue(self.locale.is_default(), "Locale set to default")
@@ -652,7 +654,7 @@ class TestUVCalibration(TestWizardsBase):
         defines.counterLog = self.TEMP_DIR / "counter.log"
 
         hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
-        self.hw = HardwareMock(hw_config)
+        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
         self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()
         self.exposure_image.printer_model = PrinterModel.SL1
@@ -792,7 +794,7 @@ class TankSurfaceCleanerTest(TestWizardsBase):
 
         hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
         hw_config.tankCleaningExposureTime = 5  # Avoid waiting for long exposures
-        self.hw = HardwareMock(hw_config)
+        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
         self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()
         self.exposure_image.printer_model = PrinterModel.SL1

@@ -55,7 +55,7 @@ from slafw.functions.system import (
     FactoryMountedRW,
     reset_hostname, compute_uvpwm,
 )
-from slafw.hardware.hardware_sl1 import HardwareSL1
+from slafw.hardware.sl1.hardware import HardwareSL1
 from slafw.hardware.printer_model import PrinterModel
 from slafw.image.exposure_image import ExposureImage
 from slafw.libAsync import AdminCheck
@@ -125,7 +125,6 @@ class Printer:
         self.exposure_image: Optional[ExposureImage] = None
         self.config0_dbus = None
         self.logs0_dbus = None
-        self.model: Optional[PrinterModel] = None
         self.hw: Optional[BaseHardware] = None
 
         self.logger.info("SLA firmware initialized in %.03f", monotonic() - init_time)
@@ -165,8 +164,7 @@ class Printer:
         start_time = monotonic()
 
         self.logger.info("Initializing libHardware")
-        self.model = PrinterModel()
-        self.hw = HardwareSL1(self.hw_config, self.model)
+        self.hw = HardwareSL1(self.hw_config, PrinterModel())
 
         self.hw.uv_led_temp.overheat_changed.connect(self._on_uv_led_temp_overheat)
         self.hw.uv_led_fan.error_changed.connect(self._on_uv_fan_error)
@@ -182,7 +180,7 @@ class Printer:
         #
 
         self.inet = Network(self.hw.cpuSerialNo)
-        self.exposure_image = ExposureImage(self.hw, self.model)
+        self.exposure_image = ExposureImage(self.hw)
 
         self.logger.info("Registering remaining D-Bus services")
         self.config0_dbus = self._system_bus.publish(Config0.__INTERFACE__, Config0(self.hw_config))
@@ -214,12 +212,12 @@ class Printer:
 
         # Model detection
         self._firstboot()
-        if self.model == PrinterModel.SL1 and not defines.printer_model.exists():
-            set_configured_printer_model(self.model)  # Configure model for old SL1 printers
+        if self.hw.printer_model == PrinterModel.SL1 and not defines.printer_model.exists():
+            set_configured_printer_model(self.hw.printer_model)  # Configure model for old SL1 printers
         self._model_update()
 
         # UV calibration
-        if not self.hw.config.is_factory_read() and not self.hw.isKit and self.model == PrinterModel.SL1:
+        if not self.hw.config.is_factory_read() and not self.hw.isKit and self.hw.printer_model == PrinterModel.SL1:
             self.exception_occurred.emit(NoFactoryUvCalib())
         self._compute_uv_pwm()
 
@@ -229,7 +227,7 @@ class Printer:
 
         # Set the default exposure for tank cleaning
         if not self.hw.config.tankCleaningExposureTime:
-            if self.model == PrinterModel.SL1:
+            if self.hw.printer_model == PrinterModel.SL1:
                 self.hw.config.tankCleaningExposureTime = 50  # seconds
             else:
                 self.hw.config.tankCleaningExposureTime = 30  # seconds
@@ -304,7 +302,7 @@ class Printer:
         if self.slicer_profile.vendor:
             self.logger.info("Starting slicer profiles updater")
             self.slicer_profile_updater = SlicerProfileUpdater(
-                self.inet, self.slicer_profile, self.model.name
+                self.inet, self.slicer_profile, self.hw.printer_model.name
             )
 
     def _firstboot(self):
@@ -315,8 +313,8 @@ class Printer:
         if not defines.firstboot.exists():
             return
 
-        self.hw.config.vatRevision = self.model.options.vat_revision
-        if self.model == PrinterModel.SL1S:
+        self.hw.config.vatRevision = self.hw.printer_model.options.vat_revision
+        if self.hw.printer_model == PrinterModel.SL1S:
             set_factory_uvpwm(self.hw.uv_led.parameters.safe_default_pwm)
             incompatible_extension = PrinterModel.SL1
         else:
@@ -327,19 +325,19 @@ class Printer:
         for file in files_to_remove:
             self.logger.info("Removing incompatible example project: %s", file)
             os.remove(file)
-        set_configured_printer_model(self.model)
+        set_configured_printer_model(self.hw.printer_model)
 
     def _model_update(self):
         config_model = get_configured_printer_model()
-        if self.model == config_model:
+        if self.hw.printer_model == config_model:
             return
 
-        self.logger.info('Printer model change detected from "%s" to "%s"', config_model, self.model)
-        if self.model == PrinterModel.SL1S:
+        self.logger.info('Printer model change detected from "%s" to "%s"', config_model, self.hw.printer_model)
+        if self.hw.printer_model == PrinterModel.SL1S:
             self.action_manager.start_wizard(
                 SL1SUpgradeWizard(self.hw, self.exposure_image, self.runtime_config)
             ).join()
-        elif self.model == PrinterModel.SL1:
+        elif self.hw.printer_model == PrinterModel.SL1:
             self.action_manager.start_wizard(
                 SL1DowngradeWizard(self.hw, self.exposure_image, self.runtime_config)
             ).join()
@@ -349,7 +347,7 @@ class Printer:
             self.logger.exception("Failed to reset hostname after model ")
 
     def _compute_uv_pwm(self):
-        if not self.model.options.has_UV_calculation:
+        if not self.hw.printer_model.options.has_UV_calculation:
             self.logger.debug("Not computing UV PWM as printer model does not support UV calculation")
             return
 

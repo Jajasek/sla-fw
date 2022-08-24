@@ -613,7 +613,7 @@ class Printer0:
             self._examples.join()
 
         # Initiate new examples download
-        self._examples = Examples(self.printer.inet, self.printer.model)
+        self._examples = Examples(self.printer.inet, self.printer.hw.printer_model)
         self._examples0 = Examples0(self._examples)
         self._examples_registration = pydbus.SystemBus().publish(
             Examples0.__INTERFACE__, (Examples0.DBUS_PATH, self._examples0)
@@ -717,7 +717,7 @@ class Printer0:
 
         :return: Set of extension strings
         """
-        return list(self.printer.model.extensions)  # type: ignore[union-attr]
+        return list(self.printer.hw.printer_model.extensions)  # type: ignore[attr-defined]
 
     @auto_dbus
     @deprecated("Use filemanager instead")
@@ -732,13 +732,13 @@ class Printer0:
         sources = [Path(defines.internalProjectPath), Path(defines.mediaRootPath)]
         projects = []
         for directory in sources:
-            projects.extend(get_all_supported_files(self.printer.model, directory))
+            projects.extend(get_all_supported_files(self.printer.hw.printer_model, directory))
         return [str(project) for project in projects]
 
     @auto_dbus
     @property
     def printer_model(self) -> int:
-        return self.printer.model.value  # type: ignore[union-attr]
+        return self.printer.hw.printer_model.value  # type: ignore[attr-defined]
 
     @auto_dbus
     @property

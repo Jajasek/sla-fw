@@ -6,7 +6,6 @@
 import os
 import unittest
 from pathlib import Path
-from unittest.mock import patch, Mock
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
@@ -14,7 +13,7 @@ from slafw.errors.errors import ProjectErrorNotFound, ProjectErrorNotEnoughLayer
                                 ProjectErrorCorrupted, ProjectErrorWrongPrinterModel, \
                                 ProjectErrorCantRead, ProjectErrorCalibrationInvalid
 from slafw.errors.warnings import PrintingDirectlyFromMedia
-from slafw.hardware.hardware_sl1 import HardwareSL1
+from slafw.hardware.sl1.hardware import HardwareSL1
 from slafw.project.project import Project, ProjectLayer, LayerCalibrationType, ExposureUserProfile
 from slafw.tests.base import SlafwTestCase
 from slafw.utils.bounding_box import BBox
@@ -38,7 +37,6 @@ def _layer_generator(name, count, height_nm, times_ms, layer_times_ms):
     return layers
 
 
-@patch("slafw.project.project.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
 class TestProject(SlafwTestCase):
     def setUp(self):
         super().setUp()
@@ -100,9 +98,9 @@ class TestProject(SlafwTestCase):
         defines.internalProjectPath = backup2
 
     def test_printer_model(self):
-        with patch("slafw.project.project.get_configured_printer_model", Mock(return_value = PrinterModel.NONE)):
-            with self.assertRaises(ProjectErrorWrongPrinterModel):
-                Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
+        hw = HardwareSL1(self.hw_config, PrinterModel.SL1S)
+        with self.assertRaises(ProjectErrorWrongPrinterModel):
+            Project(hw, str(self.SAMPLES_DIR / "numbers.sl1"))
 
     def test_read(self):
         project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))

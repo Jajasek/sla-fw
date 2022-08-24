@@ -7,7 +7,6 @@ from typing import Dict, Any, Optional
 
 import distro
 
-from slafw.functions.system import get_configured_printer_model
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType
@@ -39,7 +38,6 @@ class SystemInfoTest(Check):
     async def async_task_run(self, actions: UserActionBroker):
         self._logger.debug("Obtaining system information")
 
-        printer_model = get_configured_printer_model()
         self._result_data = CheckData(
             distro.version(),
             self._hw.cpuSerialNo,
@@ -48,7 +46,7 @@ class SystemInfoTest(Check):
             self._hw.mcBoardRevision,
             self._hw.uv_led.usage_s,
             self._hw.exposure_screen.usage_s,
-            printer_model.name,  # type: ignore[attr-defined]
+            self._hw.printer_model.name,  # type: ignore[attr-defined]
         )
 
     def get_result_data(self) -> Dict[str, Any]:

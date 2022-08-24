@@ -20,7 +20,7 @@ from slafw.admin.items import AdminAction, AdminLabel, AdminTextValue
 from slafw.admin.menu import AdminMenu
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.admin.menus.dialogs import Confirm, Error, Info, Wait
-from slafw.functions.system import FactoryMountedRW, get_configured_printer_model, shut_down
+from slafw.functions.system import FactoryMountedRW, shut_down
 from slafw.functions.files import get_export_file_name, get_save_path
 from slafw.errors.errors import ConfigException
 from slafw.state_actions.data_export import DataExport, UsbExport, ServerUpload
@@ -85,7 +85,7 @@ class BackupConfigMenu(AdminMenu):
             config.read_file()
             config.factory_reset()
             config.showUnboxing = False
-            config.vatRevision = get_configured_printer_model().options.vat_revision    # type: ignore[attr-defined]
+            config.vatRevision = self._printer.hw.printer_model.options.vat_revision    # type: ignore[attr-defined]
             self._printer.hw.uv_led.pwm = self._printer.hw.config.uvPwmPrint
             config.write()
         except ConfigException:
@@ -162,7 +162,7 @@ async def do_export(parent: DataExport, tmpdir_path: Path) -> Path:
             copy2(src, user_path, follow_symlinks=False)
         else:
             parent.logger.warning("Not exporting nonexistent file '%s'", src)
-    tar_file = tmpdir_path / f"{filenamebase}{get_configured_printer_model().name}.{get_export_file_name(parent.hw)}" # type: ignore[attr-defined]
+    tar_file = tmpdir_path / f"{filenamebase}{parent.hw.printer_model.name}.{get_export_file_name(parent.hw)}" # type: ignore[attr-defined]
     return Path(make_archive(tar_file, 'xztar', tar_root, logger=parent.logger))
 
 
@@ -209,7 +209,7 @@ class RestoreFromUsbMenu(SafeAdminMenu):
         if usb_path is None:
             self.add_label("USB not present. To get files from USB, plug the USB\nand re-enter.", "error_small_white")
         else:
-            name = get_configured_printer_model().name  # type: ignore[attr-defined]
+            name = printer.hw.printer_model.name  # type: ignore[attr-defined]
             if name in ["SL1S", "M1"]:
                 filters = [filenamebase + "SL1S.*.tar.xz", filenamebase + "M1.*.tar.xz"]
             else:
@@ -246,7 +246,7 @@ class RestoreFromNetMenu(SafeAdminMenu):
 
     def _download_list(self):
         query_url = config_api_url + "listConfig"
-        name = get_configured_printer_model().name  # type: ignore[attr-defined]
+        name = self.printer.hw.printer_model.name  # type: ignore[attr-defined]
         if name in ["SL1S", "M1"]:
             regex = re.compile(filenamebase + r"(SL1S|M1)\..*\.tar\.xz")
         else:

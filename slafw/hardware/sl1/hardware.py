@@ -58,8 +58,6 @@ class HardwareSL1(BaseHardware):
         else:
             raise NotImplementedError
 
-        self._printer_model = printer_model
-
         self.config.add_onchange_handler(self._fan_values_refresh)
 
         self._value_refresh_thread = Thread(daemon=True, target=self._value_refresh_body)
@@ -67,13 +65,13 @@ class HardwareSL1(BaseHardware):
 
         self.check_cover_override = False
 
-        if self._printer_model in (PrinterModel.SL1, PrinterModel.VIRTUAL):
-
+        if printer_model in (PrinterModel.SL1, PrinterModel.VIRTUAL):
             self.uv_led_temp = SL1TempSensorUV(self.mcc, self.config)
-        elif self._printer_model in (PrinterModel.SL1S, PrinterModel.M1):
+        elif printer_model in (PrinterModel.SL1S, PrinterModel.M1):
             self.uv_led_temp = SL1STempSensorUV(self.mcc, self.config)
         else:
             raise NotImplementedError
+
         self.ambient_temp = SL1TempSensorAmbient(self.mcc)
         self.cpu_temp = A64CPUTempSensor()
 
@@ -81,12 +79,13 @@ class HardwareSL1(BaseHardware):
         self.blower_fan = SL1FanBlower(self.mcc, self.config)
         self.rear_fan = SL1FanRear(self.mcc, self.config)
 
-        if self._printer_model in (PrinterModel.SL1, PrinterModel.VIRTUAL):
+        if printer_model in (PrinterModel.SL1, PrinterModel.VIRTUAL):
             self.uv_led = SL1UVLED(self.mcc, self.uv_led_temp)
-        elif self._printer_model in (PrinterModel.SL1S, PrinterModel.M1):
+        elif printer_model in (PrinterModel.SL1S, PrinterModel.M1):
             self.uv_led = SL1SUVLED(self.mcc, self.sl1s_booster, self.uv_led_temp)
         else:
             raise NotImplementedError
+
         self.power_led = PowerLedSL1(self.mcc)
         self.tower = TowerSL1(self.mcc, self.config, self.power_led, printer_model)
         self.tilt = TiltSL1(self.mcc, self.config, self.power_led, self.tower, printer_model)
@@ -105,7 +104,6 @@ class HardwareSL1(BaseHardware):
         )
         self.mcc.tilt_status_changed.connect(self._tilt_position_checker.set_rapid_update)
         self.mcc.tower_status_changed.connect(self._tower_position_checker.set_rapid_update)
-
         self.mcc.power_button_changed.connect(self.power_button_state_changed.emit)
         self.mcc.cover_state_changed.connect(self.cover_state_changed.emit)
         self.mcc.tower_status_changed.connect(lambda x: self.tower_position_changed.emit())
@@ -119,7 +117,7 @@ class HardwareSL1(BaseHardware):
         self.mc_sw_version_changed.emit()
         self.exposure_screen.start()
 
-        if self._printer_model.options.has_booster:
+        if self.printer_model.options.has_booster:
             self.sl1s_booster.connect()
 
     def start(self):

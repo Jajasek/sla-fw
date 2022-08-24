@@ -17,8 +17,8 @@ from slafw.configs.unit import Nm, Ustep, Unit
 from slafw.errors.errors import TiltPositionFailed, TowerPositionFailed, \
     TowerMoveFailed, TiltMoveFailed, TowerHomeFailed, TiltHomeFailed
 from slafw.hardware.axis import Axis, HomingStatus
-from slafw.functions.system import get_configured_printer_model
 
+from slafw.hardware.printer_model import PrinterModel
 from slafw.hardware.sl1.tilt import TiltSL1
 from slafw.hardware.sl1.tower import TowerSL1
 from slafw.motion_controller.controller import MotionController
@@ -43,7 +43,7 @@ class DoNotRunTestDirectlyFromBaseClass:
             self.power_led = Mock()
             self.mcc = MotionController(defines.motionControlDevice)
             self.mcc.open()
-            self.printer_model = get_configured_printer_model()
+            self.printer_model = PrinterModel.SL1
 
         def tearDown(self) -> None:
             self.mcc.exit()

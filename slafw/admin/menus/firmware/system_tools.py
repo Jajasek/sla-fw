@@ -57,9 +57,9 @@ class SystemToolsMenu(SafeAdminMenu):
                 AdminAction("Download examples", self._download_examples, "download"),
             )
         )
-        if self._printer.model == PrinterModel.SL1S:
+        if self._printer.hw.printer_model == PrinterModel.SL1S:
             self.add_item(AdminAction("Switch to M1", self._switch_m1, "cover_color"))
-        if self._printer.model == PrinterModel.M1:
+        if self._printer.hw.printer_model == PrinterModel.M1:
             self.add_item(AdminAction("Switch to SL1S", self._switch_sl1s, "cover_color"))
 
 
@@ -158,7 +158,7 @@ class SystemToolsMenu(SafeAdminMenu):
 
     def _do_download_examples(self, status: AdminLabel):
         status.set("Downloading examples")
-        examples = Examples(self._printer.inet, self._printer.model)
+        examples = Examples(self._printer.inet, self._printer.hw.printer_model)
         examples.start()
         examples.join()
         if examples.exception:

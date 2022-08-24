@@ -6,7 +6,6 @@ from typing import Iterable
 
 from slafw.configs.runtime import RuntimeConfig
 from slafw.errors.errors import PrinterError
-from slafw.functions.system import get_configured_printer_model
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.image.exposure_image import ExposureImage
 from slafw.libUvLedMeterMulti import UvLedMeterMulti, UVCalibrationResult
@@ -46,8 +45,7 @@ class UVCalibrationPrepare(CheckGroup):
         self._package = package
 
     async def setup(self, actions: UserActionBroker):
-        printer_model = get_configured_printer_model()
-        if not printer_model.options.has_UV_calibration:  # type: ignore[attr-defined]
+        if not self._package.hw.printer_model.options.has_UV_calibration:  # type: ignore[attr-defined]
             raise PrinterError("UV calibration does not work on this printer model")
         await self.wait_for_user(actions, actions.uv_calibration_prepared, WizardState.UV_CALIBRATION_PREPARE)
 

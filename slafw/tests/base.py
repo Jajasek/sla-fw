@@ -108,7 +108,7 @@ class SlafwTestCase(TestCase):
             patch("slafw.motion_controller.controller.serial", mc_port),
             patch("slafw.libUvLedMeterMulti.serial.tools.list_ports"),
             patch("slafw.hardware.base.exposure_screen.Wayland", Mock()),
-            patch("slafw.hardware.hardware_sl1.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),
+            patch("slafw.hardware.sl1.hardware.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
             patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),

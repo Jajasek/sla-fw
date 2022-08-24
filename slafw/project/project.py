@@ -31,7 +31,6 @@ from slafw.errors.errors import ProjectErrorNotFound, ProjectErrorCantRead, Proj
                                 ProjectErrorWrongPrinterModel
 from slafw.errors.warnings import PrintingDirectlyFromMedia, ProjectSettingsModified, VariantMismatch, PrinterWarning
 from slafw.configs.project import ProjectConfig
-from slafw.functions.system import get_configured_printer_model
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.project.functions import get_white_pixels
 from slafw.utils.bounding_box import BBox
@@ -216,10 +215,9 @@ class Project:
         else:
             date_time = datetime.now(timezone.utc)
         self.modification_time = date_time.timestamp()
-        printer_model = get_configured_printer_model()
-        if printer_model.name != self._config.printerModel:
+        if self._hw.printer_model.name != self._config.printerModel:
             self.logger.error("Wrong printer model '%s', expected '%s'",
-                self._config.printerModel, printer_model.name)
+                self._config.printerModel, self._hw.printer_model.name)
             raise ProjectErrorWrongPrinterModel
         if defines.printerVariant != self._config.printerVariant:
             self.warnings.add(VariantMismatch(defines.printerVariant, self._config.printerVariant))

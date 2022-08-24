@@ -164,7 +164,9 @@ class TestIntegrationPrinter0(SlaFwIntegrationTestCaseBase):
         self.printer.hw.config.showWizard = False
 
         # Test print start
-        path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+        path = self.printer0.print(
+                str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),
+                False)
         self.assertNotEqual(path, "/")
         self.assertEqual(Printer0State.PRINTING, Printer0State(self.printer0.state))
 
@@ -178,7 +180,9 @@ class TestIntegrationPrinter0(SlaFwIntegrationTestCaseBase):
 
         # Start and cancel more than max exposures -> force exposure gc
         for _ in range(ActionManager.MAX_EXPOSURES + 1):
-            path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+            path = self.printer0.print(
+                    str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),
+                    False)
             exposure0 = pydbus.SystemBus().get("cz.prusa3d.sl1.exposure0", path)
             exposure0.cancel()
 
@@ -188,10 +192,10 @@ class TestIntegrationPrinter0(SlaFwIntegrationTestCaseBase):
 
     def test_temps(self):
         # SL1S, M1 have UV temp on index 2, but the simulator does not reflect the change
-        if self.printer.model == PrinterModel.SL1:
+        if self.printer.hw.printer_model == PrinterModel.SL1:
             self.assertAlmostEqual(40, self.printer0.uv_led_temp)
             self.assertAlmostEqual(20, self.printer0.ambient_temp)
-        elif self.printer.model in (PrinterModel.SL1S, PrinterModel.M1):
+        elif self.printer.hw.printer_model in (PrinterModel.SL1S, PrinterModel.M1):
             self.assertAlmostEqual(20, self.printer0.uv_led_temp)
             self.assertAlmostEqual(20, self.printer0.ambient_temp)
         else:
@@ -250,7 +254,9 @@ class TestIntegrationPrinter0Uncalibrated(SlaFwIntegrationTestCaseBase):
         # Test print start on uncalibrated printer
         # Ignore all exceptions, check only the resulting state
         try:
-            path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+            path = self.printer0.print(
+                    str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),
+                    False)
         except GError as e:
             print("GError: ", e)
 
@@ -268,7 +274,8 @@ class TestIntegrationPrinter0Uncalibrated(SlaFwIntegrationTestCaseBase):
 
         # Test print start
         # pylint: disable=protected-access
-        self.printer._media_inserted(1, 2, 3, 4, [str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)),])
+        self.printer._media_inserted(1, 2, 3, 4,
+                [str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),])
 
         # There might be a delay between inserting the media and running "make_ready_to_print"
         time.sleep(3)
@@ -287,7 +294,7 @@ class TestIntegrationPrinter0Uncalibrated(SlaFwIntegrationTestCaseBase):
         self.printer.hw.config.showWizard = False
 
         # Test print start
-        path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+        path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)), False)
         self.assertNotEqual(path, "/")
         self.assertEqual(Printer0State.PRINTING, Printer0State(self.printer0.state))
 

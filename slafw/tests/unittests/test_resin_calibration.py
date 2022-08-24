@@ -5,8 +5,6 @@
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from unittest.mock import patch, Mock
-
 from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.base import SlafwTestCase
 from slafw.image.resin_calibration import Area, AreaWithLabel, AreaWithLabelStripe, Calibration
@@ -14,11 +12,9 @@ from slafw.tests.mocks.hardware import HardwareMock
 from slafw.utils.bounding_box import BBox
 
 from slafw.configs.hw import HwConfig
-from slafw.image.exposure_image import ExposureImage
 from slafw.project.project import Project
 
 
-@patch("slafw.project.project.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
 class TestResinCalibration(SlafwTestCase):
 
     def setUp(self):
@@ -205,8 +201,7 @@ class TestResinCalibration(SlafwTestCase):
         NUMBERS = SlafwTestCase.SAMPLES_DIR / "numbers.sl1"
         hw_config = HwConfig(HW_CONFIG)
         hw_config.read_file()
-        hw = HardwareMock(hw_config)
-        exposure_image = ExposureImage(PrinterModel.SL1S, hw)
+        hw = HardwareMock(hw_config, PrinterModel.SL1)
         project = Project(hw, NUMBERS)
         project.calibrate_regions = 9
         project.analyze()
@@ -222,4 +217,3 @@ class TestResinCalibration(SlafwTestCase):
             project.calibrate_text_size_px,
             project.calibrate_pad_spacing_px))
         self.assertTrue(calib.is_cropped)
-        exposure_image.exit()

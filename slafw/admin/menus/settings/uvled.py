@@ -35,7 +35,7 @@ class UVLedMenu(SettingsMenu):
                 AdminIntValue.from_value("UV calibration min. intensity edge", self._temp, "uvCalibMinIntEdge", 1, "brightness_color"),
             )
         )
-        if self._printer.model.options.has_booster: # type: ignore[union-attr]
+        if self._printer.hw.printer_model.options.has_booster: # type: ignore[attr-defined]
             self.add_item(AdminAction("Write PWM to booster board", self._write_to_booster, "firmware-icon"))
 
     def on_leave(self):

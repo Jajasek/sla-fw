@@ -33,12 +33,14 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
         # Resolve printer and start the print
         self.bus = pydbus.SystemBus()
         self.printer0 = self.bus.get("cz.prusa3d.sl1.printer0")
-        expo_path = self.printer0.print(str(self.SAMPLES_DIR / ("numbers" + self.printer.model.extension)), False)
+        expo_path = self.printer0.print(
+                str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),
+                False)
         self.exposure0: Exposure0 = self.bus.get("cz.prusa3d.sl1.exposure0", expo_path)
 
     def test_init(self):
         self.assertEqual(Exposure0State.CONFIRM, Exposure0State(self.exposure0.state))
-        self.assertEqual("numbers" + self.printer.model.extension, Path(self.exposure0.project_file).name)
+        self.assertEqual("numbers" + self.printer.hw.printer_model.extension, Path(self.exposure0.project_file).name)
         self.assertEqual("numbers", self.exposure0.project_name)
         self.assertEqual(0, self.exposure0.current_layer)
         self.assertEqual(0, self.exposure0.calibration_regions)

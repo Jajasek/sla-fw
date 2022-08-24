@@ -30,7 +30,7 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import FactoryResetCheckFailure
 from slafw.functions.files import ch_mode_owner, get_all_supported_files
-from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvpwm, get_configured_printer_model
+from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvpwm
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType, SyncCheck, DangerousCheck
@@ -185,12 +185,11 @@ class ResetHWConfig(ResetCheck):
         self._disable_unboxing = disable_unboxing
 
     def reset_task_run(self, actions: UserActionBroker):
-        printer_model = get_configured_printer_model()
         self._hw.config.read_file()
         self._hw.config.factory_reset()
         if self._disable_unboxing:
             self._hw.config.showUnboxing = False
-        self._hw.config.vatRevision = printer_model.options.vat_revision  # type: ignore[attr-defined]
+        self._hw.config.vatRevision = self._hw.printer_model.options.vat_revision  # type: ignore[attr-defined]
         self._hw.config.write()
         # TODO: Why is this here? Separate task would be better.
         rmtree(defines.wizardHistoryPath, ignore_errors=True)
@@ -247,7 +246,7 @@ class SendPrinterData(SyncCheck):
 
     def task_run(self, actions: UserActionBroker):
         # pylint: disable = too-many-branches
-        printer_model = get_configured_printer_model()
+        printer_model = self._hw.printer_model
         # Ensure some UV PWM is set, this ensure SL1 was UV calibrated
         if self._hw.config.uvPwm == 0:
             self._logger.error("Cannot do factory reset UV PWM not set (== 0)")

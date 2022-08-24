@@ -6,7 +6,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
-from unittest.mock import patch, Mock
 
 import numpy
 from PIL import Image
@@ -20,7 +19,6 @@ from slafw import defines, test_runtime
 from slafw.tests.mocks.hardware import HardwareMock
 
 
-@patch("slafw.project.project.get_configured_printer_model", Mock(return_value=PrinterModel.SL1))
 class TestScreen(SlafwTestCase, RefCheckTestCase):
     # pylint: disable=too-many-public-methods
     HW_CONFIG = SlafwTestCase.SAMPLES_DIR / "hardware.cfg"
@@ -39,8 +37,8 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         test_runtime.testing = True
         hw_config = HwConfig(self.HW_CONFIG)
         hw_config.read_file()
-        self.hw = HardwareMock(hw_config)
-        self.exposure_image = ExposureImage(self.hw, PrinterModel.SL1)
+        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
+        self.exposure_image = ExposureImage(self.hw)
         self.exposure_image.start()
 
     def tearDown(self):

@@ -17,12 +17,12 @@ from slafw.states.printer import PrinterState
 from slafw.libPrinter import Printer
 
 
+@patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1S))
 class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.printer: Optional[Printer] = None  # This is here to provide type hint on self.printer
 
-    @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1S))
     def setUp(self) -> None:
         super().setUp()
         set_configured_printer_model(PrinterModel.SL1S)  # Set SL1S as the current model
@@ -66,7 +66,7 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
         self.printer.exception_occurred.connect(observer)
         copyfile(self.SAMPLES_DIR / defines.expoPanelLogFileName, defines.expoPanelLogPath)
         with patch(
-            "slafw.hardware.hardware_sl1.SL1SExposureScreen.serial_number",
+            "slafw.hardware.sl1.hardware.SL1SExposureScreen.serial_number",
             PropertyMock(return_value="CZPX2921X021X000262"),
         ):
             self._run_printer()
@@ -75,7 +75,6 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
         next_to_last_key = list(log)[-2]  # get counter_s from sample file
         observer.assert_called_with(OldExpoPanel(counter_h=round(log[next_to_last_key]["counter_s"] / 3600)))
 
-    @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1S))
     def _run_printer(self):
         self.printer.setup()
 
@@ -87,12 +86,12 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
         self.printer.hw.config.uvPwm = 208
 
 
+@patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
 class TestStartupSL1(SlafwTestCaseDBus):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.printer: Optional[Printer] = None  # This is here to provide type hint on self.printer
 
-    @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
     def setUp(self) -> None:
         super().setUp()
         set_configured_printer_model(PrinterModel.SL1)  # Set SL1S as the current model
