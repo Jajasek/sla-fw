@@ -54,8 +54,6 @@ class ResetSettingsGroup(CheckGroup):
             ResetUVCalibrationData(hard_errors=hard_errors),
             RemoveSlicerProfiles(hard_errors=hard_errors),
             ResetHWConfig(package.hw, disable_unboxing=disable_unboxing, hard_errors=hard_errors),
-            EraseMCEeprom(package.hw, hard_errors=hard_errors),
-            ResetHomingProfiles(package.hw, hard_errors=hard_errors),
             DisableAccess(),
             ResetTouchUI(),
         ]
@@ -88,6 +86,22 @@ class PackStage1(CheckGroup):
         pass
 
 
+class FinishResetSettingsGroup(CheckGroup):
+    """
+    Finish resetting the printer settings. After running this group,
+    the printer should avoid homing and preferably even moving at all,
+    because the needed profiles have been reset.
+    """
+    def __init__(self, package: WizardDataPackage, hard_errors: bool = False):
+        super().__init__(Configuration(None, None), [
+            ResetHomingProfiles(package.hw, hard_errors=hard_errors),
+            EraseMCEeprom(package.hw, hard_errors=hard_errors),
+        ])
+
+    async def setup(self, actions: UserActionBroker):
+        pass
+
+
 class PackStage2(CheckGroup):
     def __init__(self, package: WizardDataPackage):
         super().__init__(Configuration(None, None), [FinishPackingMoves(package.hw)])
@@ -110,7 +124,10 @@ class FactoryResetWizard(Wizard):
         )
         super().__init__(
             WizardId.FACTORY_RESET,
-            [ResetSettingsGroup(self._package, True, erase_projects)],
+            [
+                ResetSettingsGroup(self._package, True, erase_projects),
+                FinishResetSettingsGroup(self._package),
+            ],
             self._package
         )
 
@@ -134,6 +151,8 @@ class PackingWizard(Wizard):
         else:
             groups.append(PackStage1(self._package, True))
             groups.append(PackStage2(self._package))
+
+        groups.append(FinishResetSettingsGroup(self._package, hard_errors=True))
 
         super().__init__(WizardId.PACKING, groups, self._package)
 
