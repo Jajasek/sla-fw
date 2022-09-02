@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
-from pathlib import Path
 from time import sleep
 from typing import Optional
 
@@ -29,9 +28,6 @@ from slafw.tests.mocks.hardware import HardwareMock
 from slafw.project.project import ExposureUserProfile
 
 
-def change_dir(path: str):
-    return Path(defines.previousPrints) / Path(path).name
-
 def setupHw() -> HardwareMock:
     hw = HardwareMock(printer_model = PrinterModel.SL1)
     hw.connect()
@@ -53,13 +49,6 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
 
     def setUp(self):
         super().setUp()
-        defines.statsData = str(self.TEMP_DIR / "stats.toml")
-        defines.previousPrints = str(self.TEMP_DIR)
-        defines.lastProjectHwConfig = change_dir(defines.lastProjectHwConfig)
-        defines.lastProjectFactoryFile = change_dir(defines.lastProjectFactoryFile)
-        defines.lastProjectConfigFile = change_dir(defines.lastProjectConfigFile)
-        defines.lastProjectPickler = change_dir(defines.lastProjectPickler)
-
         self.hw = setupHw()
         self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()
@@ -311,13 +300,6 @@ class TestLayers(SlafwTestCaseDBus):
 
     def setUp(self):
         super().setUp()
-        defines.statsData = str(self.TEMP_DIR / "stats.toml")
-        defines.previousPrints = str(self.TEMP_DIR)
-        defines.lastProjectHwConfig = change_dir(defines.lastProjectHwConfig)
-        defines.lastProjectFactoryFile = change_dir(defines.lastProjectFactoryFile)
-        defines.lastProjectConfigFile = change_dir(defines.lastProjectConfigFile)
-        defines.lastProjectPickler = change_dir(defines.lastProjectPickler)
-
         self.hw = setupHw()
         self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()

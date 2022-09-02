@@ -17,10 +17,9 @@
 from __future__ import annotations
 
 import asyncio
-import glob
 import logging
-import os
 import weakref
+from pathlib import Path
 from abc import abstractmethod
 from asyncio import CancelledError, Task
 from datetime import datetime, timedelta, timezone
@@ -55,7 +54,12 @@ from slafw.errors.errors import (
     FanFailed,
 )
 from slafw.errors.warnings import AmbientTooHot, AmbientTooCold, ResinNotEnough, PrinterWarning, ExpectOverheating
-from slafw.exposure.persistance import ExposurePickler, ExposureUnpickler
+from slafw.exposure.persistance import (
+    ExposurePickler,
+    ExposureUnpickler,
+    cleanup_last_data,
+    LAST_PROJECT_PICKLER,
+)
 from slafw.functions.system import shut_down
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.power_led_action import WarningAction, ErrorAction
@@ -499,13 +503,13 @@ class Exposure:
 
     def save(self):
         self.logger.debug("Storing Exposure data")
-        with open(defines.lastProjectPickler, "wb") as pickle_io:
+        with open(LAST_PROJECT_PICKLER, "wb") as pickle_io:
             ExposurePickler(pickle_io).dump(self)
 
     @staticmethod
     def load(logger: Logger, hw: BaseHardware) -> Optional[Exposure]:
         try:
-            with open(defines.lastProjectPickler, "rb") as pickle_io:
+            with open(LAST_PROJECT_PICKLER, "rb") as pickle_io:
                 exposure = ExposureUnpickler(pickle_io).load()
                 # Fix missing (and still required attributes of exposure)
                 exposure.change = Signal()
@@ -518,28 +522,8 @@ class Exposure:
         return None
 
     def check_and_clean_last_data(self) -> None:
-        clear_all = self.project.path and not str(self.project.path).startswith(defines.previousPrints)
-        Exposure.cleanup_last_data(self.logger, clear_all=clear_all)
-
-    @staticmethod
-    def cleanup_last_data(logger: Logger, clear_all=False) -> None:
-        if clear_all:
-            files = glob.glob(defines.previousPrints + "/*")
-        else:
-            files = [
-                defines.lastProjectHwConfig,
-                defines.lastProjectFactoryFile,
-                defines.lastProjectConfigFile,
-                defines.lastProjectPickler,
-            ]
-        for project_file in files:
-            logger.debug("removing '%s'", project_file)
-            try:
-                os.remove(project_file)
-            except FileNotFoundError:
-                logger.debug("No such file '%s'", project_file)
-            except Exception:
-                logger.exception("cleanup_last_data() exception:")
+        clear_all = self.project.path and Path(self.project.path).parent != defines.previousPrints
+        cleanup_last_data(self.logger, clear_all=clear_all)
 
     def stats_seen(self):
         self.state = ExposureState.DONE

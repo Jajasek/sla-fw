@@ -5,7 +5,6 @@
 
 import os
 import unittest
-from pathlib import Path
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
@@ -46,7 +45,7 @@ class TestProject(SlafwTestCase):
         self.hw = HardwareSL1(self.hw_config, PrinterModel.SL1)
         self.file2copy = self.SAMPLES_DIR / "Resin_calibration_object.sl1"
         (dummy, filename) = os.path.split(self.file2copy)
-        self.destfile = Path(os.path.join(defines.previousPrints, filename))
+        self.destfile = defines.previousPrints / filename
 
     def test_notfound(self):
         with self.assertRaises(ProjectErrorNotFound):
@@ -76,7 +75,7 @@ class TestProject(SlafwTestCase):
         self.destfile.unlink()
 
     def test_avaiable_space_check_usb(self):
-        statvfs = os.statvfs(os.path.dirname(defines.previousPrints))
+        statvfs = os.statvfs(defines.previousPrints.parent)
         backup = defines.internalReservedSpace
         defines.internalReservedSpace = statvfs.f_frsize * statvfs.f_bavail
         project = Project(self.hw, str(self.file2copy))
@@ -85,7 +84,7 @@ class TestProject(SlafwTestCase):
         defines.internalReservedSpace = backup
 
     def test_avaiable_space_check_internal(self):
-        statvfs = os.statvfs(os.path.dirname(defines.previousPrints))
+        statvfs = os.statvfs(defines.previousPrints.parent)
         backup1 = defines.internalReservedSpace
         backup2 = defines.internalProjectPath
         defines.internalReservedSpace = statvfs.f_frsize * statvfs.f_bavail

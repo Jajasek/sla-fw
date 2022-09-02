@@ -42,6 +42,12 @@ from slafw.tests import samples
 from slafw.tests.mocks.dbus.rauc import Rauc
 from slafw.tests.mocks.sl1s_uvled_booster import BoosterMock
 from slafw.tests.mocks.wayland import WaylandMock
+from slafw.exposure.persistance import (
+    LAST_PROJECT_HW_CONFIG,
+    LAST_PROJECT_FACTORY_FILE,
+    LAST_PROJECT_CONFIG_FILE,
+    LAST_PROJECT_PICKLER,
+)
 
 # gitlab CI job creates model folder in different location due to restricted permissions in Docker container
 # common path is /builds/project-0/model
@@ -58,10 +64,6 @@ warnings.simplefilter("once")
 
 SAMPLES_DIR = Path(samples.__file__).parent
 SLAFW_DIR = Path(slafw.__file__).parent
-
-
-def change_dir(path):
-    return os.path.join(defines.previousPrints, os.path.basename(path))
 
 
 class Virtual:
@@ -103,6 +105,11 @@ class Virtual:
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
             patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
+            patch("slafw.exposure.persistance.LAST_PROJECT_HW_CONFIG", self.temp / LAST_PROJECT_HW_CONFIG.name),
+            patch("slafw.exposure.persistance.LAST_PROJECT_FACTORY_FILE", self.temp / LAST_PROJECT_FACTORY_FILE.name),
+            patch("slafw.exposure.persistance.LAST_PROJECT_CONFIG_FILE", self.temp / LAST_PROJECT_CONFIG_FILE.name),
+            patch("slafw.exposure.persistance.LAST_PROJECT_PICKLER", self.temp / LAST_PROJECT_PICKLER.name),
+            patch("slafw.exposure.exposure.LAST_PROJECT_PICKLER", self.temp / LAST_PROJECT_PICKLER.name),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", SAMPLES_DIR / "cputemp"),
             patch("slafw.defines.hwConfigPath", hardware_file),
             patch("slafw.defines.hwConfigPathFactory", hardware_file_factory),
@@ -114,14 +121,10 @@ class Virtual:
             patch("slafw.defines.livePreviewImage", str(self.temp / "live.png")),
             patch("slafw.defines.displayUsageData", str(self.temp / "display_usage.npz")),
             patch("slafw.defines.serviceData", str(self.temp / "service.toml")),
-            patch("slafw.defines.statsData", str(self.temp / "stats.toml")),
+            patch("slafw.defines.statsData", self.temp / "stats.toml"),
             patch("slafw.defines.fan_check_override", True),
             patch("slafw.defines.mediaRootPath", str(SAMPLES_DIR)),
-            patch("slafw.defines.previousPrints", str(prev_prints)),
-            patch("slafw.defines.lastProjectHwConfig", change_dir(defines.lastProjectHwConfig)),
-            patch("slafw.defines.lastProjectFactoryFile", change_dir(defines.lastProjectFactoryFile)),
-            patch("slafw.defines.lastProjectConfigFile", change_dir(defines.lastProjectConfigFile)),
-            patch("slafw.defines.lastProjectPickler", change_dir(defines.lastProjectPickler)),
+            patch("slafw.defines.previousPrints", prev_prints),
             patch("slafw.defines.slicerProfilesFile", self.temp / defines.profilesFile),
             patch("slafw.defines.loggingConfig", self.temp / "logging_config.json"),
             patch("slafw.defines.last_job", self.temp / "last_job"),

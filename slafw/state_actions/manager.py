@@ -20,6 +20,7 @@ from slafw.api.exposure0 import Exposure0
 from slafw.api.wizard0 import Wizard0
 from slafw.configs.runtime import RuntimeConfig
 from slafw.exposure.exposure import Exposure
+from slafw.exposure.persistance import cleanup_last_data
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.image.exposure_image import ExposureImage
 from slafw.states.wizard import WizardState
@@ -73,7 +74,7 @@ class ActionManager:
             return None
 
         self.logger.info("Loaded pickled exposure id: %s", exposure.instance_id)
-        Exposure.cleanup_last_data(self.logger)
+        cleanup_last_data(self.logger)
         self._register_exposure(exposure)
 
         self._current_exposure = exposure

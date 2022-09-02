@@ -411,18 +411,19 @@ class Project:
         return self._config.fadeLayers + defines.exposure_time_first_extra_layers + 1
 
     def copy_and_check(self):
+        # TODO pathlib stuff
         origin_path = os.path.normpath(self.path)
         (dummy, filename) = os.path.split(origin_path)
-        new_source = os.path.join(defines.previousPrints, filename)
+        new_source = str(defines.previousPrints / filename)
         if origin_path == new_source:
             self.logger.debug("Reprint of project '%s'", origin_path)
-        elif origin_path.startswith(defines.internalProjectPath):
+        elif origin_path.startswith(str(defines.internalProjectPath)):
             self.logger.debug("Internal storage project, creating symlink '%s' -> '%s'", origin_path, new_source)
             os.symlink(origin_path, new_source)
             self.path = new_source
             self.path_changed.emit(self.path)
         else:
-            statvfs = os.statvfs(os.path.dirname(defines.previousPrints))
+            statvfs = os.statvfs(defines.previousPrints.parent)
             size_available = statvfs.f_frsize * statvfs.f_bavail - defines.internalReservedSpace
             self.logger.debug("Internal storage available space: %d bytes", size_available)
             try:

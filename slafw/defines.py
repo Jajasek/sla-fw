@@ -15,7 +15,7 @@ reqMcVersion = "1.1.9"
 printerVariant = "default"
 
 factoryMountPoint = Path("/usr/share/factory/defaults")
-persistentStorage = "/var/sl1fw"
+persistentStorage = Path("/var/sl1fw")
 
 swPath = os.path.dirname(slafw.__file__)
 dataPath = os.path.join(swPath, "data")
@@ -26,12 +26,13 @@ configDir = Path("/etc/sl1fw")
 loggingConfig = configDir / "loggerConfig.json"
 remoteConfig = configDir / "remoteConfig.toml"
 
-wizardHistoryPath = Path(persistentStorage) / "wizard_history" / "user_data"
-wizardHistoryPathFactory = Path(persistentStorage) / "wizard_history" / "factory_data"
+wizardHistoryPath = persistentStorage / "wizard_history" / "user_data"
+wizardHistoryPathFactory = persistentStorage / "wizard_history" / "factory_data"
 
 hwConfigFileName = "hardware.cfg"
 hwConfigPath = configDir / hwConfigFileName
-hwConfigPathFactory = factoryMountPoint / "hardware.toml"
+hwConfigFileNameFactory = "hardware.toml"
+hwConfigPathFactory = factoryMountPoint / hwConfigFileNameFactory
 factory_enable = factoryMountPoint / "factory_mode_enabled"
 serial_service_enabled = factoryMountPoint / "serial_enabled"
 serial_service_service = "serial-getty@ttyS0.service"
@@ -46,29 +47,25 @@ uvCalibDuration = 60 # 1 minute countdown
 
 configFile = "config.ini"
 maskFilename = "mask.png"
-previousPrints = os.path.join(persistentStorage, "previous-prints")
-lastProjectHwConfig = os.path.join(previousPrints, hwConfigFileName)
-lastProjectFactoryFile = os.path.join(previousPrints, os.path.basename(hwConfigPathFactory))
-lastProjectConfigFile = os.path.join(previousPrints, configFile)
-lastProjectPickler = os.path.join(previousPrints, "last_project.pck")
-statsData = os.path.join(persistentStorage, "stats.toml")
-serviceData = os.path.join(persistentStorage, "service.toml")
+previousPrints = persistentStorage / "previous-prints"
+statsData = persistentStorage / "stats.toml"
+serviceData = persistentStorage / "service.toml"
 counterLogFilename = "counters-log.toml"
 counterLog = factoryMountPoint / counterLogFilename
-last_job = Path(persistentStorage) / "last_job"
-last_log_token = Path(persistentStorage) / "last_log_token"
+last_job = persistentStorage / "last_job"
+last_log_token = persistentStorage / "last_log_token"
 manual_uvc_filename = "manual_uv_calibration_data"
 
 fontFile = os.path.join(dataPath, "FreeSansBold.otf")
 livePreviewImage = os.path.join(ramdiskPath, "live.png")
-displayUsageData = os.path.join(persistentStorage, "display_usage.npz")
+displayUsageData = persistentStorage / "display_usage.npz"
 displayUsagePalette = os.path.join(dataPath, "heatmap_palette.txt")
 fullscreenImage = os.path.join(ramdiskPath, "fsimage.png")
 prusa_logo_file = os.path.join(dataPath, "logo.svg")
 
 profilesFile = "slicer_profiles.toml"
 slicerProfilesFallback = Path(dataPath) / profilesFile
-slicerProfilesFile = Path(persistentStorage) / profilesFile
+slicerProfilesFile = persistentStorage / profilesFile
 slicerMinVersion = "2.2.0-alpha3"
 slicerProfilesCheckProblem = 14400   # every four hours
 slicerProfilesCheckOK = 86400   # once per day
@@ -118,12 +115,12 @@ uv_temp_hysteresis = 10  # 10 deg C hysteresis
 # keep at least 110 MB of free space when copying project to internal storage or extracting examples
 internalReservedSpace = 110 * 1024 * 1024
 
-internalProjectPath = os.path.join(persistentStorage, "projects")
+internalProjectPath = persistentStorage / "projects"
 internalProjectGroup = "projects"
 internalProjectMode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH
 internalProjectDirMode = stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH
 examplesURL = "https://sl1.prusa3d.com/examples-cleaning-adaptor-{PRINTER_MODEL}.tar.gz"
-bootFailedStamp = Path(persistentStorage) / "failedboot"
+bootFailedStamp = persistentStorage / "failedboot"
 apikeyFile = configDir / "api.key"
 uvLedMeterMaxWait_s = 10
 

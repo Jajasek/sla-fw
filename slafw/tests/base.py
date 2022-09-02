@@ -30,6 +30,12 @@ from slafw.api.exposure0 import Exposure0
 from slafw.api.printer0 import Printer0
 from slafw.api.wizard0 import Wizard0
 from slafw.exposure.exposure import Exposure
+from slafw.exposure.persistance import (
+    LAST_PROJECT_HW_CONFIG,
+    LAST_PROJECT_FACTORY_FILE,
+    LAST_PROJECT_CONFIG_FILE,
+    LAST_PROJECT_PICKLER,
+)
 from slafw.functions.system import set_configured_printer_model
 from slafw.hardware.printer_model import PrinterModel
 from slafw.image.exposure_image import ExposureImage
@@ -115,8 +121,14 @@ class SlafwTestCase(TestCase):
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", tilt_profiles),
             patch("slafw.hardware.sl1.tilt.TILT_TUNE_LOCAL", tilt_tune),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", tower_profiles),
+            patch("slafw.exposure.persistance.LAST_PROJECT_HW_CONFIG", self.TEMP_DIR / LAST_PROJECT_HW_CONFIG.name),
+            patch("slafw.exposure.persistance.LAST_PROJECT_FACTORY_FILE", self.TEMP_DIR / LAST_PROJECT_FACTORY_FILE.name),
+            patch("slafw.exposure.persistance.LAST_PROJECT_CONFIG_FILE", self.TEMP_DIR / LAST_PROJECT_CONFIG_FILE.name),
+            patch("slafw.exposure.persistance.LAST_PROJECT_PICKLER", self.TEMP_DIR / LAST_PROJECT_PICKLER.name),
+            patch("slafw.exposure.exposure.LAST_PROJECT_PICKLER", self.TEMP_DIR / LAST_PROJECT_PICKLER.name),
             patch("slafw.defines.ramdiskPath", str(self.TEMP_DIR)),
-            patch("slafw.defines.previousPrints", str(self.TEMP_DIR)),
+            patch("slafw.defines.previousPrints", self.TEMP_DIR),
+            patch("slafw.defines.statsData", self.TEMP_DIR / "stats.toml"),
             patch("slafw.defines.emmc_serial_path", self.SAMPLES_DIR / "cid"),
             patch("slafw.defines.wizardHistoryPath", wizard_history_path),
             patch("slafw.defines.wizardHistoryPathFactory", self.TEMP_DIR / "wizard_history" / "factory_data"),

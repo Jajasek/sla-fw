@@ -74,22 +74,14 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             patch("slafw.defines.livePreviewImage", str(self.TEMP_DIR / "live.png")),
             patch("slafw.defines.displayUsageData", str(self.TEMP_DIR / "display_usage.npz")),
             patch("slafw.defines.serviceData", str(self.TEMP_DIR / "service.toml")),
-            patch("slafw.defines.statsData", str(self.TEMP_DIR / "stats.toml")),
             patch("slafw.defines.fan_check_override", True),
             patch("slafw.defines.loggingConfig", self.TEMP_DIR / "logger_config.json"),
-            patch("slafw.defines.previousPrints", self.temp_dir_project.name),
-            patch("slafw.defines.lastProjectHwConfig", self._change_dir(defines.lastProjectHwConfig)),
-            patch("slafw.defines.lastProjectFactoryFile", self._change_dir(defines.lastProjectFactoryFile)),
-            patch("slafw.defines.lastProjectConfigFile", self._change_dir(defines.lastProjectConfigFile)),
-            patch("slafw.defines.lastProjectPickler", self._change_dir(defines.lastProjectPickler)),
+            patch("slafw.defines.previousPrints", Path(self.temp_dir_project.name)),
             patch("slafw.defines.last_job", self.TEMP_DIR / "last_job"),
             patch("slafw.defines.last_log_token", self.TEMP_DIR / "last_log_token"),
             patch("slafw.defines.counterLog", self.counter_log),
             patch("slafw.defines.nginx_http_digest", self.TEMP_DIR / "http_digest_enabled"),
         ]
-
-    def _change_dir(self, path) -> str:
-        return self.temp_dir_project.name + "/" + os.path.basename(path)
 
     def try_start_printer(self):
         try:
