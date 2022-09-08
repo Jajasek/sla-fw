@@ -939,6 +939,9 @@ class Exposure:
                         with ErrorAction(self.hw.power_led):
                             self.doStuckRelease()
 
+                was_stirring = False
+                exposure_compensation = 0
+
                 # /1e21 (1e7 ** 3) - we want cm3 (=ml) not nm3
                 self.resin_count += (
                     white_pixels * self.hw.exposure_screen.parameters.pixel_size_nm ** 2 * layer.height_nm / 1e21
