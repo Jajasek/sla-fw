@@ -13,5 +13,20 @@
         "first_value": 111,
         "second_value": 222,
         "third_value": 333
+    },
+    "charlie": {
+        "first_value": 4,
+        "second_value": 5,
+        "third_value": 6
+    },
+    "bravo": {
+        "first_value": 44,
+        "second_value": 55,
+        "third_value": 66
+    },
+    "alpha": {
+        "first_value": 444,
+        "second_value": 555,
+        "third_value": 666
     }
 }

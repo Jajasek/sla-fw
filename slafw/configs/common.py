@@ -23,6 +23,7 @@ class ValueConfigCommon(ValueConfig):
 
     notation.
     """
+    _add_dict_type = None
 
     def __init__(
         self,
@@ -50,6 +51,11 @@ class ValueConfigCommon(ValueConfig):
         res = [f"{self.__class__.__name__}: {self._file_path} ({self._factory_file_path}) ({self._default_file_path}):"]
         for val in dir(self.__class__):
             o = getattr(self.__class__, val)
+            if isinstance(o, Value):
+                continue
+            if isinstance(o, property):
+                res.append(f"\t{val}: {getattr(self, val)}")
+        for val,o in self.get_values().items():
             if isinstance(o, DictOfConfigs):
                 # TODO handle recursion
                 config = self._values[val].value_getter(self)
@@ -67,8 +73,6 @@ class ValueConfigCommon(ValueConfig):
                 factory = self._values[val].get_factory_value(self)
                 default = self._values[val].get_default_value(self)
                 res.append(f"\t{val}: {getattr(self, val)} ({value}, {factory}, {default})")
-            elif isinstance(o, property):
-                res.append(f"\t{val}: {getattr(self, val)}")
         return "\n".join(res)
 
     def get_writer(self) -> ConfigWriter:
@@ -127,6 +131,7 @@ class ValueConfigCommon(ValueConfig):
 
     def _fill_from_dict(
         # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-branches
         self, container, values: list, data: dict, factory: bool = False, defaults: bool = False
     ) -> None:
         for val in values:
@@ -138,11 +143,7 @@ class ValueConfigCommon(ValueConfig):
                     key = val.file_key.lower()
                 if key is not None:
                     if isinstance(val, DictOfConfigs):
-                        config = val.value_getter(container)
-                        if config is None:
-                            config = val.type[0]()
-                        self._fill_from_dict(config, config.get_values().values(), data[key], factory, defaults)
-                        val.value_setter(container, config, write_override=True, factory=factory, defaults=defaults)
+                        self._fill_dict_of_configs(container, data, val, key, factory, defaults)
                     else:
                         v = data[key] if val.unit is None else val.unit(data[key])
                         val.value_setter(container, v, write_override=True, factory=factory, defaults=defaults)
@@ -150,7 +151,25 @@ class ValueConfigCommon(ValueConfig):
             except (KeyError, ConfigException):
                 self._logger.exception("Setting config value %s to %s failed", val.name, val)
         if data:
-            self._logger.warning("Extra data in configuration source: \n %s", data)
+            if self._add_dict_type:
+                for key in data:
+                    if isinstance(data[key], dict):
+                        val = self.add_value(key, DictOfConfigs(self._add_dict_type))
+                        config = self._fill_dict_of_configs(container, data, val, key, factory, defaults)
+                        setattr(self, key, config)
+                    else:
+                        self._logger.warning("Extra data in configuration source: %s: %s", key, data[key])
+            else:
+                self._logger.warning("Extra data in configuration source: \n %s", data)
+
+    def _fill_dict_of_configs(self, container, data: dict, val: Value, key: str, factory: bool, defaults: bool):
+        # pylint: disable=too-many-arguments
+        config = val.value_getter(container)
+        if config is None:
+            config = val.type[0]()
+        self._fill_from_dict(config, config.get_values().values(), data[key], factory, defaults)
+        val.value_setter(container, config, write_override=True, factory=factory, defaults=defaults)
+        return config
 
     @abstractmethod
     def read_text(self, text: str, factory: bool = False, defaults: bool = False) -> None:

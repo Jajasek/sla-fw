@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 from functools import cache # type: ignore
 from abc import abstractmethod
 
@@ -81,32 +81,38 @@ class ProfileSet(JsonConfig):
                 default_file_path=default_file_path,
                 is_master=True
         )
+        self._ordered_profiles: List[SingleProfile] = []
         self.read_file()
         idx = 0
         for name in self.__definition_order__:
             if not name.startswith("_"):
-                profile = getattr(self, name)
-                if profile is None:
-                    raise ConfigException(f"Missing data for profile <{name}>")
-                for value in profile:
-                    if value.value_getter(profile) is None:
-                        raise ConfigException(f"Missing data for value <{value.key}> in profile <{name}>")
-                profile.name = name
-                profile.idx = idx
-                profile.saver = self.write
+                self._add_profile(name, idx)
+                idx += 1
+        for name in sorted(self.get_values()):
+            if name not in self.__definition_order__:
+                self._add_profile(name, idx)
+                self._logger.info("Profile '%s' added from config file as index %d", name, idx)
                 idx += 1
 
+    def _add_profile(self, name: str, idx: int):
+        profile = getattr(self, name)
+        if profile is None:
+            raise ConfigException(f"Missing data for profile <{name}>")
+        for value in profile:
+            if value.value_getter(profile) is None:
+                raise ConfigException(f"Missing data for value <{value.key}> in profile <{name}>")
+        profile.name = name
+        profile.idx = idx
+        profile.saver = self.write
+        self._ordered_profiles.append(profile)
+
     def __iter__(self):
-        for name in self.__definition_order__:
-            if not name.startswith("_"):
-                yield getattr(self, name)
+        for profile in self._ordered_profiles:
+            yield profile
 
     @cache
-    def __getitem__(self, key):
-        for profile in self:
-            if profile.idx == key:
-                return profile
-        raise IndexError
+    def __getitem__(self, idx):
+        return self._ordered_profiles[idx]
 
     def apply_all(self):
         if callable(self._apply_profile):

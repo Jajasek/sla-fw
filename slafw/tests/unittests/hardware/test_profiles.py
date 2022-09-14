@@ -30,6 +30,7 @@ class DummyProfileSet(ProfileSet):
     second_profile = DictOfConfigs(DummySingleProfile)
     third_profile = DictOfConfigs(DummySingleProfile)
     __definition_order__ = tuple(locals())
+    _add_dict_type = DummySingleProfile
     name = "test profile set"
 
 class ErrorProfileSet1(ProfileSet):
@@ -125,6 +126,22 @@ class TestProfileSet(SlafwTestCase):
         test_profiles.write_factory(self.outfile)
         with open(self.outfile, encoding="utf-8") as o:
             self.assertEqual({}, json.load(o))
+
+    def test_add_from_file(self):
+        # pylint: disable=no-member
+        test_profiles = DummyProfileSet(default_file_path=self.infile)
+        self.assertEqual(3, test_profiles.alpha.idx)
+        self.assertEqual(4, test_profiles.bravo.idx)
+        self.assertEqual(5, test_profiles.charlie.idx)
+        self.assertEqual(444, test_profiles.alpha.first_value)
+        self.assertEqual(555, test_profiles.alpha.second_value)
+        self.assertEqual(666, test_profiles.alpha.third_value)
+        self.assertEqual(44, test_profiles.bravo.first_value)
+        self.assertEqual(55, test_profiles.bravo.second_value)
+        self.assertEqual(66, test_profiles.bravo.third_value)
+        self.assertEqual(4, test_profiles.charlie.first_value)
+        self.assertEqual(5, test_profiles.charlie.second_value)
+        self.assertEqual(6, test_profiles.charlie.third_value)
 
 class TestMovingProfilesSL1(SlafwTestCase):
     def test_tilt_profiles(self):

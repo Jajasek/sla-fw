@@ -543,10 +543,7 @@ class ValueConfig(BaseConfig):
         for var in dir(self.__class__):
             obj = getattr(self.__class__, var)
             if isinstance(obj, Value):
-                obj.setup(self, var)
-                self._values[var] = obj
-                if not var.islower():
-                    self._lower_to_normal_map[var.lower()] = var
+                self.add_value(var, obj)
 
     @abstractmethod
     def write(self, file_path: Optional[Path] = None, factory: bool = False, nondefault: bool = False) -> None:
@@ -580,6 +577,13 @@ class ValueConfig(BaseConfig):
                 self.run_stored_callbacks()
             finally:
                 lock.release()
+
+    def add_value(self, var: str, obj: Value) -> Value:
+        obj.setup(self, var)
+        self._values[var] = obj
+        if not var.islower():
+            self._lower_to_normal_map[var.lower()] = var
+        return obj
 
     def add_onchange_handler(self, handler: Callable[[str, Any], None]):
         self._on_change.add(weakref.WeakMethod(handler))
