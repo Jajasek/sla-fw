@@ -58,7 +58,7 @@ class HardwareSL1(BaseHardware):
         else:
             raise NotImplementedError
 
-        self.config.add_onchange_handler(self._fan_values_refresh)
+        self.config.add_onchange_handler(self._config_value_refresh)
 
         self._value_refresh_thread = Thread(daemon=True, target=self._value_refresh_body)
         self._value_refresh_task: Optional[Task] = None
@@ -165,8 +165,8 @@ class HardwareSL1(BaseHardware):
         finally:
             self.logger.info("Value refresh checker thread ended")
 
-    def _fan_values_refresh(self, key: str, _: Any):
-        """ Re-load the fan RPM settings from configuration, should be used as a callback """
+    def _config_value_refresh(self, key: str, _: Any):
+        """Re-load the fan RPM and stepper sensitivity settings from configuration, should be used as a callback"""
         if key in {"fan1Rpm", "fan2Rpm", "fan3Rpm", "fan1Enabled", "fan2Enabled", "fan3Enabled", }:
             self.uv_led_fan.default_rpm = self.config.fan1Rpm
             self.uv_led_fan.enabled = self.config.fan1Enabled
@@ -174,6 +174,14 @@ class HardwareSL1(BaseHardware):
             self.blower_fan.enabled = self.config.fan2Enabled
             self.rear_fan.default_rpm = self.config.fan3Rpm
             self.rear_fan.enabled = self.config.fan3Enabled
+
+        if key == "tiltSensitivity":
+            self.tilt.__dict__.pop("sensitivity", None) # invalidate the cache
+            self.tilt.apply_all_profiles()
+
+        if key == "towerSensitivity":
+            self.tower.__dict__.pop("sensitivity", None) # invalidate the cache
+            self.tower.apply_all_profiles()
 
     def initDefaults(self):
         self.motors_release()
