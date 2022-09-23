@@ -11,42 +11,22 @@ from shutil import copyfile
 from tempfile import NamedTemporaryFile
 from threading import Thread
 from typing import Iterable, Optional, Dict, Any
-from dataclasses import dataclass
 
 import json as serializer
 from PySignal import Signal
 
 from slafw import defines
 from slafw.api.decorators import state_checked
-from slafw.configs.runtime import RuntimeConfig
 from slafw.errors.errors import WizardNotCancelable, FailedToSerializeWizardData, FailedToSaveWizardData, \
     PrinterException
 from slafw.errors.warnings import PrinterWarning
 from slafw.functions.system import FactoryMountedRW
-from slafw.hardware.base.hardware import BaseHardware
 from slafw.states.wizard import WizardState, WizardCheckState, WizardId
 from slafw.wizard.wizards.generic import ShowResultsGroup
 from slafw.wizard.actions import UserActionBroker, PushState
 from slafw.wizard.checks.base import Check, WizardCheckType, DangerousCheck
 from slafw.wizard.group import CheckGroup, SingleCheckGroup
-from slafw.configs.writer import ConfigWriter
-from slafw.libUvLedMeterMulti import UvLedMeterMulti, UVCalibrationResult
-from slafw.image.exposure_image import ExposureImage
-
-
-@dataclass
-class WizardDataPackage:
-    """
-    Data getting passed to the wizard groups and wizard checks for their initialization
-    """
-
-    hw: BaseHardware = None
-    config_writer: ConfigWriter = None
-    runtime_config: RuntimeConfig = None
-    exposure_image: ExposureImage = None
-    uv_meter: UvLedMeterMulti = None
-    uv_result: UVCalibrationResult = None
-    # TODO: use this in other wizards like self-test, unboxing, uv calibration, factory reset, SL1/SL1s config reset
+from slafw.wizard.data_package import WizardDataPackage
 
 
 class Wizard(Thread, UserActionBroker):

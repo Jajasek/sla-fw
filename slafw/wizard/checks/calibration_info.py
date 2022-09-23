@@ -5,10 +5,10 @@
 from dataclasses import dataclass, asdict
 from typing import Dict, Any, Optional
 
-from slafw.configs.hw import HwConfig
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType
 from slafw.wizard.setup import Configuration
+from slafw.wizard.data_package import WizardDataPackage
 
 
 @dataclass
@@ -18,11 +18,9 @@ class CheckData:
 
 
 class CalibrationInfo(Check):
-    def __init__(self, hw_config: HwConfig):
-        super().__init__(
-            WizardCheckType.CALIBRATION_INFO, Configuration(None, None), [],
-        )
-        self._hw_config = hw_config
+    def __init__(self, package: WizardDataPackage):
+        super().__init__(WizardCheckType.CALIBRATION_INFO, Configuration(None, None), [])
+        self._hw_config = package.hw.config
         self._result_data: Optional[CheckData] = None
 
     async def async_task_run(self, actions: UserActionBroker):

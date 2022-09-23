@@ -15,9 +15,7 @@ from slafw.wizard.setup import Configuration
 
 class SpeakerTest(Check):
     def __init__(self):
-        super().__init__(
-            WizardCheckType.MUSIC, Configuration(None, None), [],
-        )
+        super().__init__(WizardCheckType.MUSIC, Configuration(None, None), [])
         self.result: Optional[bool] = None
         self._user_event: Optional[Event] = None
 

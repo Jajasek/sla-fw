@@ -8,7 +8,8 @@ from slafw.admin.menu import AdminMenu
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.libPrinter import Printer
 from slafw.states.wizard import WizardId
-from slafw.wizard.wizard import SingleCheckWizard, WizardDataPackage
+from slafw.wizard.wizard import SingleCheckWizard
+from slafw.wizard.data_package import fill_wizard_data_package
 from slafw.wizard.wizards.calibration import CalibrationWizard
 from slafw.wizard.wizards.displaytest import DisplayTestWizard
 from slafw.wizard.wizards.factory_reset import PackingWizard, FactoryResetWizard
@@ -52,71 +53,52 @@ class WizardsTestMenu(AdminMenu):
         )
 
     def api_display_test(self):
-        self._printer.action_manager.start_wizard(
-            DisplayTestWizard(self._printer.hw, self._printer.exposure_image,
-                              self._printer.runtime_config)
-        )
+        self._printer.action_manager.start_wizard(DisplayTestWizard(fill_wizard_data_package(self._printer)))
 
     def api_unpacking_c(self):
-        self._printer.action_manager.start_wizard(
-            CompleteUnboxingWizard(self._printer.hw, self._printer.runtime_config)
-        )
+        self._printer.action_manager.start_wizard(CompleteUnboxingWizard(fill_wizard_data_package(self._printer)))
 
     def api_unpacking_k(self):
-        self._printer.action_manager.start_wizard(KitUnboxingWizard(self._printer.hw, self._printer.runtime_config))
+        self._printer.action_manager.start_wizard(KitUnboxingWizard(fill_wizard_data_package(self._printer)))
 
     def api_self_test(self):
-        self._printer.action_manager.start_wizard(
-            SelfTestWizard(self._printer.hw, self._printer.exposure_image, self._printer.runtime_config)
-        )
+        self._printer.action_manager.start_wizard(SelfTestWizard(fill_wizard_data_package(self._printer)))
 
     def api_calibration(self):
-        self._printer.action_manager.start_wizard(CalibrationWizard(self._printer.hw, self._printer.runtime_config))
+        self._printer.action_manager.start_wizard(CalibrationWizard(fill_wizard_data_package(self._printer)))
 
     def api_packing(self):
-        self._printer.action_manager.start_wizard(PackingWizard(self._printer.hw, self._printer.runtime_config))
+        self._printer.action_manager.start_wizard(PackingWizard(fill_wizard_data_package(self._printer)))
 
     def api_factory_reset(self):
-        self._printer.action_manager.start_wizard(FactoryResetWizard(self._printer.hw, self._printer.runtime_config))
+        self._printer.action_manager.start_wizard(FactoryResetWizard(fill_wizard_data_package(self._printer)))
 
     def sl1s_upgrade(self):
-        self._printer.action_manager.start_wizard(
-            SL1SUpgradeWizard(self._printer.hw, self._printer.exposure_image, self._printer.runtime_config)
-        )
+        self._printer.action_manager.start_wizard(SL1SUpgradeWizard(fill_wizard_data_package(self._printer)))
 
     def sl1_downgrade(self):
-        self._printer.action_manager.start_wizard(
-            SL1DowngradeWizard(self._printer.hw, self._printer.exposure_image, self._printer.runtime_config)
-        )
+        self._printer.action_manager.start_wizard(SL1DowngradeWizard(fill_wizard_data_package(self._printer)))
 
     def api_selftest_uvfans(self):
-        package = WizardDataPackage(
-            self._printer.hw, self._printer.hw.config.get_writer(), self._printer.runtime_config
-        )
+        package = fill_wizard_data_package(self._printer)
         self._printer.action_manager.start_wizard(SingleCheckWizard(
             WizardId.SELF_TEST,
-            UVFansTest(package.hw),
+            UVFansTest(package),
             package,
             show_results=False))
 
     def api_calibration_tilt_times(self):
-        package = WizardDataPackage(
-            self._printer.hw, self._printer.hw.config.get_writer(), self._printer.runtime_config
-        )
+        package = fill_wizard_data_package(self._printer)
         self._printer.action_manager.start_wizard(SingleCheckWizard(
             WizardId.CALIBRATION,
-            TiltTimingTest(package.hw, package.config_writer),
+            TiltTimingTest(package),
             package))
 
     def tank_surface_cleaner(self):
-        self._printer.action_manager.start_wizard(
-            TankSurfaceCleaner(self._printer.hw, self._printer.exposure_image, self._printer.runtime_config)
-        )
+        self._printer.action_manager.start_wizard(TankSurfaceCleaner(fill_wizard_data_package(self._printer)))
 
     def new_expo_panel(self):
-        self._printer.action_manager.start_wizard(
-            NewExpoPanelWizard(self._printer.hw)
-        )
+        self._printer.action_manager.start_wizard(NewExpoPanelWizard(fill_wizard_data_package(self._printer)))
 
 
 class TestUVCalibrationWizardMenu(SafeAdminMenu):
@@ -137,9 +119,7 @@ class TestUVCalibrationWizardMenu(SafeAdminMenu):
 
         self._printer.action_manager.start_wizard(
             UVCalibrationWizard(
-                self._printer.hw,
-                self._printer.exposure_image,
-                self._printer.runtime_config,
+                fill_wizard_data_package(self._printer),
                 display_replaced=self._lcd_replaced,
                 led_module_replaced=self._led_replaced,
             )

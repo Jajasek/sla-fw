@@ -19,7 +19,8 @@ from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.factory_reset import SendPrinterData
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.errors.errors import FailedUpdateChannelSet
 from slafw.functions.system import (
     FactoryMountedRW,

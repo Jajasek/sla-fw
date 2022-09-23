@@ -6,7 +6,7 @@ from asyncio import sleep
 from typing import Optional
 
 from slafw.configs.unit import Nm
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, Check
 from slafw.wizard.setup import Configuration, Resource
@@ -15,37 +15,37 @@ from slafw.wizard.setup import Configuration, Resource
 class MoveToFoam(Check):
     FOAM_TARGET_POSITION_NM = Nm(30_000_000)
 
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             WizardCheckType.MOVE_TO_FOAM, Configuration(None, None), [Resource.TOWER_DOWN, Resource.TOWER],
         )
-        self.result: Optional[bool] = None
-        self.hw = hw
+        self._result: Optional[bool] = None
+        self._hw = package.hw
 
     async def async_task_run(self, actions: UserActionBroker):
-        self.hw.tower.position = Nm(0)
-        self.hw.tower.actual_profile = self.hw.tower.profiles.homingFast
-        initial_pos_nm = self.hw.tower.position
-        self.hw.tower.move(self.FOAM_TARGET_POSITION_NM)
-        while self.hw.tower.moving:
+        self._hw.tower.position = Nm(0)
+        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
+        initial_pos_nm = self._hw.tower.position
+        self._hw.tower.move(self.FOAM_TARGET_POSITION_NM)
+        while self._hw.tower.moving:
             if self.FOAM_TARGET_POSITION_NM != initial_pos_nm:
-                self.progress = (self.hw.tower.position - initial_pos_nm) / (
+                self.progress = (self._hw.tower.position - initial_pos_nm) / (
                     self.FOAM_TARGET_POSITION_NM - initial_pos_nm
                 )
             else:
                 self.progress = 1
             await sleep(0.5)
-        self.hw.tower.release()
+        self._hw.tower.release()
 
 
 class MoveToTank(Check):
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             WizardCheckType.MOVE_TO_TANK, Configuration(None, None), [Resource.TOWER_DOWN, Resource.TOWER],
         )
-        self.result: Optional[bool] = None
-        self.hw = hw
+        self._result: Optional[bool] = None
+        self._hw = package.hw
 
     async def async_task_run(self, actions: UserActionBroker):
-        await self.hw.tower.sync_ensure_async(retries=3)  # Let this fail fast, allow for proper tower synced check
-        self.hw.tower.release()
+        await self._hw.tower.sync_ensure_async(retries=3)  # Let this fail fast, allow for proper tower synced check
+        self._hw.tower.release()

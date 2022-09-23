@@ -4,21 +4,20 @@
 
 from typing import Iterable
 
-from slafw.configs.runtime import RuntimeConfig
-from slafw.hardware.base.hardware import BaseHardware
 from slafw.states.wizard import WizardId
 from slafw.states.wizard import WizardState
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.unboxing import MoveToTank, MoveToFoam
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.wizards.generic import ShowResultsGroup
 
 
 class RemoveSafetyStickerCheckGroup(CheckGroup):
     def __init__(self, package: WizardDataPackage):
-        super().__init__(Configuration(None, None), [MoveToFoam(package.hw)])
+        super().__init__(Configuration(None, None), [MoveToFoam(package)])
 
     async def setup(self, actions: UserActionBroker):
         await self.wait_for_user(actions, actions.safety_sticker_removed, WizardState.REMOVE_SAFETY_STICKER)
@@ -26,7 +25,7 @@ class RemoveSafetyStickerCheckGroup(CheckGroup):
 
 class RemoveSideFoamCheckGroup(CheckGroup):
     def __init__(self, package: WizardDataPackage):
-        super().__init__(Configuration(None, None), [MoveToTank(package.hw)])
+        super().__init__(Configuration(None, None), [MoveToTank(package)])
 
     async def setup(self, actions: UserActionBroker):
         await self.wait_for_user(actions, actions.side_foam_removed, WizardState.REMOVE_SIDE_FOAM)
@@ -51,26 +50,24 @@ class RemoveDisplayFoilCheckGroup(CheckGroup):
 class UnboxingWizard(Wizard):
     # pylint: disable = too-many-arguments
     def __init__(self, identifier, groups: Iterable[CheckGroup], package: WizardDataPackage):
-        self._package = package
-        super().__init__(identifier, groups, self._package, cancelable=False)
+        super().__init__(identifier, groups, package, cancelable=False)
 
     def wizard_finished(self):
-        self._package.config_writer.showUnboxing = False
+        self._config_writer.showUnboxing = False
 
 
 class CompleteUnboxingWizard(UnboxingWizard):
-    def __init__(self, hw: BaseHardware, runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(hw=hw, config_writer=hw.config.get_writer(), runtime_config=runtime_config)
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             WizardId.COMPLETE_UNBOXING,
             [
-                RemoveSafetyStickerCheckGroup(self._package),
-                RemoveSideFoamCheckGroup(self._package),
+                RemoveSafetyStickerCheckGroup(package),
+                RemoveSideFoamCheckGroup(package),
                 RemoveTankFoamCheckGroup(),
                 RemoveDisplayFoilCheckGroup(),
                 ShowResultsGroup(),
             ],
-            self._package,
+            package,
         )
 
     @classmethod
@@ -79,9 +76,8 @@ class CompleteUnboxingWizard(UnboxingWizard):
 
 
 class KitUnboxingWizard(UnboxingWizard):
-    def __init__(self, hw: BaseHardware, runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(hw=hw, config_writer=hw.config.get_writer(), runtime_config=runtime_config)
-        super().__init__(WizardId.KIT_UNBOXING, [RemoveDisplayFoilCheckGroup(), ShowResultsGroup()], self._package)
+    def __init__(self, package: WizardDataPackage):
+        super().__init__(WizardId.KIT_UNBOXING, [RemoveDisplayFoilCheckGroup(), ShowResultsGroup()], package)
 
     @classmethod
     def get_name(cls) -> str:

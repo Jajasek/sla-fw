@@ -33,6 +33,7 @@ from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration, PlatformSetup, TankSetup
 from slafw.wizard.wizard import Wizard
 from slafw.wizard.wizard import serializer
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.wizards.calibration import CalibrationWizard
 from slafw.wizard.wizards.displaytest import DisplayTestWizard
 from slafw.wizard.wizards.factory_reset import FactoryResetWizard, PackingWizard
@@ -150,7 +151,17 @@ class TestWizardInfrastructure(SlafwTestCaseDBus):
 class TestWizardsBase(SlafwTestCaseDBus):
     def setUp(self) -> None:
         super().setUp()
-        self.exposure_image = Mock()  # wizards use weakly-reference to exposure_image
+        self.hw_config_file = self.TEMP_DIR / "reset_config.toml"
+        self.hw_config_factory_file = self.TEMP_DIR / "reset_config_factory.toml"
+        hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
+        hw_config.tankCleaningExposureTime = 5  # Avoid waiting for long exposures
+        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
+        self.package = WizardDataPackage(
+                hw=self.hw,
+                config_writer=self.hw.config.get_writer(),
+                runtime_config=RuntimeConfig(),
+                exposure_image=Mock(),
+        )
 
     def _run_wizard(self, wizard: Wizard, limit_s: int = 5, expected_state=WizardState.DONE):
         wizard.start()
@@ -172,7 +183,7 @@ class TestWizardsBase(SlafwTestCaseDBus):
 
 class TestDisplayTest(TestWizardsBase):
     def test_display_test(self):
-        wizard = DisplayTestWizard(HardwareMock(printer_model=PrinterModel.SL1), self.exposure_image, RuntimeConfig())
+        wizard = DisplayTestWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_DISPLAY_TEST:
@@ -186,7 +197,7 @@ class TestDisplayTest(TestWizardsBase):
         self._run_wizard(wizard)
 
     def test_display_test_fail(self):
-        wizard = DisplayTestWizard(HardwareMock(printer_model=PrinterModel.SL1), self.exposure_image, RuntimeConfig())
+        wizard = DisplayTestWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_DISPLAY_TEST:
@@ -209,6 +220,8 @@ class TestUpgradeWizard(TestWizardsBase):
         self.hw = HardwareMock(
             HwConfig(defines.hwConfigPath, defines.hwConfigPathFactory, is_master=True), PrinterModel.SL1S
         )
+        self.package.hw = self.hw
+        self.package.config_writer = self.hw.config.get_writer()
         set_configured_printer_model(PrinterModel.SL1)
 
     def tearDown(self) -> None:
@@ -216,7 +229,7 @@ class TestUpgradeWizard(TestWizardsBase):
         super().tearDown()
 
     def test_sl1s_upgrade_confirm(self):
-        wizard = SL1SUpgradeWizard(self.hw, Mock(), RuntimeConfig())
+        wizard = SL1SUpgradeWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.SL1S_CONFIRM_UPGRADE:
@@ -237,7 +250,7 @@ class TestUpgradeWizard(TestWizardsBase):
         self.assertEqual(123, config.get_values()["uvPwm"].get_factory_value(config))
 
     def test_sl1s_upgrade_reject(self):
-        wizard = SL1SUpgradeWizard(self.hw, Mock(), RuntimeConfig())
+        wizard = SL1SUpgradeWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.SL1S_CONFIRM_UPGRADE:
@@ -256,14 +269,6 @@ class TestUpgradeWizard(TestWizardsBase):
 class TestWizards(TestWizardsBase):
     def setUp(self) -> None:
         super().setUp()
-
-        self.hw_config_file = self.TEMP_DIR / "reset_config.toml"
-        self.hw_config_factory_file = self.TEMP_DIR / "reset_config_factory.toml"
-
-        hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
-        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
-        self.runtime_config = RuntimeConfig()
-        self.exposure_image = Mock()  # wizards use weakly-reference to exposure_image
         set_configured_printer_model(PrinterModel.SL1)
 
         # Mock factory data
@@ -336,7 +341,7 @@ class TestWizards(TestWizardsBase):
                 original_move(position)
 
         self.hw.tower.move = MagicMock(side_effect=side_effect_move)
-        wizard = SelfTestWizard(self.hw, self.exposure_image, RuntimeConfig())
+        wizard = SelfTestWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_WIZARD_PART_1:
@@ -391,7 +396,7 @@ class TestWizards(TestWizardsBase):
 
     def test_self_test_fail(self):
         self.hw.config.uvWarmUpTime = 1
-        wizard = SelfTestWizard(self.hw, self.exposure_image, RuntimeConfig())
+        wizard = SelfTestWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_WIZARD_PART_1:
@@ -462,7 +467,7 @@ class TestWizards(TestWizardsBase):
         self._run_self_test(expected_state=WizardState.FAILED)
 
     def test_unboxing_complete(self):
-        wizard = CompleteUnboxingWizard(self.hw, RuntimeConfig())
+        wizard = CompleteUnboxingWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.REMOVE_SAFETY_STICKER:
@@ -480,7 +485,7 @@ class TestWizards(TestWizardsBase):
         self._run_wizard(wizard)
 
     def test_unboxing_kit(self):
-        wizard = KitUnboxingWizard(self.hw, RuntimeConfig())
+        wizard = KitUnboxingWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.REMOVE_DISPLAY_FOIL:
@@ -495,8 +500,8 @@ class TestWizards(TestWizardsBase):
         self.hw.config.showWizard = False
         self.hw.config.calibrated = True
         self.hw.config.tower_height_nm = Nm(0)
-        self.runtime_config.factory_mode = True
-        wizard = PackingWizard(self.hw, self.runtime_config)
+        self.package.runtime_config.factory_mode = True
+        wizard = PackingWizard(self.package)
 
         def state_callback():
             if wizard.state == WizardState.INSERT_FOAM:
@@ -508,34 +513,48 @@ class TestWizards(TestWizardsBase):
 
     def test_packing_kit(self):
         self.hw.config.showWizard = False
-        self.runtime_config.factory_mode = True
+        self.package.runtime_config.factory_mode = True
         self.hw.mock_is_kit = True
-        self._run_wizard(PackingWizard(self.hw, self.runtime_config))
+        self._run_wizard(PackingWizard(self.package))
         self._check_factory_reset(self.hw, unboxing=True, factory_mode=True)
 
     def test_factory_reset_complete(self):
-        self.runtime_config.factory_mode = False
-        self._run_wizard(FactoryResetWizard(self.hw, self.runtime_config, True))
+        self.package.runtime_config.factory_mode = False
+        self._run_wizard(FactoryResetWizard(self.package, True))
         self._check_factory_reset(self.hw, unboxing=False, factory_mode=False)
 
     def test_factory_reset_complete_sl1s(self):
         set_configured_printer_model(PrinterModel.SL1S)
         hw = HardwareMock(HwConfig(self.hw_config_file, is_master=True), PrinterModel.SL1S)
-        self.runtime_config.factory_mode = False
-        self._run_wizard(FactoryResetWizard(hw, self.runtime_config, True))
+        runtime_config = RuntimeConfig()
+        runtime_config.factory_mode = False
+        package = WizardDataPackage(
+                hw=hw,
+                config_writer=Mock(),
+                runtime_config=runtime_config,
+                exposure_image=Mock(),
+        )
+        self._run_wizard(FactoryResetWizard(package, True))
         self._check_factory_reset(hw, unboxing=False, factory_mode=False)
 
     def test_factory_reset_complete_m1(self):
         set_configured_printer_model(PrinterModel.M1)
         hw = HardwareMock(HwConfig(self.hw_config_file, is_master=True), PrinterModel.M1)
-        self.runtime_config.factory_mode = False
-        self._run_wizard(FactoryResetWizard(hw, self.runtime_config, True))
+        runtime_config = RuntimeConfig()
+        runtime_config.factory_mode = False
+        package = WizardDataPackage(
+                hw=hw,
+                config_writer=Mock(),
+                runtime_config=runtime_config,
+                exposure_image=Mock(),
+        )
+        self._run_wizard(FactoryResetWizard(package, True))
         self._check_factory_reset(hw, unboxing=False, factory_mode=False)
 
     def test_factory_reset_kit(self):
-        self.runtime_config.factory_mode = False
+        self.package.runtime_config.factory_mode = False
         self.hw.mock_is_kit = True
-        self._run_wizard(FactoryResetWizard(self.hw, self.runtime_config, True))
+        self._run_wizard(FactoryResetWizard(self.package, True))
         self._check_factory_reset(self.hw, unboxing=False, factory_mode=False)
 
     def _check_factory_reset(self, hw, unboxing: bool, factory_mode: bool):
@@ -587,7 +606,7 @@ class TestWizards(TestWizardsBase):
                 original_move(position)
 
         self.hw.tower.move = MagicMock(side_effect=side_effect_move)
-        wizard = CalibrationWizard(self.hw, RuntimeConfig())
+        wizard = CalibrationWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_CALIBRATION_INSERT_PLATFORM_TANK:
@@ -609,7 +628,7 @@ class TestWizards(TestWizardsBase):
         self._assert_final_state(item="calibrated", expected_value=True)
 
     def test_calibration_fail(self):
-        wizard = CalibrationWizard(self.hw, RuntimeConfig())
+        wizard = CalibrationWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_CALIBRATION_INSERT_PLATFORM_TANK:
@@ -624,7 +643,7 @@ class TestWizards(TestWizardsBase):
 
         uv_usage = self.hw.uv_led.usage_s
         display_usage = self.hw.exposure_screen.usage_s
-        wizard = NewExpoPanelWizard(self.hw)
+        wizard = NewExpoPanelWizard(self.package)
 
         def on_state_changed():
             if wizard.state == WizardState.PREPARE_NEW_EXPO_PANEL:
@@ -648,16 +667,7 @@ class TestWizards(TestWizardsBase):
 class TestUVCalibration(TestWizardsBase):
     def setUp(self) -> None:
         super().setUp()
-
-        self.hw_config_file = self.TEMP_DIR / "reset_config.toml"
-        self.hw_config_factory_file = self.TEMP_DIR / "reset_config_factory.toml"
         defines.counterLog = self.TEMP_DIR / "counter.log"
-
-        hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
-        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
-        self.runtime_config = RuntimeConfig()
-        self.exposure_image = Mock()
-        self.exposure_image.printer_model = PrinterModel.SL1
         set_configured_printer_model(PrinterModel.SL1)
         self.uv_meter = UVMeterMock(self.hw)
 
@@ -668,7 +678,7 @@ class TestUVCalibration(TestWizardsBase):
 
     def test_uv_calibration_no_boost(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, False)
+            wizard = UVCalibrationWizard(self.package, False, False)
             self._run_uv_calibration(wizard)
 
         # Check wizard data
@@ -689,7 +699,7 @@ class TestUVCalibration(TestWizardsBase):
 
     def test_uv_calibration_boost(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, False)
+            wizard = UVCalibrationWizard(self.package, False, False)
             self.uv_meter.multiplier = 0.79
             self._run_uv_calibration(wizard)
             self.assertTrue(wizard.data["boost"])  # Boosted as led+display too weak
@@ -699,7 +709,7 @@ class TestUVCalibration(TestWizardsBase):
     def test_uv_calibration_boost_difference(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
             self.hw.config.data_factory_values["uvPwm"] = 100
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, False)
+            wizard = UVCalibrationWizard(self.package, False, False)
             self.uv_meter.multiplier = 0.85
             self._run_uv_calibration(wizard)
             self.assertTrue(wizard.data["boost"])  # Boosted as PWM differs too much from previous setup
@@ -708,7 +718,7 @@ class TestUVCalibration(TestWizardsBase):
     def test_uv_calibration_no_boost_replace_display(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
             self.hw.config.data_factory_values["uvPwm"] = 100
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, True, False)
+            wizard = UVCalibrationWizard(self.package, True, False)
             self.uv_meter.multiplier = 0.85
             self._run_uv_calibration(wizard)
             self.assertFalse(wizard.data["boost"])  # Not boosted despite difference from previous setup, setup changed
@@ -726,7 +736,7 @@ class TestUVCalibration(TestWizardsBase):
 
     def test_uv_calibration_boost_replace_led(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, True)
+            wizard = UVCalibrationWizard(self.package, False, True)
             self.uv_meter.multiplier = 0.75
             self._run_uv_calibration(wizard)
             self.assertTrue(wizard.data["boost"])  # Too weak needs boost even when changed
@@ -738,7 +748,7 @@ class TestUVCalibration(TestWizardsBase):
 
     def test_uv_calibration_dim(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, False)
+            wizard = UVCalibrationWizard(self.package, False, False)
             self.uv_meter.multiplier = 0.1
             self._run_uv_calibration(wizard, expected_state=WizardState.FAILED)
             self.assertIsInstance(wizard.exception, UVTooDimm)
@@ -746,7 +756,7 @@ class TestUVCalibration(TestWizardsBase):
 
     def test_uv_calibration_bright(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, False)
+            wizard = UVCalibrationWizard(self.package, False, False)
             self.uv_meter.multiplier = 10
             self._run_uv_calibration(wizard, expected_state=WizardState.FAILED)
             self.assertIsInstance(wizard.exception, UVTooBright)
@@ -754,7 +764,7 @@ class TestUVCalibration(TestWizardsBase):
 
     def test_uv_calibration_dev(self):
         with patch("slafw.wizard.wizards.uv_calibration.UvLedMeterMulti", self.uv_meter):
-            wizard = UVCalibrationWizard(self.hw, self.exposure_image, self.runtime_config, False, False)
+            wizard = UVCalibrationWizard(self.package, False, False)
             self.uv_meter.noise = 70
             self._run_uv_calibration(wizard, expected_state=WizardState.FAILED)
             self.assertIsInstance(wizard.exception, UVDeviationTooHigh)
@@ -788,17 +798,7 @@ class TankSurfaceCleanerTest(TestWizardsBase):
     # pylint: disable=too-many-instance-attributes
     def setUp(self) -> None:
         super().setUp()
-
-        self.hw_config_file = self.TEMP_DIR / "reset_config.toml"
-        self.hw_config_factory_file = self.TEMP_DIR / "reset_config_factory.toml"
-
-        hw_config = HwConfig(self.hw_config_file, self.hw_config_factory_file, is_master=True)
-        hw_config.tankCleaningExposureTime = 5  # Avoid waiting for long exposures
-        self.hw = HardwareMock(hw_config, PrinterModel.SL1)
-        self.runtime_config = RuntimeConfig()
-        self.exposure_image = Mock()
-        self.exposure_image.printer_model = PrinterModel.SL1
-        self.wizard = TankSurfaceCleaner(self.hw, self.exposure_image, self.runtime_config)
+        self.wizard = TankSurfaceCleaner(self.package)
         self.wizard.state_changed.connect(self.on_state_changed)
 
         self.exposure_start_time = None
@@ -816,8 +816,6 @@ class TankSurfaceCleanerTest(TestWizardsBase):
 
     def tearDown(self) -> None:
         del self.hw
-        del self.runtime_config
-        del self.exposure_image
         super().tearDown()
 
     def on_state_changed(self):

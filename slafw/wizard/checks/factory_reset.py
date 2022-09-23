@@ -19,7 +19,6 @@ import paho.mqtt.publish as mqtt
 
 from slafw import defines, test_runtime
 from slafw.configs.unit import Nm
-from slafw.configs.runtime import RuntimeConfig
 from slafw.errors.errors import (
     MissingUVPWM,
     MissingWizardData,
@@ -31,10 +30,10 @@ from slafw.errors.errors import (
 from slafw.errors.warnings import FactoryResetCheckFailure
 from slafw.functions.files import ch_mode_owner, get_all_supported_files
 from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvpwm
-from slafw.hardware.base.hardware import BaseHardware
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType, SyncCheck, DangerousCheck
 from slafw.wizard.setup import Configuration, Resource
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.wizards.self_test import SelfTestWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
 
@@ -179,9 +178,9 @@ class RemoveSlicerProfiles(ResetCheck):
 
 
 class ResetHWConfig(ResetCheck):
-    def __init__(self, hw: BaseHardware, *args, disable_unboxing: bool = False, **kwargs):
+    def __init__(self, package: WizardDataPackage, *args, disable_unboxing: bool = False, **kwargs):
         super().__init__(WizardCheckType.RESET_HW_CONFIG, *args, **kwargs)
-        self._hw = hw
+        self._hw = package.hw
         self._disable_unboxing = disable_unboxing
 
     def reset_task_run(self, actions: UserActionBroker):
@@ -196,9 +195,9 @@ class ResetHWConfig(ResetCheck):
 
 
 class EraseMCEeprom(ResetCheck):
-    def __init__(self, hw: BaseHardware, *args, **kwargs):
+    def __init__(self, package: WizardDataPackage, *args, **kwargs):
         super().__init__(WizardCheckType.ERASE_MC_EEPROM, Configuration(None, None), [Resource.MC], *args, **kwargs)
-        self._hw = hw
+        self._hw = package.hw
 
     def reset_task_run(self, actions: UserActionBroker):
         self._hw.eraseEeprom()
@@ -209,10 +208,10 @@ class ResetHomingProfiles(ResetCheck):
     Set homing profiles to factory defaults
     """
 
-    def __init__(self, hw: BaseHardware, *args, **kwargs):
+    def __init__(self, package: WizardDataPackage, *args, **kwargs):
         super().__init__(WizardCheckType.RESET_HOMING_PROFILES, Configuration(None, None), [Resource.MC], *args,
                          **kwargs)
-        self._hw = hw
+        self._hw = package.hw
 
     def reset_task_run(self, actions: UserActionBroker):
         self._hw.tower.profiles.factory_reset(True)
@@ -228,10 +227,8 @@ class ResetHomingProfiles(ResetCheck):
 
 
 class DisableFactory(SyncCheck):
-    def __init__(self, hw: BaseHardware, runtime_config: RuntimeConfig):
+    def __init__(self):
         super().__init__(WizardCheckType.DISABLE_FACTORY)
-        self._hw = hw
-        self._runtime_config = runtime_config
 
     def task_run(self, actions: UserActionBroker):
         self._logger.info("Factory reset - disabling factory mode")
@@ -240,9 +237,9 @@ class DisableFactory(SyncCheck):
 
 
 class SendPrinterData(SyncCheck):
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.SEND_PRINTER_DATA)
-        self._hw = hw
+        self._hw = package.hw
 
     def task_run(self, actions: UserActionBroker):
         # pylint: disable = too-many-branches
@@ -311,28 +308,28 @@ class SendPrinterData(SyncCheck):
 
 
 class InitiatePackingMoves(DangerousCheck):
-    def __init__(self, hw: BaseHardware):
-        super().__init__(hw, WizardCheckType.INITIATE_PACKING_MOVES)
-        self._hw = hw
+    def __init__(self, package: WizardDataPackage):
+        super().__init__(package, WizardCheckType.INITIATE_PACKING_MOVES)
 
     async def async_task_run(self, actions: UserActionBroker):
-        await gather(self._hw.tower.verify_async(), self._hw.tilt.verify_async())
+        hw = self._package.hw
+        await gather(hw.tower.verify_async(), hw.tilt.verify_async())
 
         # move tilt and tower to packing position
-        self._hw.tilt.actual_profile = self._hw.tilt.profiles.homingFast
-        self._hw.tilt.move(self._hw.config.tiltHeight)
-        while self._hw.tilt.moving:
+        hw.tilt.actual_profile = hw.tilt.profiles.homingFast
+        hw.tilt.move(hw.config.tiltHeight)
+        while hw.tilt.moving:
             await sleep(0.25)
 
-        self._hw.tower.actual_profile = self._hw.tower.profiles.homingFast
+        hw.tower.actual_profile = hw.tower.profiles.homingFast
         # TODO: Constant in code !!!
-        await self._hw.tower.move_ensure_async(self._hw.config.tower_height_nm - Nm(74_000_000))
+        await hw.tower.move_ensure_async(hw.config.tower_height_nm - Nm(74_000_000))
 
 
 class FinishPackingMoves(Check):
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.FINISH_PACKING_MOVES)
-        self._hw = hw
+        self._hw = package.hw
 
     async def async_task_run(self, actions: UserActionBroker):
         # slightly press the foam against printers base

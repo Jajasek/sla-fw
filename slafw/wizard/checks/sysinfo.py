@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 
 import distro
 
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType
 from slafw.wizard.setup import Configuration
@@ -28,11 +28,9 @@ class CheckData:
 
 
 class SystemInfoTest(Check):
-    def __init__(self, hw: BaseHardware):
-        super().__init__(
-            WizardCheckType.SYS_INFO, Configuration(None, None), [],
-        )
-        self._hw = hw
+    def __init__(self, package: WizardDataPackage):
+        super().__init__(WizardCheckType.SYS_INFO, Configuration(None, None), [])
+        self._hw = package.hw
         self._result_data: Optional[CheckData] = None
 
     async def async_task_run(self, actions: UserActionBroker):

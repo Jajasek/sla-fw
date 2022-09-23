@@ -44,8 +44,7 @@ from slafw.errors.errors import (
     UvTempSensorFailed,
     PrinterException, FanFailed,
 )
-from slafw.functions.files import save_all_remain_wizard_history, \
-    get_all_supported_files
+from slafw.functions.files import save_all_remain_wizard_history, get_all_supported_files
 from slafw.functions.miscellaneous import toBase32hex
 from slafw.functions.system import (
     get_octoprint_auth,
@@ -65,13 +64,12 @@ from slafw.slicer.slicer_profile import SlicerProfile
 from slafw.state_actions.manager import ActionManager
 from slafw.states.printer import PrinterState
 from slafw.states.wizard import WizardState
+from slafw.wizard.data_package import fill_wizard_data_package
 from slafw.wizard.wizards.calibration import CalibrationWizard
 from slafw.wizard.wizards.new_expo_panel import NewExpoPanelWizard
 from slafw.wizard.wizards.self_test import SelfTestWizard
-from slafw.wizard.wizards.sl1s_upgrade import SL1SUpgradeWizard, \
-    SL1DowngradeWizard
-from slafw.wizard.wizards.unboxing import CompleteUnboxingWizard, \
-    KitUnboxingWizard
+from slafw.wizard.wizards.sl1s_upgrade import SL1SUpgradeWizard, SL1DowngradeWizard
+from slafw.wizard.wizards.unboxing import CompleteUnboxingWizard, KitUnboxingWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
 
 
@@ -334,13 +332,9 @@ class Printer:
 
         self.logger.info('Printer model change detected from "%s" to "%s"', config_model, self.hw.printer_model)
         if self.hw.printer_model == PrinterModel.SL1S:
-            self.action_manager.start_wizard(
-                SL1SUpgradeWizard(self.hw, self.exposure_image, self.runtime_config)
-            ).join()
+            self.action_manager.start_wizard(SL1SUpgradeWizard(fill_wizard_data_package(self))).join()
         elif self.hw.printer_model == PrinterModel.SL1:
-            self.action_manager.start_wizard(
-                SL1DowngradeWizard(self.hw, self.exposure_image, self.runtime_config)
-            ).join()
+            self.action_manager.start_wizard(SL1DowngradeWizard(fill_wizard_data_package(self))).join()
         try:
             reset_hostname()  # set model specific default hostname
         except PrinterException:
@@ -531,11 +525,11 @@ class Printer:
         if not self.runtime_config.factory_mode and self.hw.config.showUnboxing:
             if self.hw.isKit:
                 unboxing = self.action_manager.start_wizard(
-                    KitUnboxingWizard(self.hw, self.runtime_config), handle_state_transitions=False
+                    KitUnboxingWizard(fill_wizard_data_package(self)), handle_state_transitions=False
                 )
             else:
                 unboxing = self.action_manager.start_wizard(
-                    CompleteUnboxingWizard(self.hw, self.runtime_config), handle_state_transitions=False
+                    CompleteUnboxingWizard(fill_wizard_data_package(self)), handle_state_transitions=False
                 )
             self.logger.info("Running unboxing wizard")
             self.set_state(PrinterState.WIZARD, active=True)
@@ -546,7 +540,7 @@ class Printer:
         if self._run_expo_panel_wizard and passing:
             self.logger.info("Running new expo panel wizard")
             new_expo_panel_wizard = self.action_manager.start_wizard(
-                NewExpoPanelWizard(self.hw), handle_state_transitions=False
+                NewExpoPanelWizard(fill_wizard_data_package(self)), handle_state_transitions=False
             )
             self.set_state(PrinterState.WIZARD, active=True)
             new_expo_panel_wizard.join()
@@ -556,7 +550,7 @@ class Printer:
         if self.hw.config.showWizard and passing:
             self.logger.info("Running selftest wizard")
             selftest = self.action_manager.start_wizard(
-                SelfTestWizard(self.hw, self.exposure_image, self.runtime_config), handle_state_transitions=False
+                SelfTestWizard(fill_wizard_data_package(self)), handle_state_transitions=False
             )
             self.set_state(PrinterState.WIZARD, active=True)
             selftest.join()
@@ -566,7 +560,7 @@ class Printer:
         if not self.hw.config.calibrated and passing:
             self.logger.info("Running calibration wizard")
             calibration = self.action_manager.start_wizard(
-                CalibrationWizard(self.hw, self.runtime_config), handle_state_transitions=False
+                CalibrationWizard(fill_wizard_data_package(self)), handle_state_transitions=False
             )
             self.set_state(PrinterState.WIZARD, active=True)
             calibration.join()
@@ -577,9 +571,7 @@ class Printer:
             # delete also both counters and save calibration to factory partition. It's new KIT or something went wrong.
             self.logger.info("Running UV calibration wizard")
             uv_calibration = self.action_manager.start_wizard(
-                UVCalibrationWizard(
-                    self.hw, self.exposure_image, self.runtime_config, display_replaced=True, led_module_replaced=True
-                ),
+                UVCalibrationWizard(fill_wizard_data_package(self), display_replaced=True, led_module_replaced=True),
                 handle_state_transitions=False,
             )
             self.set_state(PrinterState.WIZARD, active=True)

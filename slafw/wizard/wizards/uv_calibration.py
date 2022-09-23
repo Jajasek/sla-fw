@@ -4,10 +4,7 @@
 
 from typing import Iterable
 
-from slafw.configs.runtime import RuntimeConfig
 from slafw.errors.errors import PrinterError
-from slafw.hardware.base.hardware import BaseHardware
-from slafw.image.exposure_image import ExposureImage
 from slafw.libUvLedMeterMulti import UvLedMeterMulti, UVCalibrationResult
 from slafw.states.wizard import WizardId
 from slafw.states.wizard import WizardState
@@ -26,7 +23,8 @@ from slafw.wizard.checks.uv_calibration import (
 from slafw.wizard.checks.uvleds import UVLEDsTest
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration, TankSetup, PlatformSetup
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 
 
 # pylint: disable = too-many-arguments
@@ -37,9 +35,9 @@ class UVCalibrationPrepare(CheckGroup):
         super().__init__(
             Configuration(TankSetup.REMOVED, PlatformSetup.PRINT),
             [
-                UVLEDsTest(package.hw),
-                DisplayTest(package.hw, package.exposure_image, package.runtime_config),
-                SystemInfoTest(package.hw),
+                UVLEDsTest(package),
+                DisplayTest(package),
+                SystemInfoTest(package),
             ],
         )
         self._package = package
@@ -54,13 +52,13 @@ class UVCalibrationPlaceUVMeter(CheckGroup):
     # TODO: Checks are run in parallel within the group. This group would make a use of strict serial execution.
     # TODO: Currently this is achieved as a side effect of locking the resources. Explicit serial execution is
     # TODO: appreciated.
-    def __init__(self, package: WizardDataPackage):
+    def __init__(self, package: WizardDataPackage, uv_meter: UvLedMeterMulti):
         super().__init__(
             Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
             [
-                CheckUVMeter(package.hw, package.uv_meter),
-                UVWarmupCheck(package.hw, package.exposure_image, package.uv_meter),
-                CheckUVMeterPlacement(package.hw, package.exposure_image, package.uv_meter),
+                CheckUVMeter(package, uv_meter),
+                UVWarmupCheck(package),
+                CheckUVMeterPlacement(package, uv_meter),
             ],
         )
 
@@ -72,12 +70,17 @@ class UVCalibrationCalibrate(CheckGroup):
     # TODO: Checks are run in parallel within the group. This group would make a use of strict serial execution.
     # TODO: Currently this is achieved as a side effect of locking the resources. Explicit serial execution is
     # TODO: appreciated.
-    def __init__(self, package: WizardDataPackage, replacement: bool):
+    def __init__(self,
+            package: WizardDataPackage,
+            uv_meter: UvLedMeterMulti,
+            uv_result: UVCalibrationResult,
+            replacement: bool,
+    ):
         super().__init__(
             Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
             [
-                UVCalibrateCenter(package.hw, package.exposure_image, package.uv_meter, replacement, package.uv_result),
-                UVCalibrateEdge(package.hw, package.exposure_image, package.uv_meter, replacement, package.uv_result),
+                UVCalibrateCenter(package, uv_meter, uv_result, replacement),
+                UVCalibrateEdge(package, uv_meter, uv_result, replacement),
             ],
         )
 
@@ -87,13 +90,18 @@ class UVCalibrationCalibrate(CheckGroup):
 
 
 class UVCalibrationFinish(CheckGroup):
-    def __init__(self, package: WizardDataPackage, display_replaced: bool, led_module_replaced: bool):
+    def __init__(self,
+            package: WizardDataPackage,
+            uv_meter: UvLedMeterMulti,
+            uv_result: UVCalibrationResult,
+            display_replaced: bool,
+            led_module_replaced: bool,
+    ):
         super().__init__(
             Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
             [
-                UVRemoveCalibrator(package.hw, package.uv_meter),
-                UVCalibrateApply(
-                    package.hw, package.runtime_config, package.uv_result, display_replaced, led_module_replaced
+                UVRemoveCalibrator(uv_meter),
+                UVCalibrateApply(package, uv_result, display_replaced, led_module_replaced
                 ),
             ],
         )
@@ -104,32 +112,19 @@ class UVCalibrationFinish(CheckGroup):
 
 
 class UVCalibrationWizard(Wizard):
-    def __init__(
-        self,
-        hw: BaseHardware,
-        exposure_image: ExposureImage,
-        runtime_config: RuntimeConfig,
-        display_replaced: bool,
-        led_module_replaced: bool,
-    ):
-        # TODO: use config_writer instead
-        self._package = WizardDataPackage(
-            hw=hw,
-            config_writer=hw.config.get_writer(),
-            exposure_image=exposure_image,
-            runtime_config=runtime_config,
-            uv_meter=UvLedMeterMulti(),
-            uv_result=UVCalibrationResult(),
-        )
+    def __init__(self, package: WizardDataPackage, display_replaced: bool, led_module_replaced: bool):
+        self._package = package
+        self._uv_meter = UvLedMeterMulti()
+        uv_result = UVCalibrationResult()
         super().__init__(
             WizardId.UV_CALIBRATION,
             [
-                UVCalibrationPrepare(self._package),
-                UVCalibrationPlaceUVMeter(self._package),
-                UVCalibrationCalibrate(self._package, display_replaced or led_module_replaced),
-                UVCalibrationFinish(self._package, display_replaced, led_module_replaced),
+                UVCalibrationPrepare(package),
+                UVCalibrationPlaceUVMeter(package, self._uv_meter),
+                UVCalibrationCalibrate(package, self._uv_meter, uv_result, display_replaced or led_module_replaced),
+                UVCalibrationFinish(package, self._uv_meter, uv_result, display_replaced, led_module_replaced),
             ],
-            self._package,
+            package,
         )
 
     @classmethod
@@ -148,4 +143,4 @@ class UVCalibrationWizard(Wizard):
         finally:
             self._package.hw.uv_led.off()
             self._package.hw.stop_fans()
-            self._package.uv_meter.close()
+            self._uv_meter.close()

@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 from slafw import defines
 from slafw.api.devices import HardwareDeviceId
 from slafw.errors.errors import FanRPMOutOfTestRange, UVLEDHeatsinkFailed
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, DangerousCheck
 from slafw.wizard.setup import Configuration, Resource
@@ -24,9 +24,9 @@ class CheckData:
 
 
 class UVFansTest(DangerousCheck):
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
-            hw,
+            package,
             WizardCheckType.UV_FANS,
             Configuration(None, None),
             [Resource.FANS, Resource.UV],
@@ -35,47 +35,49 @@ class UVFansTest(DangerousCheck):
 
     async def async_task_run(self, actions: UserActionBroker):
         # pylint: disable=too-many-branches
+        # pylint: disable=too-many-locals
+        hw = self._package.hw
         await self.wait_cover_closed()
 
         fan_diff = 200
-        self._hw.start_fans()
-        self._hw.uv_led_fan.auto_control = False
-        for fan in self._hw.fans.values():
+        hw.start_fans()
+        hw.uv_led_fan.auto_control = False
+        for fan in hw.fans.values():
             fan.target_rpm = fan.default_rpm
-        self._hw.uv_led.on()
+        hw.uv_led.on()
         rpm: List[List[int]] = [[], [], []]
         fans_wait_time = defines.fanWizardStabilizeTime + defines.fanStartStopTime
 
-        self._hw.uv_led.pwm = self._hw.uv_led.max_pwm
+        hw.uv_led.pwm = hw.uv_led.max_pwm
 
-        uv_temp = self._hw.uv_led_temp.value
+        uv_temp = hw.uv_led_temp.value
         try:  # check may be interrupted by another check or canceled
-            for countdown in range(self._hw.config.uvWarmUpTime, 0, -1):
-                self.progress = 1 - countdown / self._hw.config.uvWarmUpTime
+            for countdown in range(hw.config.uvWarmUpTime, 0, -1):
+                self.progress = 1 - countdown / hw.config.uvWarmUpTime
 
                 # Store fan statistics
-                if fans_wait_time < self._hw.config.uvWarmUpTime - countdown:
-                    for i, fan in self._hw.fans.items():
+                if fans_wait_time < hw.config.uvWarmUpTime - countdown:
+                    for i, fan in hw.fans.items():
                         rpm[i].append(fan.rpm)
 
                 # Report imminent failure
-                uv_temp = self._hw.uv_led_temp.value
+                uv_temp = hw.uv_led_temp.value
                 if uv_temp > defines.maxUVTemp:
                     raise UVLEDHeatsinkFailed(uv_temp)
-                if any([fan.error for fan in self._hw.fans.values()]):
+                if any([fan.error for fan in hw.fans.values()]):
                     self._logger.error("Skipping UV Fan check due to fan failure")
                     break
 
                 await sleep(1)
         finally:
-            self._hw.uv_led.off()
-            self._hw.uv_led_fan.auto_control = True
-            self._hw.stop_fans()
+            hw.uv_led.off()
+            hw.uv_led_fan.auto_control = True
+            hw.stop_fans()
 
         # evaluate fans data
         avg_rpms = []
 
-        for i, fan in self._hw.fans.items():  # iterate over fans
+        for i, fan in hw.fans.items():  # iterate over fans
             rpms = rpm[i] if len(rpm[i]) else [0]
             avg_rpm = sum(rpms) / len(rpms)
             lower_bound_rpm = fan.target_rpm - fan_diff
@@ -83,11 +85,11 @@ class UVFansTest(DangerousCheck):
             if not lower_bound_rpm <= avg_rpm <= upper_bound_rpm or fan.error:
                 self._logger.error("Fan %s: raw RPM: %s, error: %s, samples: %s", fan.name, rpm, fan.error, len(rpms))
 
-                if fan == self._hw.uv_led_fan:
+                if fan == hw.uv_led_fan:
                     hw_id = HardwareDeviceId.UV_LED_FAN
-                elif fan == self._hw.blower_fan:
+                elif fan == hw.blower_fan:
                     hw_id = HardwareDeviceId.BLOWER_FAN
-                elif fan == self._hw.rear_fan:
+                elif fan == hw.rear_fan:
                     hw_id = HardwareDeviceId.REAR_FAN
                 else:
                     raise ValueError("Unknown failing fan")

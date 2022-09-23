@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 
 from slafw.configs.unit import Nm
 from slafw.errors.errors import ResinSensorFailed
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, DangerousCheck
 from slafw.wizard.setup import Configuration, TankSetup, PlatformSetup, Resource
@@ -17,9 +17,9 @@ class ResinSensorTest(DangerousCheck):
     allowed_min_mm = 4
     allowed_max_mm = 22
 
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
-            hw,
+            package,
             WizardCheckType.RESIN_SENSOR,
             Configuration(TankSetup.PRINT, PlatformSetup.RESIN_TEST),
             [Resource.TOWER, Resource.TOWER_DOWN],
@@ -27,14 +27,15 @@ class ResinSensorTest(DangerousCheck):
         self.position_mm: Optional[float] = None
 
     async def async_task_run(self, actions: UserActionBroker):
+        hw = self._package.hw
         await self.wait_cover_closed()
-        await gather(self._hw.tower.verify_async(), self._hw.tilt.verify_async())
-        self._hw.tower.position = Nm(120_000_000)  # TODO: constant in code
-        position_mm = await self._hw.get_resin_sensor_position_mm()
+        await gather(hw.tower.verify_async(), hw.tilt.verify_async())
+        hw.tower.position = Nm(120_000_000)  # TODO: constant in code
+        position_mm = await hw.get_resin_sensor_position_mm()
         self._logger.debug("resin triggered at %s mm", position_mm)
 
         # Move tower up to default position, move now in case of exception
-        await self._hw.tower.verify_async()
+        await hw.tower.verify_async()
 
         # to work properly even with loosen rocker bearing
         if not self.allowed_min_mm <= position_mm <= self.allowed_max_mm:

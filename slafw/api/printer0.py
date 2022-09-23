@@ -44,6 +44,7 @@ from slafw.project.functions import check_ready_to_print
 from slafw.state_actions.examples import Examples
 from slafw.states.examples import ExamplesState
 from slafw.states.printer import Printer0State
+from slafw.wizard.data_package import fill_wizard_data_package
 from slafw.wizard.wizards.calibration import CalibrationWizard
 from slafw.wizard.wizards.displaytest import DisplayTestWizard
 from slafw.wizard.wizards.factory_reset import PackingWizard, FactoryResetWizard
@@ -773,48 +774,40 @@ class Printer0:
 
     @auto_dbus
     def run_displaytest_wizard(self) -> None:
-        self.printer.action_manager.start_wizard(
-            DisplayTestWizard(self.printer.hw, self.printer.exposure_image, self.printer.runtime_config)
-        )
+        self.printer.action_manager.start_wizard(DisplayTestWizard(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_unboxing_wizard(self) -> None:
-        self.printer.action_manager.start_wizard(CompleteUnboxingWizard(self.printer.hw, self.printer.runtime_config))
+        self.printer.action_manager.start_wizard(CompleteUnboxingWizard(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_kit_unboxing_wizard(self) -> None:
-        self.printer.action_manager.start_wizard(KitUnboxingWizard(self.printer.hw, self.printer.runtime_config))
+        self.printer.action_manager.start_wizard(KitUnboxingWizard(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_self_test_wizard(self) -> None:
-        self.printer.action_manager.start_wizard(
-            SelfTestWizard(self.printer.hw, self.printer.exposure_image, self.printer.runtime_config)
-        )
+        self.printer.action_manager.start_wizard(SelfTestWizard(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_calibration_wizard(self) -> None:
-        self.printer.action_manager.start_wizard(CalibrationWizard(self.printer.hw, self.printer.runtime_config))
+        self.printer.action_manager.start_wizard(CalibrationWizard(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_tank_surface_cleaner_wizard(self) -> None:
-        self.printer.action_manager.start_wizard(
-            TankSurfaceCleaner(self.printer.hw, self.printer.exposure_image, self.printer.runtime_config)
-        )
+        self.printer.action_manager.start_wizard(TankSurfaceCleaner(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_factory_reset_wizard(self) -> None:
         if self.printer.runtime_config.factory_mode:
-            self.printer.action_manager.start_wizard(PackingWizard(self.printer.hw, self.printer.runtime_config))
+            self.printer.action_manager.start_wizard(PackingWizard(fill_wizard_data_package(self.printer)))
         else:
-            self.printer.action_manager.start_wizard(FactoryResetWizard(self.printer.hw, self.printer.runtime_config))
+            self.printer.action_manager.start_wizard(FactoryResetWizard(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_uv_calibration_wizard(self, display_replaced: bool, led_module_replaced: bool) -> None:
         self.printer.action_manager.start_wizard(
             UVCalibrationWizard(
-                self.printer.hw,
-                self.printer.exposure_image,
-                self.printer.runtime_config,
+                fill_wizard_data_package(self.printer),
                 display_replaced=display_replaced,
                 led_module_replaced=led_module_replaced,
             )

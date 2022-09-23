@@ -2,15 +2,11 @@
 # Copyright (C) 2020 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import weakref
-
-from slafw.configs.runtime import RuntimeConfig
-from slafw.hardware.base.hardware import BaseHardware
-from slafw.image.exposure_image import ExposureImage
 from slafw.wizard.checks.tank_surface_cleaner import HomeTower, TiltHome, TiltUp, TowerSafeDistance, TouchDown, \
     GentlyUp, ExposeDebris, HomeTowerFinish, Check
 from slafw.wizard.group import SingleCheckGroup, CheckGroup
-from slafw.wizard.wizard import WizardId, Wizard, WizardDataPackage, WizardState
+from slafw.wizard.wizard import WizardId, Wizard, WizardState
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 
 
@@ -54,25 +50,21 @@ class TankSurfaceCleaner(Wizard):
     - move the platform up so that the user can remove the garbage
     """
 
-    def __init__(self, hw: BaseHardware, exposure_image: ExposureImage,
-                 runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(
-            hw=hw, exposure_image=weakref.proxy(exposure_image), runtime_config=runtime_config
-        )
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             WizardId.TANK_SURFACE_CLEANER,
             [
-                InitGroup(HomeTower(self._package.hw)),
-                SingleCheckGroup(TiltHome(self._package.hw)),
-                SingleCheckGroup(TiltUp(self._package.hw)),
-                InsertCleaningAdaptorGroup(TowerSafeDistance(self._package.hw)),
-                SingleCheckGroup(TouchDown(self._package.hw)),
-                SingleCheckGroup(ExposeDebris(self._package.hw, self._package.exposure_image)),
-                SingleCheckGroup(GentlyUp(self._package.hw)),
-                SingleCheckGroup(HomeTowerFinish(self._package.hw)),
+                InitGroup(HomeTower(package)),
+                SingleCheckGroup(TiltHome(package)),
+                SingleCheckGroup(TiltUp(package)),
+                InsertCleaningAdaptorGroup(TowerSafeDistance(package)),
+                SingleCheckGroup(TouchDown(package)),
+                SingleCheckGroup(ExposeDebris(package)),
+                SingleCheckGroup(GentlyUp(package)),
+                SingleCheckGroup(HomeTowerFinish(package)),
                 RemoveCleaningAdaptorGroup(),
             ],
-            self._package,
+            package,
         )
 
     @classmethod

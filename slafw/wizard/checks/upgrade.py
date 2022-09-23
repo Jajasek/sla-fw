@@ -2,69 +2,64 @@
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from slafw.configs.hw import HwConfig
-from slafw.hardware.base.hardware import BaseHardware
-from slafw.configs.writer import ConfigWriter
 from slafw.functions.system import set_configured_printer_model, set_factory_uvpwm
-from slafw.hardware.base.uv_led import UVLED
 from slafw.hardware.printer_model import PrinterModel
-
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType
 
 
 class ResetUVPWM(Check):
-    def __init__(self, writer: ConfigWriter, uv_led: UVLED):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.ERASE_UV_PWM)
-        self._writer = writer
-        self._uv_led = uv_led
+        self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        del self._writer.uvCurrent
-        del self._writer.uvPwmTune
-        pwm = self._uv_led.parameters.safe_default_pwm
-        self._writer.uvPwm = pwm
+        del self._package.config_writer.uvCurrent
+        del self._package.config_writer.uvPwmTune
+        pwm = self._package.hw.uv_led.parameters.safe_default_pwm
+        self._package.config_writer.uvPwm = pwm
         set_factory_uvpwm(pwm)
 
 
 class ResetSelfTest(Check):
-    def __init__(self, writer: ConfigWriter):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.RESET_SELF_TEST)
-        self._writer = writer
+        self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        self._writer.showWizard = True
+        self._package.config_writer.showWizard = True
 
 
 class ResetMechanicalCalibration(Check):
-    def __init__(self, writer: ConfigWriter):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.RESET_MECHANICAL_CALIBRATION)
-        self._writer = writer
+        self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        del self._writer.tower_height_nm
-        del self._writer.towerHeight
-        del self._writer.tiltHeight
-        self._writer.calibrated = False
+        del self._package.config_writer.tower_height_nm
+        del self._package.config_writer.towerHeight
+        del self._package.config_writer.tiltHeight
+        self._package.config_writer.calibrated = False
 
 
 class ResetHwCounters(Check):
-    def __init__(self, hw: BaseHardware):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(WizardCheckType.RESET_HW_COUNTERS)
-        self._hw = hw
+        self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        self._hw.uv_led.clear_usage()
-        self._hw.exposure_screen.clear_usage()
+        self._package.hw.uv_led.clear_usage()
+        self._package.hw.exposure_screen.clear_usage()
 
 
 class MarkPrinterModel(Check):
-    def __init__(self, model: PrinterModel, config: HwConfig):
+    def __init__(self, package: WizardDataPackage, model: PrinterModel):
         super().__init__(WizardCheckType.MARK_PRINTER_MODEL)
+        self._package = package
         self._model = model
-        self._config = config
 
     async def async_task_run(self, actions: UserActionBroker):
         self._logger.info("Setting printer model to %s", self._model)
         set_configured_printer_model(self._model)
-        self._config.vatRevision = self._model.options.vat_revision  # type: ignore[attr-defined]
+        self._package.config_writer.vatRevision = self._model.options.vat_revision  # type: ignore[attr-defined]

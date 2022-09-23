@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from slafw.api.devices import HardwareDeviceId
 from slafw.errors.errors import A64Overheat, TempSensorNotInRange
 from slafw.functions.system import shut_down
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, Check
 from slafw.wizard.setup import Configuration
@@ -27,11 +27,9 @@ class CheckData:
 
 
 class TemperatureTest(Check):
-    def __init__(self, hw: BaseHardware):
-        super().__init__(
-            WizardCheckType.TEMPERATURE, Configuration(None, None), [],
-        )
-        self._hw = hw
+    def __init__(self, package: WizardDataPackage):
+        super().__init__(WizardCheckType.TEMPERATURE, Configuration(None, None), [])
+        self._hw = package.hw
         self._check_data: Optional[CheckData] = None
 
     async def async_task_run(self, actions: UserActionBroker):

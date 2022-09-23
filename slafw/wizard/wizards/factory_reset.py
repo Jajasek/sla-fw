@@ -2,9 +2,7 @@
 # Copyright (C) 2021 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from slafw.configs.runtime import RuntimeConfig
 from slafw.functions.system import shut_down
-from slafw.hardware.base.hardware import BaseHardware
 from slafw.states.wizard import WizardId, WizardState
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.factory_reset import (
@@ -31,7 +29,8 @@ from slafw.wizard.checks.factory_reset import (
 )
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 
 
 class ResetSettingsGroup(CheckGroup):
@@ -53,7 +52,7 @@ class ResetSettingsGroup(CheckGroup):
             ResetLocale(hard_errors=hard_errors),
             ResetUVCalibrationData(hard_errors=hard_errors),
             RemoveSlicerProfiles(hard_errors=hard_errors),
-            ResetHWConfig(package.hw, disable_unboxing=disable_unboxing, hard_errors=hard_errors),
+            ResetHWConfig(package, disable_unboxing=disable_unboxing, hard_errors=hard_errors),
             DisableAccess(),
             ResetTouchUI(),
         ]
@@ -67,7 +66,7 @@ class ResetSettingsGroup(CheckGroup):
 
 class SendPrinterDataGroup(CheckGroup):
     def __init__(self, package: WizardDataPackage):
-        super().__init__(Configuration(None, None), [SendPrinterData(package.hw)])
+        super().__init__(Configuration(None, None), [SendPrinterData(package)])
 
     async def setup(self, actions: UserActionBroker):
         pass
@@ -77,9 +76,9 @@ class PackStage1(CheckGroup):
     def __init__(
         self, package: WizardDataPackage, packs_moves: bool = True,
     ):
-        checks = [DisableFactory(package.hw, package.runtime_config)]
+        checks = [DisableFactory()]
         if packs_moves:
-            checks.append(InitiatePackingMoves(package.hw))
+            checks.append(InitiatePackingMoves(package))
         super().__init__(Configuration(None, None), checks)
 
     async def setup(self, actions: UserActionBroker):
@@ -94,8 +93,8 @@ class FinishResetSettingsGroup(CheckGroup):
     """
     def __init__(self, package: WizardDataPackage, hard_errors: bool = False):
         super().__init__(Configuration(None, None), [
-            ResetHomingProfiles(package.hw, hard_errors=hard_errors),
-            EraseMCEeprom(package.hw, hard_errors=hard_errors),
+            ResetHomingProfiles(package, hard_errors=hard_errors),
+            EraseMCEeprom(package, hard_errors=hard_errors),
         ])
 
     async def setup(self, actions: UserActionBroker):
@@ -104,7 +103,7 @@ class FinishResetSettingsGroup(CheckGroup):
 
 class PackStage2(CheckGroup):
     def __init__(self, package: WizardDataPackage):
-        super().__init__(Configuration(None, None), [FinishPackingMoves(package.hw)])
+        super().__init__(Configuration(None, None), [FinishPackingMoves(package)])
 
     async def setup(self, actions: UserActionBroker):
         await self.wait_for_user(actions, actions.foam_inserted, WizardState.INSERT_FOAM)
@@ -112,23 +111,14 @@ class PackStage2(CheckGroup):
 
 class FactoryResetWizard(Wizard):
     # pylint: disable=too-many-arguments
-    def __init__(
-        self,
-        hw: BaseHardware,
-        runtime_config: RuntimeConfig,
-        erase_projects: bool = False,
-    ):
-        self._package = WizardDataPackage(
-            hw=hw,
-            runtime_config=runtime_config
-        )
+    def __init__(self, package: WizardDataPackage, erase_projects: bool = False):
         super().__init__(
             WizardId.FACTORY_RESET,
             [
-                ResetSettingsGroup(self._package, True, erase_projects),
-                FinishResetSettingsGroup(self._package),
+                ResetSettingsGroup(package, True, erase_projects),
+                FinishResetSettingsGroup(package),
             ],
-            self._package
+            package,
         )
 
     def run(self):
@@ -137,24 +127,20 @@ class FactoryResetWizard(Wizard):
 
 
 class PackingWizard(Wizard):
-    def __init__(self, hw: BaseHardware, runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(
-            hw=hw,
-            runtime_config=runtime_config
-        )
+    def __init__(self, package: WizardDataPackage):
         groups = [
-            SendPrinterDataGroup(self._package),
-            ResetSettingsGroup(self._package, disable_unboxing=False, erase_projects=False, hard_errors=True),
+            SendPrinterDataGroup(package),
+            ResetSettingsGroup(package, disable_unboxing=False, erase_projects=False, hard_errors=True),
         ]
-        if self._package.hw.isKit:
-            groups.append(PackStage1(self._package, False))
+        if package.hw.isKit:
+            groups.append(PackStage1(package, False))
         else:
-            groups.append(PackStage1(self._package, True))
-            groups.append(PackStage2(self._package))
+            groups.append(PackStage1(package, True))
+            groups.append(PackStage2(package))
 
-        groups.append(FinishResetSettingsGroup(self._package, hard_errors=True))
+        groups.append(FinishResetSettingsGroup(package, hard_errors=True))
 
-        super().__init__(WizardId.PACKING, groups, self._package)
+        super().__init__(WizardId.PACKING, groups, package)
 
     def run(self):
         super().run()

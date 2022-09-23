@@ -4,9 +4,6 @@
 
 from typing import Iterable
 
-from slafw.configs.runtime import RuntimeConfig
-from slafw.hardware.base.hardware import BaseHardware
-from slafw.image.exposure_image import ExposureImage
 from slafw.states.wizard import WizardId
 from slafw.states.wizard import WizardState
 from slafw.wizard.actions import UserActionBroker
@@ -23,27 +20,27 @@ from slafw.wizard.checks.uvfans import UVFansTest
 from slafw.wizard.checks.uvleds import UVLEDsTest
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration, TankSetup, PlatformSetup
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.wizards.generic import ShowResultsGroup
 
 
 class SelfTestPart1CheckGroup(CheckGroup):
     def __init__(self, package: WizardDataPackage):
-        self._package = package
         super().__init__(
             Configuration(TankSetup.REMOVED, PlatformSetup.PRINT),
             [
-                SerialNumberTest(package.hw),
-                SystemInfoTest(package.hw),
-                TemperatureTest(package.hw),
+                SerialNumberTest(package),
+                SystemInfoTest(package),
+                TemperatureTest(package),
                 SpeakerTest(),
-                TiltHomeTest(package.hw),
-                TiltRangeTest(package.hw),
-                TowerHomeTest(package.hw, package.config_writer),
-                UVLEDsTest(package.hw),
-                UVFansTest(package.hw),
-                DisplayTest(package.hw, package.exposure_image, package.runtime_config),
-                CalibrationInfo(package.hw.config),
+                TiltHomeTest(package),
+                TiltRangeTest(package),
+                TowerHomeTest(package),
+                UVLEDsTest(package),
+                UVFansTest(package),
+                DisplayTest(package),
+                CalibrationInfo(package),
             ],
         )
 
@@ -56,7 +53,7 @@ class SelfTestPart2CheckGroup(CheckGroup):
         super().__init__(
             Configuration(TankSetup.PRINT, PlatformSetup.RESIN_TEST),
             [
-                ResinSensorTest(package.hw)
+                ResinSensorTest(package)
             ]
         )
 
@@ -69,7 +66,7 @@ class SelfTestPart3CheckGroup(CheckGroup):
         super().__init__(
             Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
             [
-                TowerRangeTest(package.hw)
+                TowerRangeTest(package)
             ]
         )
 
@@ -78,24 +75,18 @@ class SelfTestPart3CheckGroup(CheckGroup):
 
 
 class SelfTestWizard(Wizard):
-    def __init__(self, hw: BaseHardware, exposure_image: ExposureImage,
-                 runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(
-            hw=hw,
-            config_writer=hw.config.get_writer(),
-            exposure_image=exposure_image,
-            runtime_config=runtime_config
-        )
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             WizardId.SELF_TEST,
             [
-                SelfTestPart1CheckGroup(self._package),
-                SelfTestPart2CheckGroup(self._package),
-                SelfTestPart3CheckGroup(self._package),
+                SelfTestPart1CheckGroup(package),
+                SelfTestPart2CheckGroup(package),
+                SelfTestPart3CheckGroup(package),
                 ShowResultsGroup(),
             ],
-            self._package
+            package,
         )
+        self._package = package
 
     @classmethod
     def get_name(cls) -> str:
@@ -108,7 +99,7 @@ class SelfTestWizard(Wizard):
         return names
 
     def wizard_finished(self):
-        self._package.config_writer.showWizard = False
+        self._config_writer.showWizard = False
 
     def wizard_failed(self):
         writer = self._package.hw.config.get_writer()

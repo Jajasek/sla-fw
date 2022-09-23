@@ -2,11 +2,6 @@
 # Copyright (C) 2020 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import weakref
-
-from slafw.configs.runtime import RuntimeConfig
-from slafw.hardware.base.hardware import BaseHardware
-from slafw.image.exposure_image import ExposureImage
 from slafw.states.wizard import WizardId
 from slafw.states.wizard import WizardState
 from slafw.wizard.actions import UserActionBroker
@@ -14,7 +9,8 @@ from slafw.wizard.checks.display import DisplayTest
 from slafw.wizard.checks.uvleds import UVLEDsTest
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration, TankSetup
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.wizards.generic import ShowResultsGroup
 
 
@@ -23,12 +19,8 @@ class DisplayTestCheckGroup(CheckGroup):
         super().__init__(
             Configuration(TankSetup.REMOVED, None),
             [
-                UVLEDsTest(package.hw),
-                DisplayTest(
-                    package.hw,
-                    package.exposure_image,
-                    package.runtime_config
-                )
+                UVLEDsTest(package),
+                DisplayTest(package),
             ],
         )
 
@@ -38,17 +30,14 @@ class DisplayTestCheckGroup(CheckGroup):
 
 
 class DisplayTestWizard(Wizard):
-    def __init__(self, hw: BaseHardware, exp_image: ExposureImage,
-                 runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(hw=hw, exposure_image=weakref.proxy(
-            exp_image), runtime_config=runtime_config)
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             WizardId.DISPLAY,
             [
-                DisplayTestCheckGroup(self._package),
+                DisplayTestCheckGroup(package),
                 ShowResultsGroup(),
             ],
-            self._package,
+            package,
         )
 
     @classmethod

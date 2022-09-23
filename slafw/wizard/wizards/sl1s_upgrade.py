@@ -8,15 +8,11 @@ from asyncio import AbstractEventLoop, Task
 from functools import partial
 from typing import Iterable
 
-from slafw.hardware.base.hardware import BaseHardware
-from slafw.wizard.checks.sysinfo import SystemInfoTest
-
-from slafw.configs.runtime import RuntimeConfig
 from slafw.functions.system import shut_down
 from slafw.hardware.printer_model import PrinterModel
-from slafw.image.exposure_image import ExposureImage
 from slafw.states.wizard import WizardId, WizardState
 from slafw.wizard.actions import UserActionBroker, PushState
+from slafw.wizard.checks.sysinfo import SystemInfoTest
 from slafw.wizard.checks.upgrade import (
     ResetUVPWM,
     ResetSelfTest,
@@ -26,7 +22,8 @@ from slafw.wizard.checks.upgrade import (
 )
 from slafw.wizard.checks.factory_reset import ResetHostname
 from slafw.wizard.group import CheckGroup, SingleCheckGroup
-from slafw.wizard.wizard import Wizard, WizardDataPackage
+from slafw.wizard.wizard import Wizard
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.wizards.generic import ShowResultsGroup
 
 
@@ -34,10 +31,10 @@ class SL1SUpgradeCleanup(CheckGroup):
     def __init__(self, package: WizardDataPackage):
         super().__init__(
             checks=(
-                ResetUVPWM(package.config_writer, package.hw.uv_led),
-                ResetSelfTest(package.config_writer),
-                ResetMechanicalCalibration(package.config_writer),
-                ResetHwCounters(package.hw),
+                ResetUVPWM(package),
+                ResetSelfTest(package),
+                ResetMechanicalCalibration(package),
+                ResetHwCounters(package),
                 ResetHostname()
             )
         )
@@ -71,19 +68,12 @@ class SL1SUpgradeCleanup(CheckGroup):
 
 
 class UpgradeWizardBase(Wizard):
-    def __init__(self, hw: BaseHardware, exposure_image: ExposureImage,
-                 runtime_config: RuntimeConfig):
-        self._package = WizardDataPackage(
-            hw=hw,
-            runtime_config=runtime_config,
-            exposure_image=exposure_image,
-            config_writer=hw.config.get_writer()
-        )
-
+    def __init__(self, package: WizardDataPackage):
+        self._package = package
         super().__init__(
             self.get_id(),
             self.get_groups(),
-            self._package,
+            package,
             cancelable=False,
         )
 
@@ -108,11 +98,10 @@ class SL1SUpgradeWizard(UpgradeWizardBase):
 
     def get_groups(self):
         return (
-            SingleCheckGroup(SystemInfoTest(self._package.hw)),  # Just save system info BEFORE any cleanups
+            SingleCheckGroup(SystemInfoTest(self._package)),  # Just save system info BEFORE any cleanups
             SL1SUpgradeCleanup(self._package),
             ShowResultsGroup(),
-            SingleCheckGroup(MarkPrinterModel(PrinterModel.SL1S,
-                                              self._package.hw.config)),
+            SingleCheckGroup(MarkPrinterModel(self._package, PrinterModel.SL1S)),
         )
 
 
@@ -122,9 +111,8 @@ class SL1DowngradeWizard(UpgradeWizardBase):
 
     def get_groups(self):
         return (
-            SingleCheckGroup(SystemInfoTest(self._package.hw)),  # Just save system info BEFORE any cleanups
+            SingleCheckGroup(SystemInfoTest(self._package)),  # Just save system info BEFORE any cleanups
             SL1SUpgradeCleanup(self._package),
             ShowResultsGroup(),
-            SingleCheckGroup(MarkPrinterModel(PrinterModel.SL1,
-                                              self._package.hw.config)),
+            SingleCheckGroup(MarkPrinterModel(self._package, PrinterModel.SL1)),
         )

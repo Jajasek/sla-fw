@@ -10,10 +10,10 @@ from typing import Optional, List, Iterable, Dict, Any
 
 from PySignal import Signal
 
-from slafw.hardware.base.hardware import BaseHardware
 from slafw.states.wizard import WizardCheckState
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.setup import Resource, Configuration
+from slafw.wizard.data_package import WizardDataPackage
 from slafw.hardware.power_led_action import WarningAction
 
 
@@ -247,11 +247,11 @@ class DangerousCheck(Check, ABC):
     Dangerous checks require cover closed during operation
     """
 
-    def __init__(self, hw: BaseHardware, *args, **kwargs):
+    def __init__(self, package: WizardDataPackage, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._hw = hw
+        self._package = package
 
     async def wait_cover_closed(self):
         await asyncio.sleep(0)
-        while not self._hw.isCoverVirtuallyClosed():
+        while not self._package.hw.isCoverVirtuallyClosed():
             await asyncio.sleep(0.5)
