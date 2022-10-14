@@ -110,3 +110,7 @@ class Nm(Unit):
 class Ustep(Unit):
     # pylint: disable=too-few-public-methods
     pass
+
+class Ms(Unit):
+    # pylint: disable=too-few-public-methods
+    pass

@@ -6,7 +6,7 @@
 
 from slafw import defines
 from slafw.configs.ini import IniConfig
-from slafw.configs.unit import Nm, Ustep
+from slafw.configs.unit import Nm, Ustep, Ms
 from slafw.configs.value import BoolValue, IntValue, FloatValue
 
 
@@ -75,8 +75,8 @@ class HwConfig(IniConfig):
                        doc="Position used to ensure the tilt ends at the bottom. [ustep]")
     limit4fast = IntValue(35, minimum=0, maximum=100, doc="Fast tearing is used if layer area is under this value. [%]")
 
-    stirringMoves = IntValue(3, minimum=1, maximum=10, doc="Number of stirring moves")
-    stirringDelay = IntValue(5, minimum=0, maximum=300)
+    stirring_moves = IntValue(3, minimum=1, maximum=10, doc="Number of stirring moves")
+    stirring_delay_ms = IntValue(500, unit=Ms, minimum=0, maximum=300_000, doc="Delay after stirring.")
     measuringMoves = IntValue(3, minimum=1, maximum=10)
     pwrLedPwm = IntValue(100, minimum=0, maximum=100, doc="Power LED brightness. [%]")
     towerSensitivity = IntValue(0, minimum=-2, maximum=2, factory=True, doc="Tower sensitivity adjustment")
@@ -96,23 +96,13 @@ class HwConfig(IniConfig):
     )
 
     # Exposure setup
-    upAndDownUvOn = BoolValue(False)
-
-    trigger = IntValue(
-        0, minimum=0, maximum=20, doc="Duration of electronic trigger durint the layer change, currently discarded. [tenths of a second]"
-    )
-    upAndDownWait = IntValue(10, minimum=0, maximum=600, doc="Up&Down wait time. [seconds]")
-    upAndDownEveryLayer = IntValue(0, minimum=0, maximum=500, doc="Do Up&Down every N layers, 0 means never.")
-    # Deprecated - use up_and_down_z_offset_nm
-    upAndDownZoffset = IntValue(0, unit=Ustep, minimum=-800, maximum=800)
-    up_and_down_z_offset_nm = IntValue(
-        lambda self: self.tower_microsteps_to_nm(self.upAndDownZoffset),
-        unit=Nm,
-        minimum=-50_000_000,
-        maximum=50_000_000,
-    )
-
-    upAndDownExpoComp = IntValue(0, minimum=-10, maximum=300)
+    up_and_down_uv_on = BoolValue(False, doc="Keep UV LED on during Up&Down.")
+    up_and_down_wait = IntValue(10, minimum=0, maximum=600, doc="Up&Down wait time. [seconds]")
+    up_and_down_every_layer = IntValue(0, minimum=0, maximum=500, doc="Do Up&Down every N layers, 0 means never.")
+    up_and_down_z_offset_nm = IntValue(0, unit=Nm, minimum=-5_000_000, maximum=5_000_000,
+                                       doc="Tower position shift after Up&Down.")
+    up_and_down_expo_comp_ms = IntValue(0, unit=Ms, minimum=-10_000, maximum=30_000,
+                                        doc="Exposure time shift after Up&Down.")
 
     # Fans & LEDs
     fan1Rpm = IntValue(

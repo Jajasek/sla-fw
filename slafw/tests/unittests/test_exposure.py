@@ -23,7 +23,7 @@ from slafw.errors.errors import (
 from slafw.errors.warnings import PrintingDirectlyFromMedia, ResinNotEnough
 from slafw.configs.hw import HwConfig
 from slafw.configs.runtime import RuntimeConfig
-from slafw.configs.unit import Nm
+from slafw.configs.unit import Nm, Ms
 from slafw.exposure.exposure import Exposure
 from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 from slafw.states.exposure import ExposureState
@@ -259,14 +259,14 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self.assertEqual(205040, exposure.estimate_total_time_ms())
 
         delay = 10  # 0.01 s
-        self.lp.slow.delay_before_exposure_ms = delay
+        self.lp.slow.delay_before_exposure_ms = Ms(delay)
         exposure = self._start_exposure(self.hw, TestExposure.PROJECT_LAYER_CHANGE_SAFE)
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
 
         delay_time = exposure.project.total_layers * delay
         force_slow_time = exposure.project._layers_fast * \
-            (self.lp.fast.moves_time_ms - self.lp.super_fast.moves_time_ms) # pylint: disable = protected-access
+            int(self.lp.fast.moves_time_ms - self.lp.super_fast.moves_time_ms) # pylint: disable = protected-access
         self.assertEqual(201040 + delay_time + force_slow_time, exposure.estimate_total_time_ms())
 
     def _start_exposure(self, hw, project = None, expo_img = None) -> Exposure:
@@ -342,7 +342,6 @@ class TestLayers(SlafwTestCaseDBus):
         self.exposure.startProject()
 
         # verify "input" parameters
-        self.assertEqual(5, self.hw.config.stirringDelay)
         self.assertEqual(36864, self.hw.white_pixels_threshold)
         self.assertEqual(13, self.exposure.project.first_slow_layers)
 

@@ -8,7 +8,7 @@ from time import monotonic
 from typing import Optional, Dict, Any
 
 from slafw import defines
-from slafw.configs.unit import Nm, Ustep
+from slafw.configs.unit import Nm, Ustep, Ms
 from slafw.errors.errors import (
     TiltHomeCheckFailed,
     TiltEndstopNotReached,
@@ -148,7 +148,7 @@ class TiltTimingTest(DangerousCheck):
                 self._logger.debug("%s moves %d/%d, time mean: %d",
                         layer_profile.name, i + 1, measure_moves, run_time * 1000 / (i + 1))
                 self.progress = p / progress_total
-            moves_time_ms = int(run_time * 1000 / measure_moves)
+            moves_time_ms = Ms(run_time * 1000 / measure_moves)
             self._logger.info("Moves time for profile '%s': %d ms", layer_profile.name, moves_time_ms)
             getattr(self._package.config_writers, layer_profile.name).moves_time_ms = moves_time_ms
 
@@ -158,8 +158,8 @@ class TiltTimingTest(DangerousCheck):
             sname = self._package.layer_profiles[ep.small_fill_layer_profile].name
             lname = self._package.layer_profiles[ep.large_fill_layer_profile].name
             tilt_times_dict[ep.name] = {
-                "small_fill": getattr(self._package.config_writers, sname).moves_time_ms,
-                "large_fill": getattr(self._package.config_writers, lname).moves_time_ms,
+                "small_fill": int(getattr(self._package.config_writers, sname).moves_time_ms),
+                "large_fill": int(getattr(self._package.config_writers, lname).moves_time_ms),
             }
         return {"moving_times_ms": tilt_times_dict}
 

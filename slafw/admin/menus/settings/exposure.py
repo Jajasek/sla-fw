@@ -30,6 +30,7 @@ class ExposureSettingsMenu(SettingsMenu):
                     "forceSlowTiltHeight",
                     10000,
                     6,
+                    2,
                     "move_resin_tank_color"),
                 AdminIntValue.from_value(
                     "Limit for fast tilt [%]",
@@ -40,33 +41,43 @@ class ExposureSettingsMenu(SettingsMenu):
                 AdminBoolValue.from_value(
                     "Up&Down UV on",
                     self._temp,
-                    "upAndDownUvOn",
+                    "up_and_down_uv_on",
                     "tower_offset_color"),
                 AdminIntValue.from_value(
                     "Up&down wait [s]",
                     self._temp,
-                    "upanddownwait",
+                    "up_and_down_wait",
                     1,
                     "exposure_times_color"),
                 AdminIntValue.from_value(
                     "Up&down every n-th layer",
                     self._temp,
-                    "upanddowneverylayer",
+                    "up_and_down_every_layer",
                     1,
                     "tower_offset_color"),
                 AdminFixedValue.from_value(
                     "Up&down Z offset [mm]",
                     self._temp,
                     "up_and_down_z_offset_nm",
-                    1,
-                    6,
-                    "calibration_color"),
+                    icon="calibration_color"),
                 AdminFixedValue.from_value(
                     "Up&down exposure compensation [s]",
                     self._temp,
-                    "upAndDownExpoComp",
-                    1,
-                    1,
+                    "up_and_down_expo_comp_ms",
+                    10,
+                    3,
+                    2,
                     "exposure_times_color"),
+                AdminIntValue.from_value(
+                    "Stirring moves count",
+                    self._temp,
+                    "stirring_moves",
+                    1,
+                    "move_resin_tank_color"),
+                AdminFixedValue.from_value(
+                    "Delay after stirring [s]",
+                    self._temp,
+                    "stirring_delay_ms",
+                    icon="exposure_times_color")
             )
         )

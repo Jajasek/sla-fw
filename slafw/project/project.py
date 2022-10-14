@@ -496,8 +496,10 @@ class Project:
         # Fast and slow layer times
         sfp = self._layer_profiles[self.exposure_profile.small_fill_layer_profile]
         hfp = self._layer_profiles[self.exposure_profile.large_fill_layer_profile]
-        time_remain_ms += fast_layers * (sfp.moves_time_ms + sfp.delay_before_exposure_ms + sfp.delay_after_exposure_ms)
-        time_remain_ms += slow_layers * (hfp.moves_time_ms + hfp.delay_before_exposure_ms + hfp.delay_after_exposure_ms)
+        time_remain_ms += \
+            fast_layers * int(sfp.moves_time_ms + sfp.delay_before_exposure_ms + sfp.delay_after_exposure_ms)
+        time_remain_ms += \
+            slow_layers * int(hfp.moves_time_ms + hfp.delay_before_exposure_ms + hfp.delay_after_exposure_ms)
 
         time_remain_ms += (total_layers - layers_done) * (
                 self.layer_height_nm * 5000 // 1000 // 1000  # tower move

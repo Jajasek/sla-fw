@@ -4,7 +4,7 @@
 
 from slafw import defines
 from slafw.configs.value import DictOfConfigs, BoolValue, IntValue, ProfileIndex
-from slafw.configs.unit import Ustep, Nm
+from slafw.configs.unit import Ustep, Nm, Ms
 from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 from slafw.hardware.sl1.tilt_profiles import MovingProfilesTiltSL1
 from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1
@@ -19,11 +19,13 @@ class SingleLayerProfileSL1(SingleProfile):
     delay_before_exposure_ms = IntValue(
             minimum=0,
             maximum=30_000,
+            unit=Ms,
             factory=True,
             doc="Delay between tear off and exposure.")
     delay_after_exposure_ms = IntValue(
             minimum=0,
             maximum=30_000,
+            unit=Ms,
             factory=True,
             doc="Delay between exposure and tear off.")
     tower_hop_height_nm = IntValue(
@@ -53,6 +55,7 @@ class SingleLayerProfileSL1(SingleProfile):
     tilt_down_offset_delay_ms = IntValue(
             minimum=0,
             maximum=20000,
+            unit=Ms,
             factory=True,
             doc="Waiting time after first move down.")
     tilt_down_finish_profile = ProfileIndex(
@@ -67,6 +70,7 @@ class SingleLayerProfileSL1(SingleProfile):
     tilt_down_delay_ms = IntValue(
             minimum=0,
             maximum=20000,
+            unit=Ms,
             factory=True,
             doc="Waiting time after every part.")
     # tilt up settings
@@ -82,7 +86,8 @@ class SingleLayerProfileSL1(SingleProfile):
             doc="How many steps to perform in first move up.")
     tilt_up_offset_delay_ms = IntValue(
             minimum=0,
-            maximum=20000,
+            maximum=20_000,
+            unit=Ms,
             factory=True,
             doc="Waiting time after first move up.")
     tilt_up_finish_profile = ProfileIndex(
@@ -96,13 +101,15 @@ class SingleLayerProfileSL1(SingleProfile):
             doc="How many parts should the remaining distance be made up of.")
     tilt_up_delay_ms = IntValue(
             minimum=0,
-            maximum=20000,
+            maximum=20_000,
+            unit=Ms,
             factory=True,
             doc="Waiting time after every part.")
     # this should be measured by printer
     moves_time_ms = IntValue(
             minimum=0,
             maximum=600_000,
+            unit=Ms,
             factory=True,
             doc="Time necessary to perform all layer change moves.")
     __definition_order__ = tuple(locals())

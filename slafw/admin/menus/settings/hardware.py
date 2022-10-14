@@ -4,7 +4,7 @@
 
 from slafw.libPrinter import Printer
 from slafw.admin.control import AdminControl
-from slafw.admin.items import AdminIntValue, AdminBoolValue, AdminFloatValue
+from slafw.admin.items import AdminIntValue, AdminBoolValue
 from slafw.admin.menus.settings.base import SettingsMenu
 
 
@@ -27,26 +27,6 @@ class HardwareSettingsMenu(SettingsMenu):
                     "measuringMoves",
                     1,
                     "move_resin_tank_color"),
-                AdminIntValue.from_value(
-                    "Stirring moves count",
-                    self._temp,
-                    "stirringMoves",
-                    1,
-                    "move_resin_tank_color"),
-                AdminFloatValue(
-                    "Delay after stirring [s]",
-                    self.get_stirring_delay,
-                    self.set_stirring_delay,
-                    0.1,
-                    "exposure_times_color",
-                    minimum=self._temp.get_value_property("stirringDelay", "min") / 10,
-                    maximum=self._temp.get_value_property("stirringDelay", "max") / 10),
                 AdminIntValue.from_value("Power LED intensity", self._temp, "pwrLedPwm", 1, "brightness_color"),
             )
         )
-
-    def set_stirring_delay(self, value):
-        self._temp.stirringDelay = int(round(value * 10, ndigits=1))
-
-    def get_stirring_delay(self):
-        return self._temp.stirringDelay / 10

@@ -5,12 +5,21 @@
 from typing import Collection, Optional
 from pathlib import Path
 from time import sleep
+import re
 
 from slafw.defines import dataPath
 from slafw.libPrinter import Printer
 from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 from slafw.admin.control import AdminControl
-from slafw.admin.items import AdminItem, AdminLabel, AdminAction, AdminIntValue, AdminSelectionValue, AdminBoolValue
+from slafw.admin.items import (
+    AdminItem,
+    AdminLabel,
+    AdminAction,
+    AdminIntValue,
+    AdminSelectionValue,
+    AdminBoolValue,
+    AdminFixedValue,
+)
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.admin.menu import AdminMenu
 from slafw.admin.menus.dialogs import Info, Wait, Error
@@ -21,8 +30,16 @@ from slafw.hardware.power_led_action import WarningAction
 from slafw.functions.files import get_save_path, usb_remount, get_export_file_name
 from slafw.errors.errors import NoExternalStorage, TiltHomeFailed
 from slafw.configs.value import ProfileIndex, BoolValue
-from slafw.configs.unit import Nm
+from slafw.configs.unit import Nm, Ms
 from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
+
+CAMEL2SNAKE = re.compile(r'(?<!^)(?=[A-Z])')
+
+def pretty_name(name: str) -> str:
+    name = CAMEL2SNAKE.sub('_', name).lower()
+    for replace in (("_", " "), (" ms", " [s]"), (" nm", " [mm]")):
+        name = name.replace(*replace)
+    return name.capitalize()
 
 
 class Profiles(SafeAdminMenu):
@@ -84,7 +101,7 @@ class EditProfiles(AdminMenu):
         else:
             icon = ""
         for profile in pset:
-            yield AdminAction(profile.name, self._get_callback(printer, pset, profile, axis), icon)
+            yield AdminAction(pretty_name(profile.name), self._get_callback(printer, pset, profile, axis), icon)
 
     def _get_callback(self,
             printer: Printer,
@@ -121,12 +138,18 @@ class EditProfileItems(SafeAdminMenu):
 
     def _get_items(self, profile: SingleProfile) -> Collection[AdminItem]:
         for value in profile:
+            name = pretty_name(value.key)
             if isinstance(value, ProfileIndex):
-                yield AdminSelectionValue.from_value(value.key, self._temp, value.key, value.options, True, "edit_white")
+                yield AdminSelectionValue.from_value(
+                        name, self._temp, value.key, [pretty_name(n) for n in value.options], True, "edit_white")
             elif isinstance(value, BoolValue):
-                yield AdminBoolValue.from_value(value.key, self._temp, value.key, "edit_white")
+                yield AdminBoolValue.from_value(name, self._temp, value.key, "edit_white")
+# TODO python 3.10
+#            elif value.unit is not None and issubclass(value.unit, Nm | Ms):
+            elif value.unit is not None and any((issubclass(value.unit, Nm), issubclass(value.unit, Ms))):
+                yield AdminFixedValue.from_value(name, self._temp, value.key, icon="edit_white")
             else:
-                yield AdminIntValue.from_value(value.key, self._temp, value.key, 1, "edit_white")
+                yield AdminIntValue.from_value(name, self._temp, value.key, 1, "edit_white")
 
     def on_leave(self):
         self._temp.commit()

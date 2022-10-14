@@ -120,8 +120,8 @@ class Config0:
         .. code-block:: python
 
             {
-                'stirringMoves': {'min': 1, 'max': 10},
-                'stirringDelay': {'max': 300},
+                'stirring_moves': {'min': 1, 'max': 10},
+                'stirring_delay_ms': {'max': 300000},
                 'towerSensitivity': {'min': -2, 'max': 2},
                 ...
             }

@@ -170,6 +170,11 @@ class Admin0FixedValueItem:
 
     @auto_dbus
     @property
+    def decimal_places(self) -> int:
+        return self._item.decimal_places
+
+    @auto_dbus
+    @property
     def minimum(self) -> int:
         return self._item.minimum
 

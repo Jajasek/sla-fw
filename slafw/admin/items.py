@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from functools import partial, wraps
 from typing import Callable, Any, Optional, List
-
 from PySignal import Signal
+
+from slafw.configs.unit import Unit, Nm, Ms
 
 
 class AdminItem:
@@ -192,15 +193,39 @@ class AdminFixedValue(AdminMinMaxValue):
             name: str,
             getter: Callable,
             setter: Callable,
-            step: int,
-            fractions: int,
+            unit: Optional[Unit]=None,
+            step: int=None,
+            fractions: int=None,
+            decimal_places: int=None,
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
             maximum: int=None):
         super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
+        if step is None:
+            if issubclass(unit, Nm):
+                step = 10000
+            elif issubclass(unit, Ms):
+                step = 100
+            else:
+                step = 1
+        if fractions is None:
+            if issubclass(unit, Nm):
+                fractions = 6
+            elif issubclass(unit, Ms):
+                fractions = 3
+            else:
+                fractions = 0
+        if decimal_places is None:
+            if issubclass(unit, Nm):
+                decimal_places = 2
+            elif issubclass(unit, Ms):
+                decimal_places = 1
+            else:
+                decimal_places = 0
         self._step = step
         self._fractions = fractions
+        self._decimal_places = decimal_places
 
     @classmethod
     def from_value(
@@ -208,8 +233,9 @@ class AdminFixedValue(AdminMinMaxValue):
             name: str,
             obj: object,
             prop: str,
-            step: int,
-            fractions: int,
+            step: int=None,
+            fractions: int=None,
+            decimal_places: int=None,
             icon: str="",
             enabled: bool=True) -> AdminFixedValue:
         unit, minimum, maximum = cls._get_params_from_value(obj, prop)
@@ -222,26 +248,28 @@ class AdminFixedValue(AdminMinMaxValue):
                 value = unit(value)
             setattr(obj, prop, value)
 
-        return AdminFixedValue(name, g, s, step, fractions, icon, enabled, minimum, maximum)
+        return AdminFixedValue(name, g, s, unit, step, fractions, decimal_places, icon, enabled, minimum, maximum)
 
     @classmethod
     def from_property(
             cls,
             obj: object,
             prop: property,
-            step: int,
-            fractions: int,
+            step: int=None,
+            fractions: int=None,
+            decimal_places: int=None,
             icon: str="",
-            enabled: bool=True,
-            minimum: int=None,
-            maximum: int=None) -> AdminFixedValue:
+            enabled: bool=True) -> AdminFixedValue:
         prop_name = cls._get_prop_name(obj, prop)
+        unit, minimum, maximum = cls._get_params_from_value(obj, prop)
         value = AdminFixedValue(
                 prop_name,
                 partial(prop.fget, obj),
                 partial(prop.fset, obj),
+                unit,
                 step,
                 fractions,
+                decimal_places,
                 icon,
                 enabled,
                 minimum,
@@ -256,6 +284,10 @@ class AdminFixedValue(AdminMinMaxValue):
     @property
     def fractions(self) -> int:
         return self._fractions
+
+    @property
+    def decimal_places(self) -> int:
+        return self._decimal_places
 
 
 class AdminFloatValue(AdminMinMaxValue):

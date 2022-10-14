@@ -575,14 +575,15 @@ class Exposure:
         white_pixels = self.exposure_image.sync_preloader()
         self.exposure_image.screenshot_rename()
 
-        delay_before = self.actual_layer_profile.delay_before_exposure_ms
+        delay_before = int(self.actual_layer_profile.delay_before_exposure_ms)
         if delay_before:
             self.logger.info("Delay before exposure [s]: %f", delay_before / 1000)
             sleep(delay_before / 1000)
 
-        if was_stirring:
-            self.logger.info("Stirring delay [s]: %f", self.hw.config.stirringDelay / 10.0)
-            sleep(self.hw.config.stirringDelay / 10.0)
+        delay_stirring = int(self.hw.config.stirring_delay_ms)
+        if was_stirring and delay_stirring:
+            self.logger.info("Stirring delay [s]: %f", delay_stirring / 1000)
+            sleep(delay_stirring / 1000)
 
         self.exposure_image.blit_image()
 
@@ -598,7 +599,7 @@ class Exposure:
         self.logger.info("Exposure done")
         self.exposure_image.preload_image(self.actual_layer + 1)
 
-        delay_after = self.actual_layer_profile.delay_after_exposure_ms
+        delay_after = int(self.actual_layer_profile.delay_after_exposure_ms)
         if delay_after:
             self.logger.info("Delay after exposure [s]: %f", delay_after / 1000)
             sleep(delay_after / 1000)
@@ -636,7 +637,7 @@ class Exposure:
 
     def upAndDown(self):
         with WarningAction(self.hw.power_led):
-            if self.hw.config.upAndDownUvOn:
+            if self.hw.config.up_and_down_uv_on:
                 self.hw.uv_led.on()
 
             self.state = ExposureState.GOING_UP
@@ -644,8 +645,8 @@ class Exposure:
             self.hw.tower.move_ensure(self.hw.config.tower_height_nm)
 
             self.state = ExposureState.WAITING
-            for sec in range(self.hw.config.upAndDownWait):
-                cnt = self.hw.config.upAndDownWait - sec
+            for sec in range(self.hw.config.up_and_down_wait):
+                cnt = self.hw.config.up_and_down_wait - sec
                 self.remaining_wait_sec = cnt
                 sleep(1)
                 if self.hw.config.coverCheck and not self.hw.isCoverClosed():
@@ -881,9 +882,9 @@ class Exposure:
                     self.state = ExposureState.PRINTING
 
                 if (
-                    self.hw.config.upAndDownEveryLayer
+                    self.hw.config.up_and_down_every_layer
                     and self.actual_layer
-                    and not self.actual_layer % self.hw.config.upAndDownEveryLayer
+                    and not self.actual_layer % self.hw.config.up_and_down_every_layer
                 ):
                     self.doUpAndDown()
                     was_stirring = True
@@ -942,11 +943,6 @@ class Exposure:
                 self.logger.debug("resin_count: %f", self.resin_count)
 
                 seconds = (datetime.now(tz=timezone.utc) - self.printStartTime).total_seconds()
-
-                if self.hw.config.trigger:
-                    self.logger.error("Trigger not implemented")
-                    # sleep(self.hw.config.trigger / 10.0)
-
                 self.actual_layer += 1
 
         if self.canceled:

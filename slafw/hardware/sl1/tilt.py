@@ -95,7 +95,7 @@ class TiltSL1(Tilt, AxisSL1):
             self.move(self.position - layer_profile.tilt_down_offset_steps)
             while self.moving:
                 await asyncio.sleep(0.1)
-        await asyncio.sleep(layer_profile.tilt_down_offset_delay_ms / 1000.0)
+        await asyncio.sleep(int(layer_profile.tilt_down_offset_delay_ms / 1000))
         # next movement may be splited
         self.actual_profile = self._profiles[layer_profile.tilt_down_finish_profile]
         movePerCycle = self.position // layer_profile.tilt_down_cycles
@@ -103,7 +103,7 @@ class TiltSL1(Tilt, AxisSL1):
             self.move(self.position - movePerCycle)
             while self.moving:
                 await asyncio.sleep(0.1)
-            await asyncio.sleep(layer_profile.tilt_down_delay_ms / 1000.0)
+            await asyncio.sleep(int(layer_profile.tilt_down_delay_ms / 1000))
         tolerance = Ustep(defines.tiltHomingTolerance)
         # if not already in endstop ensure we end up at defined bottom position
         if not self._mcc.checkState("endstop"):
@@ -137,7 +137,7 @@ class TiltSL1(Tilt, AxisSL1):
         self.move(_tilt_height - layer_profile.tilt_up_offset_steps)
         while self.moving:
             await asyncio.sleep(0.1)
-        await asyncio.sleep(layer_profile.tilt_up_offset_delay_ms / 1000.0)
+        await asyncio.sleep(int(layer_profile.tilt_up_offset_delay_ms / 1000))
         self.actual_profile = self._profiles[layer_profile.tilt_up_finish_profile]
 
         # finish move may be also splited in multiple sections
@@ -146,14 +146,14 @@ class TiltSL1(Tilt, AxisSL1):
             self.move(self.position + movePerCycle)
             while self.moving:
                 await asyncio.sleep(0.1)
-            await asyncio.sleep(layer_profile.tilt_up_delay_ms / 1000.0)
+            await asyncio.sleep(int(layer_profile.tilt_up_delay_ms / 1000))
 
     def release(self) -> None:
         axis_enabled = self._mcc.doGetInt("?ena")
         self._mcc.do("!ena", axis_enabled & ~2)
 
     async def stir_resin_async(self, layer_profile: SingleLayerProfileSL1) -> None:
-        for _ in range(self._config.stirringMoves):
+        for _ in range(self._config.stirring_moves):
             await self.layer_down_wait_async(layer_profile)
             await self.layer_up_wait_async(layer_profile)
 

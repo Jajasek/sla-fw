@@ -14,7 +14,7 @@ from gi.repository import GLib
 from pydbus import Variant
 from pydbus.generic import signal
 
-from slafw.configs.unit import Nm, Ustep
+from slafw.configs.unit import Nm, Ustep, Ms
 from slafw.errors.errors import NotAvailableInState, DBusMappingException
 
 
@@ -167,6 +167,7 @@ PYTHON_TO_DBUS_TYPE = {
     bool: "b",
     str: "s",
     Nm: "i",
+    Ms: "i",
     Ustep: "i",
     DBusObjectPath: "o",
     Any: "v",
