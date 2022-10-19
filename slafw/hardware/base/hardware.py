@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
-import re
 from abc import abstractmethod
 from functools import cached_property, lru_cache
 from time import sleep
@@ -99,6 +98,10 @@ class BaseHardware:
     def isKit(self):
         return self.read_cpu_serial()[1]
 
+    @property
+    def ethMac(self):
+        return self.read_cpu_serial()[2]
+
     @abstractmethod
     def beep(self, frequency_hz: int, length_s: float):
         ...
@@ -179,7 +182,7 @@ class BaseHardware:
             if mcsc != mcs1 or mcsc ^ 255 != mcs2:
                 self.logger.error("MAC checksum FAIL (is %02x:%02x, should be %02x:%02x)", mcs1, mcs2, mcsc, mcsc ^ 255)
             else:
-                mac_hex = ":".join(re.findall("../../..", mac.hex))
+                mac_hex = ":".join(mac.hex[i:i+2] for i in range(0, len(mac.hex), 2))
                 self.logger.info("MAC: %s (checksum %02x:%02x)", mac_hex, mcs1, mcs2)
 
                 # byte order change
@@ -214,7 +217,7 @@ class BaseHardware:
         except Exception:
             self.logger.exception("CPU serial:")
 
-        return sn, is_kit
+        return sn, is_kit, mac_hex
 
     @cached_property
     def emmc_serial(self) -> str:  # pylint: disable = no-self-use

@@ -118,7 +118,8 @@ class Standard0:
         self._last_exception: Optional[Exception] = None
         # Avoid keeping printer alive by API object. Printer object shares lifecycle with the whole application.
         self._printer: Printer = weakref.proxy(printer)
-        self.__info_mac = None
+        self.__info_eth_mac = None
+        self.__info_wlan_mac = None
         self.__info_uuid = None
         self._last_state = None
         self._printer.exception_occurred.connect(self._on_exception_changed)
@@ -233,14 +234,21 @@ class Standard0:
         uuid_hash.update(mac_eth0.encode())
         uuid_hash.update(self._printer.hw.cpuSerialNo.encode())
         uuid_hash.update(mac_wlan0.encode())
-        self.__info_mac = mac_eth0
+        self.__info_eth_mac = mac_eth0
+        self.__info_wlan_mac = mac_wlan0
         self.__info_uuid = uuid_hash.hexdigest()
 
     @property
-    def _info_mac(self):
-        if not self.__info_mac:
+    def _info_eth_mac(self):
+        if not self.__info_eth_mac:
             self._info_populate()
-        return self.__info_mac
+        return self.__info_eth_mac
+
+    @property
+    def _info_wlan_mac(self):
+        if not self.__info_wlan_mac:
+            self._info_populate()
+        return self.__info_wlan_mac
 
     @property
     def _info_uuid(self):
@@ -631,7 +639,8 @@ class Standard0:
                 'name': 'Original Prusa Sl1',
                 'firmware': '1.5.0',
                 'sn': 'CZPX1234X000XK0001',
-                'mac': '10:00:10:00:10:00',
+                'eth_mac': '10:00:10:00:10:00',
+                'wlan_mac': '11:00:11:00:11:00',
                 'uuid': '2a2db92796ac6379dc981c2e0d6f2cff541eddf2'
             }
         """
@@ -639,7 +648,8 @@ class Standard0:
             "name": "Original Prusa Sl1",
             "firmware": distro.version(),
             "sn": self._printer.hw.cpuSerialNo.lstrip(" *"),
-            "mac": self._info_mac,
+            "eth_mac": self._info_eth_mac,
+            "wlan_mac": self._info_wlan_mac,
             "uuid": self._info_uuid,
         }
 

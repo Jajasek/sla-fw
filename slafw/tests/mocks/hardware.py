@@ -76,12 +76,13 @@ class HardwareMock(BaseHardware):
         self.cover_state_changed = Signal()
         self.mock_serial = "CZPX0819X009XC00151"
         self.mock_is_kit = False
+        self.eth_mac = "10:9c:70:10:10:62"
 
     def motors_release(self) -> None:
         pass
 
     def read_cpu_serial(self):
-        return self.mock_serial, self.mock_is_kit
+        return self.mock_serial, self.mock_is_kit, self.eth_mac
 
     def exit(self):
         self.cover_state_changed.clear()
