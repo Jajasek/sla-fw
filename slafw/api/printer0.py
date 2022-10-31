@@ -106,24 +106,32 @@ class Printer0:
         self.printer.fatal_error_changed.connect(self._on_fatal_error)
 
         # Register HW dependent event in case we actually have the hardware
+        # If not, it should be registered at later time
         if self.printer.hw:
-            self.printer.hw.uv_led_fan.rpm_changed.connect(self._on_uv_led_fan_changed)
-            self.printer.hw.uv_led_fan.error_changed.connect(self._on_uv_led_fan_changed)
-            self.printer.hw.blower_fan.rpm_changed.connect(self._on_blower_fan_changed)
-            self.printer.hw.blower_fan.error_changed.connect(self._on_blower_fan_changed)
-            self.printer.hw.rear_fan.rpm_changed.connect(self._on_rear_fan_changed)
-            self.printer.hw.rear_fan.error_changed.connect(self._on_rear_fan_changed)
-            self.printer.hw.uv_led_temp.value_changed.connect(self._on_uv_temp_changed)
-            self.printer.hw.ambient_temp.value_changed.connect(self._on_ambient_temp_changed)
-            self.printer.hw.cpu_temp.value_changed.connect(self._on_cpu_temp_changed)
-            self.printer.hw.resin_sensor_state_changed.connect(self._on_resin_sensor_changed)
-            self.printer.hw.cover_state_changed.connect(self._on_cover_state_changed)
-            self.printer.hw.power_button_state_changed.connect(self._on_power_switch_state_changed)
-            self.printer.hw.mc_sw_version_changed.connect(self._on_controller_sw_version_change)
-            self.printer.hw.uv_led.usage_s_changed.connect(self._on_uv_usage_changed)
-            self.printer.hw.exposure_screen.usage_s_changed.connect(self._on_display_usage_changed)
-            self.printer.hw.tower_position_changed.connect(self._on_tower_position_changed)
-            self.printer.hw.tilt_position_changed.connect(self._on_tilt_position_changed)
+            self.register_hardware(self.printer.hw)
+
+    def register_hardware(self, hw: BaseHardware):
+        """
+        Connect the required signals to watch for hardware changes. Hardware (via libPrinter) is
+        normally setup after Printer0 interface is created. That's when this should be called.
+        """
+        hw.uv_led_fan.rpm_changed.connect(self._on_uv_led_fan_changed)
+        hw.uv_led_fan.error_changed.connect(self._on_uv_led_fan_changed)
+        hw.blower_fan.rpm_changed.connect(self._on_blower_fan_changed)
+        hw.blower_fan.error_changed.connect(self._on_blower_fan_changed)
+        hw.rear_fan.rpm_changed.connect(self._on_rear_fan_changed)
+        hw.rear_fan.error_changed.connect(self._on_rear_fan_changed)
+        hw.uv_led_temp.value_changed.connect(self._on_uv_temp_changed)
+        hw.ambient_temp.value_changed.connect(self._on_ambient_temp_changed)
+        hw.cpu_temp.value_changed.connect(self._on_cpu_temp_changed)
+        hw.resin_sensor_state_changed.connect(self._on_resin_sensor_changed)
+        hw.cover_state_changed.connect(self._on_cover_state_changed)
+        hw.power_button_state_changed.connect(self._on_power_switch_state_changed)
+        hw.mc_sw_version_changed.connect(self._on_controller_sw_version_change)
+        hw.uv_led.usage_s_changed.connect(self._on_uv_usage_changed)
+        hw.exposure_screen.usage_s_changed.connect(self._on_display_usage_changed)
+        hw.tower_position_changed.connect(self._on_tower_position_changed)
+        hw.tilt_position_changed.connect(self._on_tilt_position_changed)
 
     def _on_state_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"state": self.state}, [])

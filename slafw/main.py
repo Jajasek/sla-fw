@@ -32,12 +32,14 @@ logger.info("Logging is set to level %s", logging.getLevelName(logger.level))
 warnings.simplefilter("ignore")
 
 printer = libPrinter.Printer()
+printer0 = Printer0(printer)
 
-SystemBus().publish(Printer0.__INTERFACE__, Printer0(printer))
+SystemBus().publish(Printer0.__INTERFACE__, printer0)
 SystemBus().publish(Standard0.__INTERFACE__, Standard0(printer))
 admin_manager = AdminManager()
 SystemBus().publish(Admin0.__INTERFACE__, Admin0(admin_manager, printer))
 printer.setup()
+printer0.register_hardware(printer.hw)  # Hardware is not available before this point
 printer.run_make_ready_to_print()
 
 logger.info("Running DBus event loop")
