@@ -38,6 +38,7 @@ from slafw.errors.errors import ReprintWithoutHistory, PrinterException
 from slafw.functions.files import get_all_supported_files
 from slafw.functions.system import shut_down
 from slafw.hardware.base.fan import Fan
+from slafw.hardware.base.hardware import BaseHardware
 from slafw.hardware.power_led_action import WarningAction
 from slafw.hardware.sl1.uv_led import SL1UVLED
 from slafw.project.functions import check_ready_to_print
@@ -104,11 +105,6 @@ class Printer0:
         self.printer.uv_calibrated_changed.connect(self._on_uv_calibrated_changed)
         self.printer.exception_occurred.connect(self._on_exception)
         self.printer.fatal_error_changed.connect(self._on_fatal_error)
-
-        # Register HW dependent event in case we actually have the hardware
-        # If not, it should be registered at later time
-        if self.printer.hw:
-            self.register_hardware(self.printer.hw)
 
     def register_hardware(self, hw: BaseHardware):
         """

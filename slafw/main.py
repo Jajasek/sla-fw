@@ -39,7 +39,10 @@ SystemBus().publish(Standard0.__INTERFACE__, Standard0(printer))
 admin_manager = AdminManager()
 SystemBus().publish(Admin0.__INTERFACE__, Admin0(admin_manager, printer))
 printer.setup()
-printer0.register_hardware(printer.hw)  # Hardware is not available before this point
+# Register HW dependent event in case we actually have the hardware
+# If not, it should be registered at later time
+if printer.hw:
+    printer0.register_hardware(printer.hw)
 printer.run_make_ready_to_print()
 
 logger.info("Running DBus event loop")
