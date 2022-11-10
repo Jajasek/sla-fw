@@ -63,9 +63,44 @@ class ExposurePickler(pickle.Pickler):
 
 
 class ExposureUnpickler(pickle.Unpickler):
-    def __init__(self, pickle_io, exposure_profiles: ExposureProfilesSL1):
+    def __init__(self,
+                 pickle_io,
+                 hw: BaseHardware,
+                 exposure_profiles: ExposureProfilesSL1,
+                 layer_profiles: LayerProfilesSL1):
+
         super().__init__(pickle_io)
+        self._hw = hw
         self._exposure_profiles = exposure_profiles
+        self._layer_profiles = layer_profiles
+        assert hw is not None
+        assert exposure_profiles is not None
+        assert layer_profiles is not None
+
+    def load(self) -> "Exposure":
+        # FIXME bad practise
+        # pylint: disable=protected-access
+        """ The Exposure object and its member Project are recovered broken, this wrapper is here to fix them """
+        exposure = super().load()
+
+        # Necessary preconditions
+        assert exposure is not None
+        assert exposure.project is not None
+
+        # Reconstruct the unpickled Exposure object to usable state
+        exposure.change = Signal()
+        exposure.hw = self._hw
+        exposure.exposure_profiles = self._exposure_profiles
+        exposure.layer_profiles = self._layer_profiles
+
+        # Exposure.project is also unpickled in an invalid state, fix it!
+        # This is awkward because it touches its private variables. It's still slightly better than creating a new one
+        # and picking which members to copy.
+        if exposure.project._hw is None:
+            exposure.project._hw = self._hw
+        if exposure.project._layer_profiles is None:
+            exposure.project._layer_profiles = self._layer_profiles
+        return exposure
 
     def persistent_load(self, pid):
         key, val = pid

@@ -86,8 +86,10 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
         exposure.exposure_profiles.default.delay_after_exposure_large_fill_ms = 23755
         exposure.read_project(TestExposure.PROJECT)
+        self.assertEqual(13740, exposure.estimate_remain_time_ms())
         exposure.save()
         new_exposure = Exposure.load(Mock(), self.hw, self.ep, self.lp)
+        self.assertEqual(13740, new_exposure.estimate_remain_time_ms())
         self.assertEqual(exposure.exposure_profiles, new_exposure.exposure_profiles)
         self.assertEqual(exposure.project.exposure_profile, new_exposure.project.exposure_profile)
 

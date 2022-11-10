@@ -522,12 +522,8 @@ class Exposure:
             layer_profiles: LayerProfilesSL1) -> Optional[Exposure]:
         try:
             with open(LAST_PROJECT_PICKLER, "rb") as pickle_io:
-                exposure = ExposureUnpickler(pickle_io, exposure_profiles).load()
-                # Fix missing (and still required attributes of exposure)
-                exposure.change = Signal()
-                exposure.hw = hw
-                exposure.exposure_profiles = exposure_profiles
-                exposure.layer_profiles = layer_profiles
+                exposure = ExposureUnpickler(pickle_io, hw, exposure_profiles, layer_profiles).load()
+                logger.info("Loading the last printed project: %s", exposure.project)
                 return exposure
         except FileNotFoundError:
             logger.info("Last exposure data not present")
