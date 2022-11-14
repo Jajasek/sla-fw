@@ -2,7 +2,7 @@
 # Copyright (C) 2020-2022 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import functools
+from functools import partial
 import json
 import re
 import tempfile
@@ -216,11 +216,16 @@ class RestoreFromUsbMenu(SafeAdminMenu):
                 filters = [filenamebase + "SL1S.*.tar.xz", filenamebase + "M1.*.tar.xz"]
             else:
                 filters = [filenamebase + f"{name}.*.tar.xz",]
-            self.list_files(usb_path, filters, self._restore_config, "usb_color")
+            self.list_files(usb_path, filters, self._confirm_restore, "usb_color")
+
+    def _confirm_restore(self, path: Path, name: str):
+        self._control.enter(Confirm(
+            self._control,
+            partial(self._restore_config, path, name),
+            text=f"Restore from {name}?\n\nThe printer will restart."))
 
     @SafeAdminMenu.safe_call
     def _restore_config(self, path: Path, name: str):
-        # pylint: disable=no-self-use
         restore_config(self.logger, str(path / name))
         shut_down(self._printer.hw, reboot=True)
 
@@ -248,7 +253,7 @@ class RestoreFromNetMenu(SafeAdminMenu):
 
     def _download_list(self):
         query_url = config_api_url + "listConfig"
-        name = self.printer.hw.printer_model.name  # type: ignore[attr-defined]
+        name = self._printer.hw.printer_model.name  # type: ignore[attr-defined]
         if name in ["SL1S", "M1"]:
             regex = re.compile(filenamebase + r"(SL1S|M1)\..*\.tar\.xz")
         else:
@@ -260,7 +265,10 @@ class RestoreFromNetMenu(SafeAdminMenu):
             configs = json.load(tf)["results"]
             self.add_items(
                 [
-                     AdminAction(config["tar"], functools.partial(self._restore_config, config["id"]), "download")
+                     AdminAction(
+                         config["tar"],
+                         partial(self._confirm_restore, config["id"], config["tar"]),
+                         "download")
                      for config in configs if regex.fullmatch(config["tar"])
                 ]
             )
@@ -268,6 +276,12 @@ class RestoreFromNetMenu(SafeAdminMenu):
 
     def _download_callback(self, progress: float):
         self.status = f"Downloading list of configs: {round(progress * 100)}%"
+
+    def _confirm_restore(self, config_id: int, name: str):
+        self._control.enter(Confirm(
+            self._control,
+            partial(self._restore_config, config_id),
+            text=f"Restore from {name}?\n\nThe printer will restart."))
 
     @SafeAdminMenu.safe_call
     def _restore_config(self, config_id: int):
