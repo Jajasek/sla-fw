@@ -61,7 +61,7 @@ class TestLayerProfilesSL1(LayerProfilesBase):
         self.tilt = TiltSL1(self.mcc, self.config, self.power_led, tower, printer_model)
         self.tilt.start()
         self.layer_profiles = LayerProfilesSL1(
-                factory_file_path=self.SLAFW_DIR / "data/SL1/default_layer_profiles.json")
+                factory_file_path=self.SLAFW_DIR / "data/SL1/default_layer_change_profiles.json")
 
     def test_profile_fast_up(self):
         positions = [Ustep(0), Ustep(0)]
@@ -127,7 +127,7 @@ class TestLayerProfilesSL1S(LayerProfilesBase):
         self.tilt = TiltSL1(self.mcc, self.config, self.power_led, tower, printer_model)
         self.tilt.start()
         self.layer_profiles = LayerProfilesSL1(
-                factory_file_path=self.SLAFW_DIR / "data/SL1S/default_layer_profiles.json")
+                factory_file_path=self.SLAFW_DIR / "data/SL1S/default_layer_change_profiles.json")
 
     def test_profile_fast_up(self):
         positions = [Ustep(0), Ustep(0)]

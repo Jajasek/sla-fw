@@ -10,7 +10,7 @@ from slafw.hardware.sl1.tilt_profiles import MovingProfilesTiltSL1
 from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1
 
 
-LAYER_PROFILES_DEFAULT_NAME = "default_layer_profiles.json"
+LAYER_PROFILES_DEFAULT_NAME = "default_layer_change_profiles.json"
 LAYER_PROFILES_LOCAL = defines.configDir / "profiles_layer.json"
 EXPOSURE_PROFILES_DEFAULT_NAME = "default_exposure_profiles.json"
 EXPOSURE_PROFILES_LOCAL = defines.configDir / "profiles_exposure.json"
