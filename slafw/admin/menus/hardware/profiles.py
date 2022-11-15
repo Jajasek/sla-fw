@@ -71,9 +71,9 @@ class Profiles(SafeAdminMenu):
         save_path = get_save_path()
         if save_path is None or not save_path.parent.exists():
             raise NoExternalStorage()
-        usb_remount(str(save_path))
         model_name = self._printer.hw.printer_model.name    # type: ignore[attr-defined]
         fn = f"{self._pset.name.replace(' ', '_')}-{model_name}.{get_export_file_name(self._printer.hw)}.json"
+        usb_remount(str(save_path / fn))
         self._pset.write_factory(save_path / fn, nondefault=True)
         self._control.enter(Info(self._control, headline=f"{self._pset.name.capitalize()} saved to:", text=fn))
 
