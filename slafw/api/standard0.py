@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import logging
 import functools
 import weakref
 from enum import unique, Enum
@@ -115,6 +116,7 @@ class Standard0:
     }
 
     def __init__(self, printer: Printer):
+        self._logger = logging.getLogger(__name__)
         self._last_exception: Optional[Exception] = None
         # Avoid keeping printer alive by API object. Printer object shares lifecycle with the whole application.
         self._printer: Printer = weakref.proxy(printer)
@@ -123,12 +125,10 @@ class Standard0:
         self.__info_uuid = None
         self._last_state = None
         self._printer.exception_occurred.connect(self._on_exception_changed)
-        self._printer.state_changed.connect(self._state_update)
-        self._printer.action_manager.exposure_change.connect(self._exposure_changed)
+        self._printer.state_changed.connect(self._on_state_update)
+        self._printer.action_manager.exposure_data_changed.connect(self._on_exposure_values_changed)
         self._printer.http_digest_changed.connect(self._on_http_digest_changed)
         self._printer.api_key_changed.connect(self._on_api_key_changed)
-        self._old_expo = None
-        self._last_error_or_warn = None
 
     @auto_dbus_signal
     def LastErrorOrWarn(self, value: Dict[str, Any]):
@@ -140,36 +140,26 @@ class Standard0:
     def _on_api_key_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"net_authorization": self.net_authorization}, [])
 
-    def _state_update(self, *args):  # pylint: disable=unused-argument
-
+    def _on_state_update(self, *args):  # pylint: disable=unused-argument
+        self._logger.debug("on_state_update: %s", args)
         state = self._state
         if self._last_state != state:
-            self.PropertiesChanged(self.__INTERFACE__, {"state": state.value}, [])
+            content = {"state": state.value}
+            self._logger.debug("PropertiesChanged: %s", content)
+            self.PropertiesChanged(self.__INTERFACE__, content, [])
             self._last_state = state
 
-    def _exposure_changed(self, *args):
-        """Exposure change, It might connect/disconnect a handle for property change"""
-        self._state_update(*args)
-        if id(self._old_expo) != id(self._printer.action_manager.exposure):
-            if self._old_expo:
-                self._old_expo.change.disconnect(self._exposure_values_changed)
-            self._old_expo = weakref.proxy(self._printer.action_manager.exposure)
-            self._old_expo.change.connect(self._exposure_values_changed)
-
-    def _exposure_values_changed(self, key, value):
+    def _on_exposure_values_changed(self, key, value):
         """Property value change in Exposure it should check if are warnings or errors"""
-        if key == "exception":
-            self.LastErrorOrWarn(wrap_dict_data(PrinterException.as_dict(value)))
+        self._logger.debug("on_exposure_values_changed: %s set to %s", key, value)
         if key == "warning":
             self.LastErrorOrWarn(wrap_dict_data(PrinterWarning.as_dict(value)))
-        if key =='warn_resin':
+        if key =='resin_warn':
             if value:
                 warn = ResinLow()
                 self.LastErrorOrWarn(wrap_dict_data(PrinterWarning.as_dict(warn)))
             else:
                 self.LastErrorOrWarn(wrap_dict_data(PrinterWarning.as_dict(None)))
-        if key == "last_warn":
-            self.LastErrorOrWarn(wrap_dict_data(PrinterWarning.as_dict(value)))
 
     def _on_exception_changed(self, exception: Exception):
         self.LastErrorOrWarn(wrap_dict_data(PrinterException.as_dict(exception)))
@@ -341,22 +331,22 @@ class Standard0:
         exposure = self._current_expo
         project = exposure.project
         data = {
-            "current_layer": exposure.actual_layer + 1,
+            "current_layer": exposure.data.actual_layer + 1,
             "total_layers": project.total_layers,
-            "remaining_material": exposure.remain_resin_ml if exposure.remain_resin_ml else -1,
-            "consumed_material": exposure.resin_count,
+            "remaining_material": exposure.data.resin_remain_ml if exposure.data.resin_remain_ml else -1,
+            "consumed_material": exposure.data.resin_count_ml,
             "progress": exposure.progress,
-            "estimatedPrintTime": exposure.estimated_total_time_ms / 1000,
+            "estimatedPrintTime": exposure.data.estimated_total_time_ms / 1000,
             "remaining_time": exposure.estimate_remain_time_ms() / 1000,
             "exposureTime": project.exposure_time_ms,
             "exposureTimeFirst": project.exposure_time_first_ms,
             "exposureUserProfile": project.exposure_profile_by_id,
             "path": str(project.origin_path),
         }
-        if exposure.printStartTime.microsecond == 0:
+        if exposure.data.print_start_time.microsecond == 0:
             data["time_elapsed"] = 0
         else:
-            data["time_elapsed"] = (datetime.now(tz=timezone.utc) - exposure.printStartTime).total_seconds()
+            data["time_elapsed"] = (datetime.now(tz=timezone.utc) - exposure.data.print_start_time).total_seconds()
         if project.calibrate_regions > 0:
             data["exposureTimeCalibration"] = project.calibrate_time_ms
 
@@ -412,7 +402,7 @@ class Standard0:
         :return: Project file with path
         """
         exposure = self._current_expo
-        return str(exposure.project.path)
+        return str(exposure.project.data.path)
 
     @auto_dbus
     @last_error
@@ -494,23 +484,16 @@ class Standard0:
                 last_exposure.try_cancel()
 
             # create a new exposure
-            expo = self._printer.action_manager.new_exposure(
-                self._printer.hw,
-                self._printer.exposure_image,
-                self._printer.runtime_config,
-                self._printer.exposure_profiles,
-                self._printer.layer_profiles,
-                project_path,
-            )
+            expo = self._printer.action_manager.new_exposure(self._printer.exposure_pickler, project_path)
 
             if expo.state == ExposureState.FAILURE:
-                raise expo.fatal_error
+                raise expo.data.fatal_error
 
             # start print automatically
             if auto_advance:
                 expo.confirm_print_start()
 
-            return Exposure0.dbus_path(expo.instance_id)
+            return Exposure0.dbus_path(expo.data.instance_id)
         except Exception:
             if not ignore_errors:
                 raise

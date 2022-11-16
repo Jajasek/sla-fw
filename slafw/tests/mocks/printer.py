@@ -6,28 +6,27 @@ from PySignal import Signal
 
 from slafw.configs.runtime import RuntimeConfig
 from slafw.states.printer import PrinterState
-from slafw.hardware.printer_model import PrinterModel
-from slafw.tests.mocks.hardware import HardwareMock
 from slafw.tests.mocks.network import Network
-from slafw.tests.mocks.action_manager import ActionManager
 
 
 class Printer:
     # pylint: disable = too-many-instance-attributes
-    def __init__(self, exposure):
+    def __init__(self, hw, action_manager):
         self.state_changed = Signal()
         self.http_digest_changed = Signal()
         self.api_key_changed = Signal()
         self.data_privacy_changed = Signal()
         self.exception_changed = Signal()
-        self.hw = HardwareMock(printer_model=PrinterModel.SL1)
-        self.action_manager = ActionManager(exposure)
+        self.hw = hw
+        self.action_manager = action_manager
         self.runtime_config = RuntimeConfig()
         self.unboxed_changed = Signal()
         self.self_tested_changed = Signal()
         self.mechanically_calibrated_changed = Signal()
         self.uv_calibrated_changed = Signal()
         self.inet = Network()
+        self.exception_occurred = Signal()
+        self.fatal_error_changed = Signal()
 
         self.state = PrinterState.PRINTING
         self.exception = None

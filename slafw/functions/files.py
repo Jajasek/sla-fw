@@ -14,6 +14,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
+from logging import Logger
 
 from slafw import defines, test_runtime
 from slafw.hardware.printer_model import PrinterModel
@@ -106,3 +107,14 @@ def get_export_file_name(hw: BaseHardware) -> str:
     serial = re.sub("[^a-zA-Z0-9]", "_", hw.cpuSerialNo)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return f"{serial}.{timestamp}"
+
+
+def remove_files(logger: Logger, files: list) -> None:
+    for file in files:
+        logger.debug("removing '%s'", file)
+        try:
+            file.unlink()
+        except FileNotFoundError:
+            logger.debug("No such file '%s'", file)
+        except Exception:
+            logger.exception("remove_files() exception:")

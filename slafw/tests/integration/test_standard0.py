@@ -26,7 +26,6 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
         self.printer.hw.config.fanCheck = False
         self.printer.hw.config.coverCheck = False
         self.printer.hw.config.resinSensor = False
-        self.standard = Standard0(self.printer)
 
         # dbus
         bus = SystemBus()

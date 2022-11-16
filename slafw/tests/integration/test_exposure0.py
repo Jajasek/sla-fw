@@ -105,7 +105,6 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
         self._test_home_axis()
 
     def test_home_axis_with_both(self):
-
         self.printer.hw.tilt.sync_ensure()
         self.printer.hw.tower.sync_ensure()
         self.exposure0.confirm_start()

@@ -5,7 +5,6 @@
 
 # TODO: Fix following pylint problems
 # pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-statements
 
 from __future__ import annotations
 
@@ -18,8 +17,9 @@ from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from time import time
-from typing import Optional, Collection, List, Set
+from typing import Optional, Collection, List, Set, Dict, Any
 from enum import unique, IntEnum
+from dataclasses import dataclass, asdict
 
 import pprint
 from PIL import Image
@@ -80,24 +80,40 @@ class ProjectLayer:
         elif total_height_nm < pad_thickness_nm + text_thickness_nm:
             self.calibration_type = LayerCalibrationType.LABEL_TEXT
 
+@dataclass
+class ProjectData:
+    changed: Signal
+    path: str   # When printing points to `previous-prints`
+    exposure_time_ms: int = 0
+    exposure_time_first_ms: int = 0
+    calibrate_time_ms: int = 0
+    calibrate_regions: int = 0
+    exposure_profile_id: int = 0
+
+    def __setattr__(self, key: str, value: Any):
+        object.__setattr__(self, key, value)
+        self.changed.emit(key, value)
+
+def _project_data_filter(data):
+    return dict(x for x in data if isinstance(x[1], (int, str)))
+
 
 class Project:
+    # pylint: disable=too-many-arguments
     def __init__(self,
             hw: BaseHardware,
             exposure_profiles: ExposureProfilesSL1,
             layer_profiles: LayerProfilesSL1,
-            project_file: str):
+            project_file: str,
+            changed_signal: Optional[Signal] = None):
         self.logger = logging.getLogger(__name__)
-        self.params_changed = Signal()
-        self.path_changed = Signal()
+        self.times_changed = Signal()
         self._hw = hw
         self._exposure_profiles = exposure_profiles
         self._layer_profiles = layer_profiles
         self.warnings: Set[PrinterWarning] = set()
         # Origin path: `local` or `usb`
         self.origin_path = project_file
-        # When printing points to `previous-prints`
-        self.path = project_file
         self._config = ProjectConfig()
         self.layers: List[ProjectLayer] = []
         self.total_height_nm = 0
@@ -112,14 +128,10 @@ class Project:
         self.modification_time = 0.0
         self._zf: Optional[ZipFile] = None
         self._mode_warn = True
-        self._exposure_time_ms = 0
-        self._exposure_time_first_ms = 0
+        self.data = ProjectData(changed = changed_signal if changed_signal else Signal(), path = project_file)
         self._layers_slow = 0
         self._layers_fast = 0
-        self._calibrate_time_ms = 0
         self._calibrate_time_ms_exact: List[int] = []
-        self._calibrate_regions = 0
-        self.exposure_profile: Optional[SingleExposureProfileSL1] = None
         namelist = self._read_toml_config()
         self._parse_config()
         self._build_layers_description(self._check_filenames(namelist))
@@ -129,15 +141,15 @@ class Project:
 
     def __repr__(self) -> str:
         items = {
-            'path': self.path,
+            'path': self.data.path,
             'layers': self.layers,
             'total_height_nm': self.total_height_nm,
             'layer_height_nm': self.layer_height_nm,
             'layer_height_first_nm': self.layer_height_first_nm,
             'used_material_nl': self.used_material_nl,
             'modification_time': self.modification_time,
-            'exposure_time_ms': self._exposure_time_ms,
-            'exposure_time_first_ms': self._exposure_time_first_ms,
+            'exposure_time_ms': self.data.exposure_time_ms,
+            'exposure_time_first_ms': self.data.exposure_time_first_ms,
             'layers_slow': self._layers_slow,
             'layers_fast': self._layers_fast,
             'bbox': self.bbox,
@@ -145,21 +157,21 @@ class Project:
             'calibrate_pad_spacing_px': self.calibrate_pad_spacing_px,
             'calibrate_penetration_px': self.calibrate_penetration_px,
             'calibrate_compact': self.calibrate_compact,
-            'calibrate_time_ms': self._calibrate_time_ms,
+            'calibrate_time_ms': self.data.calibrate_time_ms,
             'calibrate_time_ms_exact': self._calibrate_time_ms_exact,
-            'calibrate_regions': self._calibrate_regions,
+            'calibrate_regions': self.data.calibrate_regions,
             'exposure_profile': self.exposure_profile
             }
         pp = pprint.PrettyPrinter(width=200)
         return "Project:\n" + pp.pformat(items)
 
     def _read_toml_config(self) -> list:
-        self.logger.info("Opening project file '%s'", self.path)
-        if not Path(self.path).is_file():
-            self.logger.error("Project lookup exception: file not found: %s", self.path)
+        self.logger.info("Opening project file '%s'", self.data.path)
+        if not Path(self.data.path).is_file():
+            self.logger.error("Project lookup exception: file not found: %s", self.data.path)
             raise ProjectErrorNotFound
         try:
-            with ZipFile(self.path, "r") as zf:
+            with ZipFile(self.data.path, "r") as zf:
                 self._config.read_text(zf.read(defines.configFile).decode("utf-8"))
                 namelist = zf.namelist()
         except Exception as exception:
@@ -179,8 +191,8 @@ class Project:
     def _parse_config(self):
         # copy visible config values to project internals
         self.logger.debug(self._config)
-        self._exposure_time_ms = int(self._config.expTime * 1e3)
-        self._exposure_time_first_ms = int(self._config.expTimeFirst * 1e3)
+        self.data.exposure_time_ms = int(self._config.expTime * 1e3)
+        self.data.exposure_time_first_ms = int(self._config.expTimeFirst * 1e3)
         self._layers_slow = self._config.layersSlow
         self._layers_fast = self._config.layersFast
         if self._config.layerHeight > 0.0099:    # minimal layer height
@@ -189,9 +201,9 @@ class Project:
             # for backward compatibility: 8 mm per turn and stepNum = 40 is 0.05 mm
             self.layer_height_nm = self._hw.config.tower_microsteps_to_nm(self._config.stepnum // (self._hw.config.screwMm / 4))
         self.layer_height_first_nm = int(self._config.layerHeightFirst * 1e6)
-        self._calibrate_time_ms = int(self._config.calibrateTime * 1e3)
+        self.data.calibrate_time_ms = int(self._config.calibrateTime * 1e3)
         self._calibrate_time_ms_exact = [int(x * 1e3) for x in self._config.calibrateTimeExact]
-        self._calibrate_regions = self._config.calibrateRegions
+        self.data.calibrate_regions = self._config.calibrateRegions
         pixel_size_nm = self._hw.exposure_screen.parameters.pixel_size_nm
         self.calibrate_text_size_px = int(self._config.calibrateTextSize * 1e6 // pixel_size_nm)
         self.calibrate_pad_spacing_px = int(self._config.calibratePadSpacing * 1e6 // pixel_size_nm)
@@ -199,10 +211,10 @@ class Project:
         self.calibrate_compact = self._config.calibrateCompact
         self.used_material_nl = int(self._config.usedMaterial * 1e6)
         self.exposure_profile_by_id = self._config.expUserProfile
-        if self._calibrate_regions:
+        if self.data.calibrate_regions:
             # labels and pads consumption is ignored
-            self.used_material_nl *= self._calibrate_regions
-        if self._calibrate_time_ms_exact and len(self._calibrate_time_ms_exact) != self._calibrate_regions:
+            self.used_material_nl *= self.data.calibrate_regions
+        if self._calibrate_time_ms_exact and len(self._calibrate_time_ms_exact) != self.data.calibrate_regions:
             self.logger.error("lenght of calibrate_time_ms_exact (%d) not match calibrate_regions (%d)",
                     len(self._calibrate_time_ms_exact), self.calibrate_regions)
             raise ProjectErrorCalibrationInvalid
@@ -248,20 +260,20 @@ class Project:
 
     def _fill_layers_times(self):
         fade_layers = self._config.fadeLayers
-        time_loss = (self._exposure_time_first_ms - self._exposure_time_ms) // (fade_layers + 1)
+        time_loss = (self.data.exposure_time_first_ms - self.data.exposure_time_ms) // (fade_layers + 1)
         extra_layers = defines.exposure_time_first_extra_layers
         for i, layer in enumerate(self.layers):
             if i <= extra_layers:
-                t = self._exposure_time_first_ms
+                t = self.data.exposure_time_first_ms
             elif i <= fade_layers + extra_layers:
-                t = self._exposure_time_first_ms - (i - extra_layers) * time_loss
+                t = self.data.exposure_time_first_ms - (i - extra_layers) * time_loss
             else:
-                t = self._exposure_time_ms
-            if self._calibrate_regions:
+                t = self.data.exposure_time_ms
+            if self.data.calibrate_regions:
                 if self._calibrate_time_ms_exact:
                     layer.times_ms = self._calibrate_time_ms_exact
                 else:
-                    layer.times_ms = (t,) + (self._calibrate_time_ms,) * (self._calibrate_regions - 1)
+                    layer.times_ms = (t,) + (self.data.calibrate_time_ms,) * (self.data.calibrate_regions - 1)
             else:
                 layer.times_ms = (t,)
 
@@ -292,8 +304,8 @@ class Project:
                 # labels and pads are not counted
                 if force or not layer.consumed_resin_nl:
                     white_pixels = get_white_pixels(img.crop(layer.bbox.coords))
-                    if self._calibrate_regions:
-                        white_pixels *= self._calibrate_regions
+                    if self.data.calibrate_regions:
+                        white_pixels *= self.data.calibrate_regions
                     self.logger.debug("white_pixels: %s", white_pixels)
                     update_consumed = True
                     if white_pixels > self._hw.white_pixels_threshold:
@@ -321,76 +333,75 @@ class Project:
 
         :return: Name of the project as string
         """
-        return Path(self.path).stem
+        return Path(self.data.path).stem
 
     @property
     def exposure_time_ms(self) -> int:
-        return self._exposure_time_ms
+        return self.data.exposure_time_ms
 
     @range_checked(defines.exposure_time_min_ms, defines.exposure_time_max_ms)
     @exposure_time_ms.setter
     def exposure_time_ms(self, value: int) -> None:
-        if self._exposure_time_ms != value:
-            self._exposure_time_ms = value
+        if self.data.exposure_time_ms != value:
+            self.data.exposure_time_ms = value
             self._times_changed()
 
     @property
     def exposure_time_first_ms(self) -> int:
-        return self._exposure_time_first_ms
+        return self.data.exposure_time_first_ms
 
     @range_checked(defines.exposure_time_first_min_ms, defines.exposure_time_first_max_ms)
     @exposure_time_first_ms.setter
     def exposure_time_first_ms(self, value: int) -> None:
-        if self._exposure_time_first_ms != value:
-            self._exposure_time_first_ms = value
+        if self.data.exposure_time_first_ms != value:
+            self.data.exposure_time_first_ms = value
             self._times_changed()
-
-    # FIXME compatibility with api/standard0
-    @property
-    def exposure_time_calibrate_ms(self) -> int:
-        return self._calibrate_time_ms
 
     @property
     def calibrate_time_ms(self) -> int:
-        return self._calibrate_time_ms
+        return self.data.calibrate_time_ms
 
     @range_checked(defines.exposure_time_calibrate_min_ms, defines.exposure_time_calibrate_max_ms)
     @calibrate_time_ms.setter
     def calibrate_time_ms(self, value: int) -> None:
-        if self._calibrate_time_ms != value:
-            self._calibrate_time_ms = value
+        if self.data.calibrate_time_ms != value:
+            self.data.calibrate_time_ms = value
             self._times_changed()
 
     @property
+    def exposure_profile(self) -> SingleExposureProfileSL1:
+        return self._exposure_profiles[self.data.exposure_profile_id]
+
+    @property
     def exposure_profile_by_id(self) -> int:
-        return self.exposure_profile.idx
+        return self.data.exposure_profile_id
 
     @exposure_profile_by_id.setter
     def exposure_profile_by_id(self, value: int) -> None:
-        try:
-            self.exposure_profile = self._exposure_profiles[value]
-        except IndexError as e:
-            raise ValueError(f"Value: {value} out of range") from e
-        self.logger.info("Exposure profile set to '%s'", self.exposure_profile.name)
-        self.count_remain_time.cache_clear()
-        self.params_changed.emit()
+        if 0 <= value < len(self._exposure_profiles):
+            self.data.exposure_profile_id = value
+            self.logger.info("Exposure profile set to '%s'", self.exposure_profile.name)
+            self.count_remain_time.cache_clear()
+            self.times_changed.emit()
+        else:
+            raise ValueError(f"Value: {value} out of range")
 
     # FIXME compatibility with api/standard0
     @property
     def calibration_regions(self) -> int:
-        return self._calibrate_regions
+        return self.data.calibrate_regions
 
     @property
     def calibrate_regions(self) -> int:
-        return self._calibrate_regions
+        return self.data.calibrate_regions
 
     @calibrate_regions.setter
     def calibrate_regions(self, value: int) -> None:
         if value not in [0, 2, 4, 6, 8, 9, 10]:
             self.logger.error("calibrate_regions - value %d not in [0, 2, 4, 6, 8, 9, 10]", value)
             raise ProjectErrorCalibrationInvalid
-        if self._calibrate_regions != value:
-            self._calibrate_regions = value
+        if self.data.calibrate_regions != value:
+            self.data.calibrate_regions = value
             self._times_changed()
 
     @property
@@ -413,7 +424,7 @@ class Project:
 
     def copy_and_check(self):
         # TODO pathlib stuff
-        origin_path = os.path.normpath(self.path)
+        origin_path = os.path.normpath(self.data.path)
         (dummy, filename) = os.path.split(origin_path)
         new_source = str(defines.previousPrints / filename)
         if origin_path == new_source:
@@ -421,14 +432,13 @@ class Project:
         elif origin_path.startswith(str(defines.internalProjectPath)):
             self.logger.debug("Internal storage project, creating symlink '%s' -> '%s'", origin_path, new_source)
             os.symlink(origin_path, new_source)
-            self.path = new_source
-            self.path_changed.emit(self.path)
+            self.data.path = new_source
         else:
             statvfs = os.statvfs(defines.previousPrints.parent)
             size_available = statvfs.f_frsize * statvfs.f_bavail - defines.internalReservedSpace
             self.logger.debug("Internal storage available space: %d bytes", size_available)
             try:
-                filesize = os.path.getsize(self.path)
+                filesize = os.path.getsize(self.data.path)
                 self.logger.debug("Project size: %d bytes", filesize)
             except Exception as e:
                 self.logger.exception("filesize exception: %s", str(e))
@@ -442,15 +452,14 @@ class Project:
                     shutil.copyfile(origin_path, new_source + "~")
                     shutil.move(new_source + "~", new_source)
                     self.logger.debug("Done copying project")
-                    self.path = new_source
-                    self.path_changed.emit(self.path)
+                    self.data.path = new_source
                 except Exception as e:
                     self.logger.exception("copyfile exception: %s", str(e))
                     self.logger.warning("Can't copy the project, printing directly from USB.")
                     self.warnings.add(PrintingDirectlyFromMedia())
         try:
             self.logger.debug("Testing project file integrity")
-            with ZipFile(self.path, "r") as zf:
+            with ZipFile(self.data.path, "r") as zf:
                 badfile = zf.testzip()
             self.logger.debug("Done testing integrity")
         except Exception as e:
@@ -464,7 +473,7 @@ class Project:
     def read_image(self, filename: str):
         ''' may raise ZipFile exception '''
         self.data_open()
-        self.logger.debug("loading '%s' from '%s'", filename, self.path)
+        self.logger.debug("loading '%s' from '%s'", filename, self.data.path)
         img = Image.open(BytesIO(self._zf.read(filename)))
         if img.mode != "L":
             if self._mode_warn:
@@ -478,7 +487,7 @@ class Project:
     def data_open(self):
         ''' may raise ZipFile exception '''
         if not self._zf:
-            self._zf = ZipFile(self.path, "r")  # pylint: disable = consider-using-with
+            self._zf = ZipFile(self.data.path, "r")  # pylint: disable = consider-using-with
 
     def data_close(self):
         if self._zf:
@@ -509,25 +518,22 @@ class Project:
         self.logger.debug("time_remain_ms: %d", time_remain_ms)
         return time_remain_ms
 
-    def set_timings_reference(self, project: Project):
-        """
-        Set times from existing project without range checks
+    @property
+    def persistent_data(self) -> Dict[str, Any]:
+        return asdict(self.data, dict_factory=_project_data_filter)
 
-        Used for reprint. As we load times from projects without checking there needs to be a way how to reprint using
-        the same settings.
-        """
-        self.logger.debug("Passing exposure times for reprint: %f, %f, %f",
-                project.exposure_time_ms, project.exposure_time_first_ms, project.calibrate_time_ms)
-        self.exposure_time_ms = project.exposure_time_ms
-        self.exposure_time_first_ms = project.exposure_time_first_ms
-        self.calibrate_time_ms = project.calibrate_time_ms
-        self.exposure_profile = project.exposure_profile
+    @persistent_data.setter
+    def persistent_data(self, data: Dict[str, Any]):
+        # for inspiration: https://gist.github.com/gatopeich/1efd3e1e4269e1e98fae9983bb914f22
+        self.data = ProjectData(changed = self.data.changed, **data)
+        self._times_changed()
 
     @property
     def is_open(self):
         return self._zf and self._zf.fp
 
     def _times_changed(self):
+        self.logger.debug("For the times they are a-changin'")
         self._fill_layers_times()
         self.count_remain_time.cache_clear()
-        self.params_changed.emit()
+        self.times_changed.emit()

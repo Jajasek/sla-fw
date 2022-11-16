@@ -238,7 +238,7 @@ class Wizard0:
         self.PropertiesChanged(self.__INTERFACE__, {"identifier": self.identifier}, [])
         self.PropertiesChanged(self.__INTERFACE__, {"cancelable": self.cancelable}, [])
 
-    def _state_changed(self):
+    def _state_changed(self, _):
         self.PropertiesChanged(self.__INTERFACE__, {"state": self.state}, [])
 
     def _check_states_changed(self):

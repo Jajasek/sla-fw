@@ -8,6 +8,7 @@ from enum import unique, Enum
 
 @unique
 class ExposureState(Enum):
+    INIT = 0
     READING_DATA = 1
     CONFIRM = 2
     CHECKS = 3

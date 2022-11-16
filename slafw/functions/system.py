@@ -26,13 +26,8 @@ set_update_channel_bin = "/usr/sbin/set-update-channel.sh"
 
 
 def shut_down(hw: BaseHardware, reboot=False):
-    if test_runtime.testing:
-        print("Skipping poweroff due to testing")
-        return
-
     hw.uv_led.off()
     hw.motors_release()
-
     if reboot:
         os.system("reboot")
     else:

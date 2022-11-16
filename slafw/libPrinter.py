@@ -52,7 +52,9 @@ from slafw.functions.system import (
     set_configured_printer_model,
     set_factory_uvpwm,
     FactoryMountedRW,
-    reset_hostname, compute_uvpwm,
+    reset_hostname,
+    compute_uvpwm,
+    shut_down,
 )
 from slafw.hardware.sl1.hardware import HardwareSL1
 from slafw.hardware.printer_model import PrinterModel
@@ -62,6 +64,7 @@ from slafw.libAsync import SlicerProfileUpdater
 from slafw.libNetwork import Network
 from slafw.slicer.slicer_profile import SlicerProfile
 from slafw.state_actions.manager import ActionManager
+from slafw.states.exposure import ExposureState
 from slafw.states.printer import PrinterState
 from slafw.states.wizard import WizardState
 from slafw.wizard.data_package import fill_wizard_data_package
@@ -79,6 +82,7 @@ from slafw.exposure.profiles import (
     EXPOSURE_PROFILES_LOCAL,
     EXPOSURE_PROFILES_DEFAULT_NAME
 )
+from slafw.exposure.persistence import ExposurePickler
 
 
 class Printer:
@@ -100,8 +104,9 @@ class Printer:
         self.api_key_changed = Signal()
         self.data_privacy_changed = Signal()
         self.action_manager: ActionManager = ActionManager()
-        self.action_manager.exposure_change.connect(self._exposure_changed)
-        self.action_manager.wizard_changed.connect(self._wizard_changed)
+        self.action_manager.exposure_changed.connect(self._on_exposure_changed)
+        self.action_manager.exposure_data_changed.connect(self._on_exposure_data_changed)
+        self.action_manager.wizard_state_changed.connect(self._on_wizard_state_changed)
         self._states: Set[PrinterState] = {PrinterState.INIT}
         self._dbus_subscriptions = []
         self.unboxed_changed = Signal()
@@ -134,6 +139,7 @@ class Printer:
         self.config0_dbus = None
         self.logs0_dbus = None
         self.hw: Optional[BaseHardware] = None
+        self.exposure_pickler: Optional[ExposurePickler] = None
 
         self.logger.info("Printer initialized in %.03f seconds", monotonic() - init_time)
 
@@ -243,7 +249,8 @@ class Printer:
 
         # Past exposures
         save_all_remain_wizard_history()
-        self.action_manager.load_exposure(self.hw, self.exposure_profiles, self.layer_profiles)
+        self.exposure_pickler = ExposurePickler(fill_wizard_data_package(self))
+        self.action_manager.load_exposure(self.exposure_pickler)
 
         # Set the default exposure for tank cleaning
         if not self.hw.config.tankCleaningExposureTime:
@@ -380,12 +387,21 @@ class Printer:
         if "Operation" in changed:
             self.set_state(PrinterState.UPDATING, changed["Operation"] != "idle")
 
-    def _exposure_changed(self):
-        self.set_state(PrinterState.PRINTING, self.action_manager.exposure and not self.action_manager.exposure.done)
+    def _on_exposure_changed(self):
+        exposure = self.action_manager.exposure
+        self.set_state(PrinterState.PRINTING, exposure and not exposure.done)
 
-    def _wizard_changed(self):
-        wizard = self.action_manager.wizard
-        self.set_state(PrinterState.WIZARD, wizard and wizard.state not in WizardState.finished_states())
+    def _on_exposure_data_changed(self, key: str, value: Any):
+        self.logger.debug("on_exposure_data_changed: %s set to %s", key, value)
+        if key == "state":
+            self.set_state(PrinterState.PRINTING, value not in ExposureState.finished_states())
+            # save & power off
+            if self.hw.config.autoOff and value == ExposureState.FINISHED:
+                self.exposure_pickler.save(self.action_manager.exposure)
+                shut_down(self.hw)
+
+    def _on_wizard_state_changed(self, state: WizardState):
+        self.set_state(PrinterState.WIZARD, state not in WizardState.finished_states())
 
     @property
     def id(self) -> str:
@@ -479,13 +495,7 @@ class Printer:
                 last_exposure = self.action_manager.exposure
                 if last_exposure:
                     last_exposure.try_cancel()
-                self.action_manager.new_exposure(
-                        self.hw,
-                        self.exposure_image,
-                        self.runtime_config,
-                        self.exposure_profiles,
-                        self.layer_profiles,
-                        path)
+                self.action_manager.new_exposure(self.exposure_pickler, path)
         except (NotUVCalibrated, NotMechanicallyCalibrated):
             self.run_make_ready_to_print()
         except Exception:

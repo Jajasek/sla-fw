@@ -7,49 +7,53 @@ from datetime import datetime, timedelta
 from PySignal import Signal
 
 from slafw.states.exposure import ExposureState, ExposureCheck, ExposureCheckResult
+from slafw.exposure.exposure import ExposureData
 from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.mocks.hardware import HardwareMock
 from slafw.tests.mocks.project import Project
 
 
+
 class Exposure:
-    # pylint: disable = too-many-instance-attributes
     def __init__(self):
-        self.state = ExposureState.PRINTING
-        self.instance_id = 1
-        self.change = Signal()
+        exposure_end = datetime.utcnow() + timedelta(hours=10)
+        self.data = ExposureData(
+                changed = Signal(),
+                instance_id = 1,
+                state = ExposureState.PRINTING,
+                actual_layer = 42,
+                resin_count_ml = 4,
+                resin_remain_ml = 142,
+                resin_warn = False,
+                resin_low = False,
+                remaining_wait_sec = 4242,
+                estimated_total_time_ms = 123456,
+                print_start_time = datetime.utcnow(),
+                print_end_time = exposure_end,
+                exposure_end = exposure_end,
+                check_results = {
+                    ExposureCheck.FAN: ExposureCheckResult.RUNNING,
+                    ExposureCheck.PROJECT: ExposureCheckResult.RUNNING,
+                    ExposureCheck.RESIN: ExposureCheckResult.SCHEDULED,
+                    ExposureCheck.COVER: ExposureCheckResult.DISABLED,
+                    ExposureCheck.START_POSITIONS: ExposureCheckResult.SUCCESS,
+                },
+                warning = None,
+        )
         self.hw = HardwareMock(printer_model=PrinterModel.SL1)
         self.project = Project()
         self.progress = 0
-        self.exception = None
-        self.low_resin = False
         self.resin_volume = 42
-        self.remain_resin_ml = 142
-        self.resin_count = 4
-        self.warn_resin = False
-        self.estimated_total_time_ms = 123456
-        self.actual_layer = 42
-        self.remaining_wait_sec = 4242
-        self.printStartTime = datetime.utcnow()
-        self.printEndTime = datetime.utcnow() + timedelta(hours=10)
         self.tower_position_nm = 424242
-        self.warning = None
-        self.exposure_end = self.printEndTime
-        self.check_results = {
-            ExposureCheck.FAN: ExposureCheckResult.RUNNING,
-            ExposureCheck.PROJECT: ExposureCheckResult.RUNNING,
-            ExposureCheck.RESIN: ExposureCheckResult.SCHEDULED,
-            ExposureCheck.COVER: ExposureCheckResult.DISABLED,
-            ExposureCheck.START_POSITIONS: ExposureCheckResult.SUCCESS,
-        }
+        self.warning_occurred = Signal()
 
     def expected_finish_timestamp(self):
         return datetime.utcnow() + timedelta(milliseconds=self.estimate_remain_time_ms())
 
     def estimate_remain_time_ms(self):
-        return self.project.exposure_time_ms * (self.project.total_layers - self.actual_layer)
+        return self.project.data.exposure_time_ms * (self.project.total_layers - self.data.actual_layer)
 
     def set_state(self, state):
-        self.state = state
-        self.change.emit("state", state)
-        self.change.emit("check_results", self.check_results)
+        self.data.state = state
+        self.data.changed.emit("state", state)
+        self.data.changed.emit("check_results", self.data.check_results)

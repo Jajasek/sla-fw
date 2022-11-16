@@ -103,7 +103,7 @@ class Wizard(Thread, UserActionBroker):
     def state(self, value: WizardState):
         if value != self.__state:
             self.__state = value
-            self.state_changed.emit()
+            self.state_changed.emit(value)
 
     @property
     def cancelable(self):

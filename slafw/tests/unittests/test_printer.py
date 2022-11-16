@@ -2,14 +2,17 @@
 # Copyright (C) 2021-2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from time import sleep
 from unittest.mock import Mock
 from unittest.mock import patch
 
 from slafw.errors.errors import UnknownPrinterModel
 from slafw.hardware.printer_model import PrinterModel
 from slafw.libPrinter import Printer
+from slafw.states.exposure import ExposureState
 from slafw.states.printer import PrinterState
 from slafw.tests.base import RefCheckTestCase, SlafwTestCaseDBus
+from slafw.exposure.persistence import LAST_PROJECT_DATA
 
 
 @patch("slafw.hardware.printer_model.PrinterModel.detect_model", Mock(return_value=PrinterModel.SL1))
@@ -98,3 +101,26 @@ class TestPrinter(SlafwTestCaseDBus, RefCheckTestCase):
         self_tested_callback.assert_called_once()
         mechanically_calibrated_callback.assert_called_once()
         uv_calibrated_callback.assert_called_once()
+
+    @patch("slafw.functions.system.os")
+    def test_finish_poweroff(self, os_mock):
+        self.printer.hw.config.calibrated = True
+        self.printer.hw.config.uvPwm = 208
+        self.printer.action_manager.new_exposure(self.printer.exposure_pickler, str(self.SAMPLES_DIR / "numbers.sl1"))
+        sleep(.1)
+        self.printer.action_manager.exposure.state = ExposureState.FINISHED
+        sleep(.1)
+        os_mock.system.assert_called_once_with("poweroff")
+        self.assertTrue((self.TEMP_DIR / LAST_PROJECT_DATA.name).is_file())
+        self.printer.exposure_pickler.cleanup_last_data()
+
+    @patch("slafw.functions.system.os")
+    def test_finish_nopoweroff(self, os_mock):
+        self.printer.hw.config.calibrated = True
+        self.printer.hw.config.uvPwm = 208
+        self.printer.action_manager.new_exposure(self.printer.exposure_pickler, str(self.SAMPLES_DIR / "numbers.sl1"))
+        sleep(.1)
+        self.printer.action_manager.exposure.state = ExposureState.CANCELED
+        sleep(.1)
+        os_mock.system.assert_not_called()
+        self.assertFalse((self.TEMP_DIR / LAST_PROJECT_DATA.name).is_file())

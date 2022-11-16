@@ -22,8 +22,8 @@ class WizardDataPackage:
     config_writers: Any = None
     runtime_config: RuntimeConfig = None
     exposure_image: ExposureImage = None
-    layer_profiles: LayerProfilesSL1 = None
     exposure_profiles: ExposureProfilesSL1 = None
+    layer_profiles: LayerProfilesSL1 = None
 
 
 def fill_wizard_data_package(printer) -> WizardDataPackage:

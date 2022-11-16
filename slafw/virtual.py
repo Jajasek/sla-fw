@@ -45,12 +45,7 @@ from slafw.tests.mocks.wayland import WaylandMock
 from slafw.hardware.sl1.tilt_profiles import TILT_CFG_LOCAL
 from slafw.hardware.sl1.tower_profiles import TOWER_CFG_LOCAL
 from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL
-from slafw.exposure.persistance import (
-    LAST_PROJECT_HW_CONFIG,
-    LAST_PROJECT_FACTORY_FILE,
-    LAST_PROJECT_CONFIG_FILE,
-    LAST_PROJECT_PICKLER,
-)
+from slafw.exposure.persistence import LAST_PROJECT_DATA
 from slafw.states.printer import PrinterState
 
 # gitlab CI job creates model folder in different location due to restricted permissions in Docker container
@@ -105,11 +100,7 @@ class Virtual:
             patch("slafw.hardware.sl1.hardware.Booster", BoosterMock),
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.temp / TILT_CFG_LOCAL.name),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.temp / TOWER_CFG_LOCAL.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_HW_CONFIG", self.temp / LAST_PROJECT_HW_CONFIG.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_FACTORY_FILE", self.temp / LAST_PROJECT_FACTORY_FILE.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_CONFIG_FILE", self.temp / LAST_PROJECT_CONFIG_FILE.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_PICKLER", self.temp / LAST_PROJECT_PICKLER.name),
-            patch("slafw.exposure.exposure.LAST_PROJECT_PICKLER", self.temp / LAST_PROJECT_PICKLER.name),
+            patch("slafw.exposure.persistence.LAST_PROJECT_DATA", self.temp / LAST_PROJECT_DATA.name),
             patch("slafw.exposure.profiles.LAYER_PROFILES_LOCAL", self.temp / LAYER_PROFILES_LOCAL.name),
             patch("slafw.exposure.profiles.EXPOSURE_PROFILES_LOCAL", self.temp / EXPOSURE_PROFILES_LOCAL.name),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", SAMPLES_DIR / "cputemp"),
@@ -146,7 +137,8 @@ class Virtual:
             patch("slafw.wizard.checks.factory_reset.ResetHttpDigest.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetTouchUI.reset_task_run", Mock()),
-            patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock())
+            patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock()),
+            patch("slafw.functions.system.os", Mock()),
         ]
 
         if not os.environ.get("WAYLAND_DISPLAY") or printer_model != PrinterModel.VIRTUAL:

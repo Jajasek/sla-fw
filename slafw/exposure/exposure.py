@@ -6,7 +6,6 @@
 
 # TODO: Fix following pylint problems
 # pylint: disable=too-many-lines
-# pylint: disable=too-many-arguments
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
@@ -24,12 +23,12 @@ from abc import abstractmethod
 from asyncio import CancelledError, Task
 from datetime import datetime, timedelta, timezone
 from hashlib import md5
-from logging import Logger
 from queue import Queue, Empty
 from threading import Thread, Event, Lock
 from time import sleep, monotonic_ns
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Dict
 from weakref import WeakMethod
+from dataclasses import dataclass, field, asdict
 
 import psutil
 from PySignal import Signal
@@ -37,7 +36,6 @@ from PySignal import Signal
 from slafw import defines, test_runtime
 from slafw.api.devices import HardwareDeviceId
 from slafw.configs.unit import Nm
-from slafw.configs.runtime import RuntimeConfig
 from slafw.configs.stats import TomlConfigStats
 from slafw.errors import tests
 from slafw.errors.errors import (
@@ -55,21 +53,14 @@ from slafw.errors.errors import (
     FanFailed,
 )
 from slafw.errors.warnings import AmbientTooHot, AmbientTooCold, ResinNotEnough, PrinterWarning, ExpectOverheating
-from slafw.exposure.persistance import (
-    ExposurePickler,
-    ExposureUnpickler,
-    cleanup_last_data,
-    LAST_PROJECT_PICKLER,
-)
-from slafw.functions.system import shut_down
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.functions.files import remove_files
 from slafw.hardware.power_led_action import WarningAction, ErrorAction
-from slafw.image.exposure_image import ExposureImage
 from slafw.project.functions import check_ready_to_print
 from slafw.project.project import Project
 from slafw.states.exposure import ExposureState, ExposureCheck, ExposureCheckResult
 from slafw.utils.traceable_collections import TraceableDict
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1, SingleLayerProfileSL1
+from slafw.exposure.profiles import SingleLayerProfileSL1
+from slafw.wizard.data_package import WizardDataPackage
 
 
 class ExposureCheckRunner:
@@ -81,21 +72,21 @@ class ExposureCheckRunner:
 
     async def start(self):
         self.logger.info("Running: %s", self.check_type)
-        self.expo.check_results[self.check_type] = ExposureCheckResult.RUNNING
+        self.expo.data.check_results[self.check_type] = ExposureCheckResult.RUNNING
         try:
             await self.run()
             if self.warnings:
                 self.logger.warning("Check warnings: %s", self.warnings)
-                self.expo.check_results[self.check_type] = ExposureCheckResult.WARNING
+                self.expo.data.check_results[self.check_type] = ExposureCheckResult.WARNING
             else:
                 self.logger.info("Success: %s", self.check_type)
-                self.expo.check_results[self.check_type] = ExposureCheckResult.SUCCESS
+                self.expo.data.check_results[self.check_type] = ExposureCheckResult.SUCCESS
         except ExposureCheckDisabled:
             self.logger.info("Disabled: %s", self.check_type)
-            self.expo.check_results[self.check_type] = ExposureCheckResult.DISABLED
+            self.expo.data.check_results[self.check_type] = ExposureCheckResult.DISABLED
         except Exception:
             self.logger.exception("Exception: %s", self.check_type)
-            self.expo.check_results[self.check_type] = ExposureCheckResult.FAILURE
+            self.expo.data.check_results[self.check_type] = ExposureCheckResult.FAILURE
             raise
 
     def raise_warning(self, warning):
@@ -152,8 +143,9 @@ class ProjectDataCheck(ExposureCheckRunner):
 
     async def run(self):
         await asyncio.sleep(0)
-        self.logger.debug("Running disk cleanup")
-        self.expo.check_and_clean_last_data()
+        if Path(self.expo.project.data.path).parent != defines.previousPrints:
+            self.logger.debug("Running disk cleanup")
+            remove_files(self.logger, list(defines.previousPrints.glob("*")))
         await asyncio.sleep(0)
         self.logger.debug("Running project copy and check")
         self.expo.project.copy_and_check()
@@ -187,13 +179,13 @@ class FansCheck(ExposureCheckRunner):
         self.logger.info("Checking fan errors")
         if not defines.fan_check_override:
             if self.expo.hw.uv_led_fan.error:
-                self.expo.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
+                self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
                 raise FanFailed(HardwareDeviceId.UV_LED_FAN.value)
             if self.expo.hw.blower_fan.error:
-                self.expo.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
+                self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
                 raise FanFailed(HardwareDeviceId.BLOWER_FAN.value)
             if self.expo.hw.rear_fan.error:
-                self.expo.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
+                self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
                 raise FanFailed(HardwareDeviceId.REAR_FAN.value)
         self.logger.info("Fans OK")
 
@@ -281,49 +273,51 @@ class StirringCheck(ExposureCheckRunner):
         await self.expo.hw.tilt.stir_resin_async(self.expo.actual_layer_profile)
 
 
+@dataclass
+class ExposureData:
+    changed: Signal
+    instance_id: int
+    state: ExposureState = ExposureState.INIT
+    actual_layer: int = 0
+    resin_count_ml: float = 0.0
+    resin_remain_ml: Optional[float] = None
+    resin_warn: bool = False
+    resin_low: bool = False
+    remaining_wait_sec: int = 0
+    estimated_total_time_ms: int = -1
+    print_start_time: datetime = datetime.now(tz=timezone.utc)
+    print_end_time: datetime = datetime.fromtimestamp(0, tz=timezone.utc)
+    exposure_end: Optional[datetime] = None
+    check_results: TraceableDict = field(default_factory=TraceableDict)
+    warning: Optional[Warning] = None  # Current preprint warning
+    fatal_error: Optional[Exception] = None
+
+    def __setattr__(self, key: str, value: Any):
+        object.__setattr__(self, key, value)
+        self.changed.emit(key, value)
+
+def _exposure_data_filter(data):
+    return dict(x for x in data if isinstance(x[1], (int, float, datetime, ExposureState)))
+
+
 class Exposure:
-    def __init__(
-        self,
-        job_id: int,
-        hw: BaseHardware,
-        exposure_image: ExposureImage,
-        runtime_config: RuntimeConfig,
-        exposure_profiles: ExposureProfilesSL1,
-        layer_profiles: LayerProfilesSL1,
-    ):
-        self.change = Signal()
+    def __init__(self, job_id: int, package: WizardDataPackage, changed_signal: Optional[Signal] = None):
         self.logger = logging.getLogger(__name__)
-        self.runtime_config = runtime_config
         self.project: Optional[Project] = None
-        self.hw = hw
-        self.exposure_image = weakref.proxy(exposure_image)
-        self.exposure_profiles = exposure_profiles
-        self.layer_profiles = layer_profiles
-        self.resin_count = 0.0
+        self.hw = package.hw
+        self.exposure_image = package.exposure_image
+        self.exposure_profiles = package.exposure_profiles
+        self.layer_profiles = package.layer_profiles
+        self.data = ExposureData(changed = changed_signal if changed_signal else Signal(), instance_id = job_id)
         self.resin_volume = None
         self.tower_position_nm = self.hw.tower.minimal_position
-        self.actual_layer = 0
         self.slow_layers_done = 0
-        self.printStartTime = datetime.now(tz=timezone.utc)
-        self.printEndTime = datetime.fromtimestamp(0, tz=timezone.utc)
-        self.state = ExposureState.READING_DATA
-        self.remaining_wait_sec = 0
-        self.low_resin = False
-        self.warn_resin = False
-        self.remain_resin_ml: Optional[float] = None
-        self.exposure_end: Optional[datetime] = None
-        self.instance_id = job_id
-        self.check_results = TraceableDict()
-        self.check_results.changed.connect(self._on_check_result_change)
-        self.fatal_error: Optional[Exception] = None
         self.warning_occurred = Signal()  # Generic warning has been issued
-        self.warning: Optional[Warning] = None  # Current preprint warning
         self.canceled = False
         self.commands: Queue[str] = Queue()  # pylint: disable=unsubscriptable-object
         self.warning_dismissed = Event()
         self.warning_result: Optional[Exception] = None
         self.pending_warning = Lock()
-        self.estimated_total_time_ms = -1
         weak_run = WeakMethod(self.run)
         self._thread = Thread(target=lambda: weak_run()())  # pylint: disable = unnecessary-lambda
         self._large_fill_remain_nm: int = 0
@@ -332,33 +326,39 @@ class Exposure:
         self.hw.rear_fan.error_changed.connect(self._on_rear_fan_error)
         self._checks_task: Optional[Task] = None
         self.actual_layer_profile: Optional[SingleLayerProfileSL1] = None
+        # this not working in ExposureData
+        self.data.check_results.changed.connect(self._on_check_result_change)
+
+    def _on_check_result_change(self):
+        self.data.changed.emit("check_results", self.data.check_results)
 
     def read_project(self, project_file: str):
+        self.state = ExposureState.READING_DATA
         check_ready_to_print(self.hw.config, self.hw.uv_led.parameters)
         try:
-            # Read project
-            self.project = Project(self.hw, self.exposure_profiles, self.layer_profiles, project_file)
-            self.estimated_total_time_ms = self.estimate_total_time_ms()
+            # read project
+            self.project = Project(
+                    self.hw,
+                    self.exposure_profiles,
+                    self.layer_profiles,
+                    project_file,
+                    self.data.changed)
+            self.data.estimated_total_time_ms = self.estimate_total_time_ms()
             self.state = ExposureState.CONFIRM
-            # Signal project change on its parameter change. This lets Exposure0 emit
-            # property changed on properties bound to project parameters.
-            self.project.params_changed.connect(self._on_project_changed)
+            # recompute estimetad time after project times change
+            self.project.times_changed.connect(self._on_times_changed)
         except ExposureError as exception:
-            self.logger.exception("Exposure init exception")
-            self.fatal_error = exception
+            self.logger.exception("Exposure read_project exception")
+            self.data.fatal_error = exception
             self.state = ExposureState.FAILURE
             self.hw.uv_led.off()
             self.hw.stop_fans()
             self.hw.motors_release()
             raise
-        self.logger.info("Created new exposure object id: %s", self.instance_id)
+        self.logger.info("Readed project '%s'", project_file)
 
-    def _on_check_result_change(self):
-        self.change.emit("check_results", self.check_results)
-
-    def _on_project_changed(self):
-        self.estimated_total_time_ms = self.estimate_total_time_ms()
-        self.change.emit("project", None)
+    def _on_times_changed(self):
+        self.data.estimated_total_time_ms = self.estimate_total_time_ms()
 
     def confirm_print_start(self):
         self._thread.start()
@@ -373,7 +373,7 @@ class Exposure:
 
     def reject_print_warning(self):
         self.logger.info("User rejected print due to warnings")
-        self.warning_result = WarningEscalation(self.warning)
+        self.warning_result = WarningEscalation(self.data.warning)
         self.warning_dismissed.set()
 
     def cancel(self):
@@ -392,7 +392,6 @@ class Exposure:
             # Exposure thread not yet running (cancel before start)
             self.logger.info("Canceling not started exposure")
             self.state = ExposureState.DONE
-            self.write_last_exposure()
 
     def try_cancel(self):
         self.logger.info("Trying cancel exposure")
@@ -404,21 +403,9 @@ class Exposure:
             raise NotAvailableInState(self.state, cancelable_states)
         return True
 
-    def __setattr__(self, key: str, value: Any):
-        # TODO: This is too generic
-        # Would be better to have properties for all important attributes with separate signals
-        # Or to separate important attributes to another object
-
-        if key == "state" and hasattr(self, "state"):
-            self.logger.info("State changed: %s -> %s", self.state, value)
-
-        object.__setattr__(self, key, value)
-        if not key.startswith("_"):
-            self.change.emit(key, value)
-
     def startProject(self):
-        self.actual_layer = 0
-        self.resin_count = 0.0
+        self.data.actual_layer = 0
+        self.data.resin_count_ml = 0.0
         self.slow_layers_done = 0
         self.exposure_image.new_project(self.project)
         self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.large_fill_layer_profile]
@@ -450,8 +437,17 @@ class Exposure:
         if self.state == ExposureState.FINISHED:
             return 1
 
-        completed_layers = self.actual_layer - 1 if self.actual_layer else 0
+        completed_layers = self.data.actual_layer - 1 if self.data.actual_layer else 0
         return completed_layers / self.project.total_layers
+
+    @property
+    def state(self) -> ExposureState:
+        return self.data.state
+
+    @state.setter
+    def state(self, state: ExposureState):
+        self.logger.info("State changed: %s -> %s", self.data.state, state)
+        self.data.state = state
 
     def waitDone(self):
         if self._thread:
@@ -481,8 +477,8 @@ class Exposure:
         if volume is None:
             self.resin_volume = None
         else:
-            self.resin_volume = volume + int(self.resin_count)
-            self.remain_resin_ml = volume
+            self.resin_volume = volume + int(self.data.resin_count_ml)
+            self.data.resin_remain_ml = volume
 
     def estimate_total_time_ms(self):
         if self.project:
@@ -492,7 +488,7 @@ class Exposure:
 
     def estimate_remain_time_ms(self) -> int:
         if self.project:
-            return self.project.count_remain_time(self.actual_layer, self.slow_layers_done)
+            return self.project.count_remain_time(self.data.actual_layer, self.slow_layers_done)
         self.logger.warning("No active project to get remaining time")
         return -1
 
@@ -504,36 +500,6 @@ class Exposure:
         """
         end = datetime.now(tz=timezone.utc) + timedelta(milliseconds=self.estimate_remain_time_ms())
         return end.timestamp()
-
-    def write_last_exposure(self):
-        if self.hw.config.autoOff and not self.canceled:
-            self.save()
-
-    def save(self):
-        self.logger.debug("Storing Exposure data")
-        with open(LAST_PROJECT_PICKLER, "wb") as pickle_io:
-            ExposurePickler(pickle_io).dump(self)
-
-    @staticmethod
-    def load(
-            logger: Logger,
-            hw: BaseHardware,
-            exposure_profiles: ExposureProfilesSL1,
-            layer_profiles: LayerProfilesSL1) -> Optional[Exposure]:
-        try:
-            with open(LAST_PROJECT_PICKLER, "rb") as pickle_io:
-                exposure = ExposureUnpickler(pickle_io, hw, exposure_profiles, layer_profiles).load()
-                logger.info("Loading the last printed project: %s", exposure.project)
-                return exposure
-        except FileNotFoundError:
-            logger.info("Last exposure data not present")
-        except Exception:
-            logger.exception("Last exposure data failed to load!")
-        return None
-
-    def check_and_clean_last_data(self) -> None:
-        clear_all = self.project.path and Path(self.project.path).parent != defines.previousPrints
-        cleanup_last_data(self.logger, clear_all=clear_all)
 
     def stats_seen(self):
         self.state = ExposureState.DONE
@@ -584,8 +550,8 @@ class Exposure:
         self.exposure_image.blit_image()
 
         exp_time_ms = sum(times_ms)
-        self.exposure_end = datetime.now(tz=timezone.utc) + timedelta(seconds=exp_time_ms / 1e3)
-        self.logger.info("Exposure started: %d ms, end: %s", exp_time_ms, self.exposure_end)
+        self.data.exposure_end = datetime.now(tz=timezone.utc) + timedelta(seconds=exp_time_ms / 1e3)
+        self.logger.info("Exposure started: %d ms, end: %s", exp_time_ms, self.data.exposure_end)
 
         if len(times_ms) == 1:
             self._exposure_simple(times_ms)
@@ -593,7 +559,7 @@ class Exposure:
             self._exposure_calibration(times_ms)
 
         self.logger.info("Exposure done")
-        self.exposure_image.preload_image(self.actual_layer + 1)
+        self.exposure_image.preload_image(self.data.actual_layer + 1)
 
         delay_after = int(self.actual_layer_profile.delay_after_exposure_ms)
         if delay_after:
@@ -613,9 +579,9 @@ class Exposure:
             self.logger.debug("large_fill forced by height, remain[nm]: %d", self._large_fill_remain_nm)
 
         # Force large fill on first layers
-        if self.actual_layer < self.project.first_slow_layers:
+        if self.data.actual_layer < self.project.first_slow_layers:
             self.logger.debug("large_fill forced by first layers, %d/%d",
-                    self.actual_layer + 1, self.project.first_slow_layers)
+                    self.data.actual_layer + 1, self.project.first_slow_layers)
             large_fill = True
 
         if large_fill:
@@ -643,7 +609,7 @@ class Exposure:
             self.state = ExposureState.WAITING
             for sec in range(self.hw.config.up_and_down_wait):
                 cnt = self.hw.config.up_and_down_wait - sec
-                self.remaining_wait_sec = cnt
+                self.data.remaining_wait_sec = cnt
                 sleep(1)
                 if self.hw.config.coverCheck and not self.hw.isCoverClosed():
                     self.state = ExposureState.COVER_OPEN
@@ -755,7 +721,7 @@ class Exposure:
         except (Exception, CancelledError) as exception:
             self.logger.exception("Exposure thread exception")
             if not isinstance(exception, CancelledError):
-                self.fatal_error = exception
+                self.data.fatal_error = exception
             if not isinstance(exception, (TiltFailed, TowerFailed)):
                 self._final_go_up()
             if isinstance(exception, (WarningEscalation, CancelledError)):
@@ -771,14 +737,14 @@ class Exposure:
         self.logger.warning("Warning being raised in pre-print: %s", type(warning))
         with self.pending_warning:
             self.warning_result = None
-            self.warning = warning
+            self.data.warning = warning
             old_state = self.state
             self.state = ExposureState.CHECK_WARNING
             self.warning_dismissed.clear()
             self.logger.debug("Waiting for warning resolution")
             self.warning_dismissed.wait()
             self.logger.debug("Warnings resolved")
-            self.warning = None
+            self.data.warning = None
             self.state = old_state
             if self.warning_result:
                 raise self.warning_result  # pylint: disable = raising-bad-type
@@ -797,7 +763,7 @@ class Exposure:
         self.state = ExposureState.CHECKS
         self.logger.info("Running pre-print checks")
         for check in ExposureCheck:
-            self.check_results.update({check: ExposureCheckResult.SCHEDULED})
+            self.data.check_results.update({check: ExposureCheckResult.SCHEDULED})
 
         with WarningAction(self.hw.power_led):
             await asyncio.gather(FansCheck(self).start(), TempsCheck(self).start(), ProjectDataCheck(self).start())
@@ -812,7 +778,7 @@ class Exposure:
 
         self.logger.info("Running exposure")
         self.state = ExposureState.PRINTING
-        self.printStartTime = datetime.now(tz=timezone.utc)
+        self.data.print_start_time = datetime.now(tz=timezone.utc)
         statistics = TomlConfigStats(defines.statsData, self.hw)
         statistics.load()
         statistics["started_projects"] += 1
@@ -825,7 +791,7 @@ class Exposure:
         exposure_compensation = 0
 
         with WarningAction(self.hw.power_led):
-            while self.actual_layer < project.total_layers:
+            while self.data.actual_layer < project.total_layers:
                 try:
                     command = self.commands.get_nowait()
                 except Empty:
@@ -856,10 +822,10 @@ class Exposure:
                 if self.resin_volume:
                     self._update_resin()
 
-                if command == "feedme" or self.low_resin:
+                if command == "feedme" or self.data.resin_low:
                     with ErrorAction(self.hw.power_led):
                         self.state = ExposureState.FEED_ME
-                        sub_command = self.doWait(self.low_resin)
+                        sub_command = self.doWait(self.data.resin_low)
 
                         if sub_command == "continue":
                             # update resin volume
@@ -879,14 +845,14 @@ class Exposure:
 
                 if (
                     self.hw.config.up_and_down_every_layer
-                    and self.actual_layer
-                    and not self.actual_layer % self.hw.config.up_and_down_every_layer
+                    and self.data.actual_layer
+                    and not self.data.actual_layer % self.hw.config.up_and_down_every_layer
                 ):
                     self.doUpAndDown()
                     was_stirring = True
                     exposure_compensation = self.hw.config.upAndDownExpoComp * 100
 
-                layer = project.layers[self.actual_layer]
+                layer = project.layers[self.data.actual_layer]
 
                 self.logger.info(
                     "Layer started » {"
@@ -901,28 +867,28 @@ class Exposure:
                     " 'RAM': '%.1f%%',"
                     " 'CPU': '%.1f%%'"
                     " }",
-                    self.actual_layer + 1,
+                    self.data.actual_layer + 1,
                     project.total_layers,
                     layer.image.replace(project.name, project_hash),
                     str(layer.times_ms),
                     self.slow_layers_done,
                     int(self.tower_position_nm - self.hw.config.calib_tower_offset_nm) / 1e6,
                     project.total_height_nm / 1e6,
-                    int(round((datetime.now(tz=timezone.utc) - self.printStartTime).total_seconds() / 60)),
+                    int(round((datetime.now(tz=timezone.utc) - self.data.print_start_time).total_seconds() / 60)),
                     self.estimate_remain_time_ms(),
-                    self.resin_count,
-                    self.remain_resin_ml if self.remain_resin_ml else -1,
+                    self.data.resin_count_ml,
+                    self.data.resin_remain_ml if self.data.resin_remain_ml else -1,
                     psutil.virtual_memory().percent,
                     psutil.cpu_percent(),
                 )
 
                 times_ms = list(layer.times_ms)
                 times_ms[0] += exposure_compensation
-                last_layer = self.actual_layer + 1 == project.total_layers
+                last_layer = self.data.actual_layer + 1 == project.total_layers
 
                 # _do_frame() will move tower to NEXT layer
                 if not last_layer:
-                    self.tower_position_nm += Nm(project.layers[self.actual_layer + 1].height_nm)
+                    self.tower_position_nm += Nm(project.layers[self.data.actual_layer + 1].height_nm)
 
                 success, white_pixels = self._do_frame(times_ms, was_stirring, layer.height_nm, last_layer)
                 if not success:
@@ -933,13 +899,13 @@ class Exposure:
                 exposure_compensation = 0
 
                 # /1e21 (1e7 ** 3) - we want cm3 (=ml) not nm3
-                self.resin_count += (
+                self.data.resin_count_ml += (
                     white_pixels * self.hw.exposure_screen.parameters.pixel_size_nm ** 2 * layer.height_nm / 1e21
                 )
-                self.logger.debug("resin_count: %f", self.resin_count)
+                self.logger.debug("resin_count_ml: %f", self.data.resin_count_ml)
 
-                seconds = (datetime.now(tz=timezone.utc) - self.printStartTime).total_seconds()
-                self.actual_layer += 1
+                seconds = (datetime.now(tz=timezone.utc) - self.data.print_start_time).total_seconds()
+                self.data.actual_layer += 1
 
         if self.canceled:
             self.hw.tilt.layer_down_wait(self.actual_layer_profile)
@@ -949,12 +915,12 @@ class Exposure:
         is_finished = not self.canceled
         if is_finished:
             statistics["finished_projects"] += 1
-        statistics["layers"] += self.actual_layer
+        statistics["layers"] += self.data.actual_layer
         statistics["total_seconds"] += seconds
-        statistics["total_resin"] += self.resin_count
+        statistics["total_resin"] += self.data.resin_count_ml
         statistics.save_raw()
         exposure_times = (
-            f"{project.exposure_time_first_ms:d}/{project.exposure_time_ms:d}/{project.exposure_time_calibrate_ms:d} s"
+            f"{project.exposure_time_first_ms:d}/{project.exposure_time_ms:d}/{project.calibrate_time_ms:d} s"
         )
         self.logger.info(
             "Job finished » { 'job': %d, 'project': '%s', 'finished': %s, "
@@ -964,35 +930,23 @@ class Exposure:
             project_hash[:-1],
             is_finished,
             self.hw.config.autoOff,
-            self.actual_layer,
+            self.data.actual_layer,
             project.total_layers,
             seconds,
-            self.resin_count,
-            self.remain_resin_ml if self.remain_resin_ml else -1,
+            self.data.resin_count_ml,
+            self.data.resin_remain_ml if self.data.resin_remain_ml else -1,
             exposure_times,
             int(self.tower_position_nm - self.hw.config.calib_tower_offset_nm) / 1e6,
         )
-
         self.exposure_image.save_display_usage()
-
-        if self.canceled:
-            self.state = ExposureState.CANCELED
-        else:
-            self.state = ExposureState.FINISHED
-
         self._print_end_hw_off()
-        self.write_last_exposure()
-
-        if not self.canceled:
-            if self.hw.config.autoOff:
-                shut_down(self.hw)
-
+        self.state = ExposureState.CANCELED if self.canceled else ExposureState.FINISHED
         self.logger.debug("Exposure ended")
 
     def _update_resin(self):
-        self.remain_resin_ml = self.resin_volume - self.resin_count
-        self.warn_resin = self.remain_resin_ml < defines.resinLowWarn
-        self.low_resin = self.remain_resin_ml < defines.resinFeedWait
+        self.data.resin_remain_ml = self.resin_volume - self.data.resin_count_ml
+        self.data.resin_warn = self.data.resin_remain_ml < defines.resinLowWarn
+        self.data.resin_low = self.data.resin_remain_ml < defines.resinFeedWait
 
     def _wait_cover_close(self) -> bool:
         """
@@ -1029,7 +983,7 @@ class Exposure:
         self.hw.exposure_screen.stop_counting_usage()
         self.hw.uv_led.save_usage()
         # TODO: Save also display statistics once we have display component
-        self.printEndTime = datetime.now(tz=timezone.utc)
+        self.data.print_end_time = datetime.now(tz=timezone.utc)
 
     def _on_uv_led_fan_error(self, error: bool):
         if error:
@@ -1051,3 +1005,11 @@ class Exposure:
         exception = tests.get_instance_by_code(code)
         self.logger.info("Injecting exception %s", exception)
         self.warning_occurred.emit(exception)
+
+    @property
+    def persistent_data(self) -> Dict[str, Any]:
+        return asdict(self.data, dict_factory=_exposure_data_filter)
+
+    @persistent_data.setter
+    def persistent_data(self, data: Dict[str, Any]):
+        self.data = ExposureData(changed = self.data.changed, **data)

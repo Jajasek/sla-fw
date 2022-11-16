@@ -96,7 +96,7 @@ class Printer0:
         self.printer.http_digest_changed.connect(self._on_http_digest_changed)
         self.printer.api_key_changed.connect(self._on_api_key_changed)
         self.printer.data_privacy_changed.connect(self._on_data_privacy_changed)
-        self.printer.action_manager.exposure_change.connect(self._on_exposure_change)
+        self.printer.action_manager.exposure_changed.connect(self._on_exposure_changed)
         self.printer.runtime_config.factory_mode_changed.connect(self._on_factory_mode_changed)
         self.printer.runtime_config.show_admin_changed.connect(self._on_admin_enabled_changed)
         self.printer.unboxed_changed.connect(self._on_unboxed_changed)
@@ -178,7 +178,7 @@ class Printer0:
     def _on_power_switch_state_changed(self, value):
         self.PropertiesChanged(self.__INTERFACE__, {"power_switch_state": value}, [])
 
-    def _on_exposure_change(self):
+    def _on_exposure_changed(self):
         self.PropertiesChanged(self.__INTERFACE__, {"current_exposure": self.current_exposure}, [])
 
     def _on_controller_sw_version_change(self):
@@ -663,18 +663,11 @@ class Printer0:
         """
         self.printer.check_printer_calibrated_before_print()
 
-        expo = self.printer.action_manager.new_exposure(
-            self.printer.hw,
-            self.printer.exposure_image,
-            self.printer.runtime_config,
-            self.printer.exposure_profiles,
-            self.printer.layer_profiles,
-            project_path,
-        )
+        expo = self.printer.action_manager.new_exposure(self.printer.exposure_pickler, project_path)
         if auto_advance:
             expo.confirm_print_start()
 
-        return Exposure0.dbus_path(expo.instance_id)
+        return Exposure0.dbus_path(expo.data.instance_id)
 
     @auto_dbus
     @state_checked(Printer0State.IDLE)
@@ -693,18 +686,11 @@ class Printer0:
             raise ReprintWithoutHistory()
 
         last_exposure = self.printer.action_manager.exposure
-        exposure = self.printer.action_manager.reprint_exposure(
-            last_exposure,
-            self.printer.hw,
-            self.printer.exposure_image,
-            self.printer.runtime_config,
-            self.printer.exposure_profiles,
-            self.printer.layer_profiles,
-        )
+        exposure = self.printer.action_manager.reprint_exposure(self.printer.exposure_pickler, last_exposure)
         if auto_advance:
             exposure.confirm_print_start()
 
-        return Exposure0.dbus_path(exposure.instance_id)
+        return Exposure0.dbus_path(exposure.data.instance_id)
 
     @auto_dbus
     @property
@@ -716,7 +702,7 @@ class Printer0:
         """
         if not self.printer.action_manager.exposure:
             return DBusObjectPath("/")
-        return Exposure0.dbus_path(self.printer.action_manager.exposure.instance_id)
+        return Exposure0.dbus_path(self.printer.action_manager.exposure.data.instance_id)
 
     @auto_dbus
     @property

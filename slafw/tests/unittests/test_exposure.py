@@ -22,21 +22,13 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import PrintingDirectlyFromMedia, ResinNotEnough
 from slafw.configs.hw import HwConfig
-from slafw.configs.runtime import RuntimeConfig
 from slafw.configs.unit import Nm, Ms
 from slafw.exposure.exposure import Exposure
 from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
+from slafw.exposure.persistence import ExposurePickler
 from slafw.states.exposure import ExposureState
-from slafw.tests.mocks.hardware import HardwareMock
-
-
-def setupHw() -> HardwareMock:
-    hw = HardwareMock(printer_model = PrinterModel.SL1)
-    hw.connect()
-    hw.start()
-    hw.config.uvPwm = 250
-    hw.config.calibrated = True
-    return hw
+from slafw.tests.mocks.hardware import HardwareMock, setupHw
+from slafw.wizard.data_package import WizardDataPackage
 
 
 @patch("slafw.exposure.exposure.sleep", Mock()) # do it faster, much faster ;-)
@@ -53,13 +45,13 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
     def setUp(self):
         super().setUp()
         self.hw = setupHw()
-        self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()
         self.exposure_image.__class__ = ExposureImage
         self.exposure_image.__reduce__ = lambda x: (Mock, ())
         self.exposure_image.sync_preloader.return_value = 100
         self.ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
         self.lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
+        self.pickler = ExposurePickler(WizardDataPackage(self.hw, None, None, self.exposure_image, self.ep, self.lp))
 
     def tearDown(self):
         self.hw.exit()
@@ -70,59 +62,66 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         hw.connect()
         hw.start()
         with self.assertRaises(NotUVCalibrated):
-            exposure = Exposure(0, hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
+            exposure = Exposure(0, WizardDataPackage(hw, None, None, self.exposure_image, self.ep, self.lp))
             exposure.read_project(TestExposure.PROJECT)
 
     def test_exposure_init(self):
-        exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
+        exposure = Exposure(0, self.pickler.package)
         exposure.read_project(TestExposure.PROJECT)
 
     def test_exposure_load(self):
-        exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
+        exposure = Exposure(0, self.pickler.package)
         exposure.read_project(TestExposure.PROJECT)
         exposure.startProject()
 
-    def test_pickle_profile(self):
-        exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
+    def test_exposure_serialise(self):
+        exposure = Exposure(0, self.pickler.package)
         exposure.exposure_profiles.default.delay_after_exposure_large_fill_ms = 23755
         exposure.read_project(TestExposure.PROJECT)
-        self.assertEqual(13740, exposure.estimate_remain_time_ms())
-        exposure.save()
-        new_exposure = Exposure.load(Mock(), self.hw, self.ep, self.lp)
-        self.assertEqual(13740, new_exposure.estimate_remain_time_ms())
+        exposure.project.exposure_time_first_ms = 2000
+        self._check_serialize(exposure)
+        self.pickler.save(exposure)
+        new_exposure = self.pickler.load()
         self.assertEqual(exposure.exposure_profiles, new_exposure.exposure_profiles)
         self.assertEqual(exposure.project.exposure_profile, new_exposure.project.exposure_profile)
+        self.assertEqual(exposure.project.layers, new_exposure.project.layers)
+        self._check_serialize(new_exposure)
+
+    def _check_serialize(self, exposure: Exposure):
+        self.assertEqual(15740, exposure.estimate_remain_time_ms())
+        self.assertEqual(2000, exposure.project.exposure_time_first_ms)
+        self.assertEqual(2000, exposure.project.layers[0].times_ms[0])
 
     def test_exposure_start_stop(self):
         exposure = self._wait_exposure(self._start_exposure(self.hw))
         self.assertNotEqual(exposure.state, ExposureState.FAILURE)
-        self.assertIsNone(exposure.warning)
+        self.assertIsNone(exposure.data.warning)
 
     def test_resin_enough(self):
         hw = setupHw()
         hw.get_resin_volume_async = AsyncMock(return_value = defines.resinMaxVolume)
         exposure = self._wait_exposure(self._start_exposure(hw))
         self.assertNotEqual(exposure.state, ExposureState.FAILURE)
-        self.assertIsNone(exposure.warning)
+        self.assertIsNone(exposure.data.warning)
 
     def test_resin_warning(self):
         hw = setupHw()
         hw.get_resin_volume_async = AsyncMock(return_value = defines.resinMinVolume + 0.1)
         exposure = self._wait_exposure(self._start_exposure(hw))
-        self.assertIsInstance(exposure.fatal_error, WarningEscalation)
-        self.assertIsInstance(exposure.fatal_error.warning, ResinNotEnough)  # pylint: disable=no-member
+        self.assertIsInstance(exposure.data.fatal_error, WarningEscalation)
+        self.assertIsInstance(exposure.data.fatal_error.warning, ResinNotEnough)  # pylint: disable=no-member
 
     def test_resin_error(self):
         hw = setupHw()
         hw.get_resin_volume_async = AsyncMock(return_value = defines.resinMinVolume - 0.1)
         exposure = self._wait_exposure(self._start_exposure(hw))
-        self.assertIsInstance(exposure.fatal_error, ResinTooLow)
+        self.assertIsInstance(exposure.data.fatal_error, ResinTooLow)
 
     def test_broken_empty_project(self):
-        exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
+        exposure = Exposure(0, self.pickler.package)
         with self.assertRaises(ProjectErrorCantRead):
             exposure.read_project(self.BROKEN_EMPTY_PROJECT)
-        self.assertIsInstance(exposure.fatal_error, ProjectErrorCantRead)
+        self.assertIsInstance(exposure.data.fatal_error, ProjectErrorCantRead)
 
     def test_stuck_recovery_success(self):
         hw = setupHw()
@@ -132,8 +131,8 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         for i in range(30):
             print(f"Waiting for exposure {i}, state: ", exposure.state)
             if exposure.state == ExposureState.CHECK_WARNING:
-                print(exposure.warning)
-                if isinstance(exposure.warning, PrintingDirectlyFromMedia):
+                print(exposure.data.warning)
+                if isinstance(exposure.data.warning, PrintingDirectlyFromMedia):
                     exposure.confirm_print_warning()
                 else:
                     exposure.reject_print_warning()
@@ -158,8 +157,8 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         for i in range(30):
             print(f"Waiting for exposure {i}, state: ", exposure.state)
             if exposure.state == ExposureState.CHECK_WARNING:
-                print(exposure.warning)
-                if isinstance(exposure.warning, PrintingDirectlyFromMedia):
+                print(exposure.data.warning)
+                if isinstance(exposure.data.warning, PrintingDirectlyFromMedia):
                     exposure.confirm_print_warning()
                 else:
                     exposure.reject_print_warning()
@@ -276,7 +275,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
             project = TestExposure.PROJECT
         if expo_img is None:
             expo_img = self.exposure_image
-        exposure = Exposure(0, hw, expo_img, self.runtime_config, self.ep, self.lp)
+        exposure = Exposure(0, WizardDataPackage(hw, None, None, expo_img, self.ep, self.lp))
         exposure.read_project(project)
         exposure.startProject()
         exposure.confirm_print_start()
@@ -286,8 +285,8 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         for i in range(50):
             print(f"Waiting for exposure {i}, state: ", exposure.state)
             if exposure.state == ExposureState.CHECK_WARNING:
-                print(exposure.warning)
-                if isinstance(exposure.warning, PrintingDirectlyFromMedia):
+                print(exposure.data.warning)
+                if isinstance(exposure.data.warning, PrintingDirectlyFromMedia):
                     exposure.confirm_print_warning()
                 else:
                     exposure.reject_print_warning()
@@ -326,7 +325,6 @@ class TestLayers(SlafwTestCaseDBus):
         self.hw.start()
         self.hw.config.uvPwm = 250
         self.hw.config.calibrated = True
-        self.runtime_config = RuntimeConfig()
         self.exposure_image = Mock()
         self.exposure_image.__class__ = ExposureImage
         self.exposure_image.__reduce__ = lambda x: (Mock, ())
@@ -337,8 +335,11 @@ class TestLayers(SlafwTestCaseDBus):
         self.hw.tilt.layer_down_wait_async = AsyncMock()
 
         self.ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
+        print(self.ep)
         self.lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
-        self.exposure = Exposure(0, self.hw, self.exposure_image, self.runtime_config, self.ep, self.lp)
+        print(self.lp)
+        package = WizardDataPackage(self.hw, None, None, self.exposure_image, self.ep, self.lp)
+        self.exposure = Exposure(0, package)
         self.exposure._exposure_simple = MagicMock()    # pylint: disable = protected-access
         self.exposure.read_project(TestExposure.PROJECT_LAYER_CHANGE)
         self.exposure.startProject()
@@ -405,7 +406,7 @@ class TestLayers(SlafwTestCaseDBus):
                 "sleep" : []
             },
         }
-        self._check_all_layer_variants(self.ep.default, expected_results)
+        self._check_all_layer_variants(self.ep.default.idx, expected_results)
 
     @patch("slafw.exposure.exposure.sleep")
     def test_safe_profile(self, sleep_mock):
@@ -460,7 +461,7 @@ class TestLayers(SlafwTestCaseDBus):
                 "sleep" : [call(3.0)],
             },
         }
-        self._check_all_layer_variants(self.ep.safe, expected_results)
+        self._check_all_layer_variants(self.ep.safe.idx, expected_results)
 
     @patch("slafw.exposure.exposure.sleep")
     def test_high_viscosity_profile(self, sleep_mock):
@@ -515,14 +516,14 @@ class TestLayers(SlafwTestCaseDBus):
                 "sleep" : [call(3.5)],
             },
         }
-        self._check_all_layer_variants(self.ep.high_viscosity, expected_results)
+        self._check_all_layer_variants(self.ep.high_viscosity.idx, expected_results)
 
-    def _check_all_layer_variants(self, user_profile, expected_results):
-        self.exposure.project.exposure_profile = user_profile
+    def _check_all_layer_variants(self, user_profile_id, expected_results):
+        self.exposure.project.exposure_profile_by_id = user_profile_id
 
         # start - first layers (3 + numFade)
         test_parameters = {
-                "actual_layer_profile" : self.lp[user_profile.large_fill_layer_profile],
+                "actual_layer_profile" : self.lp[self.ep[user_profile_id].large_fill_layer_profile],
                 "actual_layer" : 0,
                 "white_pixels" : 100}
         print("start_inside")
@@ -568,9 +569,9 @@ class TestLayers(SlafwTestCaseDBus):
         if "actual_layer_profile" in test_parameters:
             self.exposure.actual_layer_profile = test_parameters["actual_layer_profile"]
         if "actual_layer" in test_parameters:
-            self.exposure.actual_layer = test_parameters["actual_layer"]
+            self.exposure.data.actual_layer = test_parameters["actual_layer"]
         else:
-            self.exposure.actual_layer += 1
+            self.exposure.data.actual_layer += 1
         if "white_pixels" in test_parameters:
             self.exposure_image.sync_preloader.return_value = test_parameters["white_pixels"]
         success, _ = self.exposure._do_frame((100,), False, 50000, last)

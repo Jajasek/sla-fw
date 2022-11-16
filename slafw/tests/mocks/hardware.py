@@ -19,7 +19,6 @@ from slafw.tests.mocks.temp_sensor import MockTempSensor
 from slafw.tests.mocks.uv_led import MockUVLED
 
 
-
 class HardwareMock(BaseHardware):
     # pylint: disable = too-many-instance-attributes
     # pylint: disable = no-self-use
@@ -156,3 +155,12 @@ class HardwareMock(BaseHardware):
     def __getattr__(self, name):
         setattr(self, name, Mock())
         return getattr(self, name)
+
+
+def setupHw() -> HardwareMock:
+    hw = HardwareMock(printer_model = PrinterModel.SL1)
+    hw.connect()
+    hw.start()
+    hw.config.uvPwm = 250
+    hw.config.calibrated = True
+    return hw

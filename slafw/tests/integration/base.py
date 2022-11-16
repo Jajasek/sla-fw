@@ -29,7 +29,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
         super().__init__(*args, **kwargs)
         self.printer: Optional[Printer] = None
         self.thread: Optional[Thread] = None
-        self.temp_dir_project = None
 
     def setUp(self):
         super().setUp()
@@ -63,7 +62,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
         self.sdl_audio_file = self.TEMP_DIR / "slafw.sdl_audio.raw"
         self.api_key_file = self.TEMP_DIR / "api.key"
         self.counter_log = self.TEMP_DIR / defines.counterLogFilename
-        self.temp_dir_project = TemporaryDirectory()  # pylint: disable = consider-using-with
 
         return super().patches() + [
             patch("slafw.defines.wizardHistoryPath", Path(self.temp_dir_wizard_history.name)),
@@ -77,8 +75,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             patch("slafw.defines.serviceData", str(self.TEMP_DIR / "service.toml")),
             patch("slafw.defines.fan_check_override", True),
             patch("slafw.defines.loggingConfig", self.TEMP_DIR / "logger_config.json"),
-            patch("slafw.defines.previousPrints", Path(self.temp_dir_project.name)),
-            patch("slafw.defines.last_job", self.TEMP_DIR / "last_job"),
             patch("slafw.defines.last_log_token", self.TEMP_DIR / "last_log_token"),
             patch("slafw.defines.counterLog", self.counter_log),
             patch("slafw.defines.nginx_http_digest", self.TEMP_DIR / "http_digest_enabled"),
@@ -107,8 +103,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
         # Base test tear down checks this does not happen.
         del self.printer
         del self._printer0
-        del self.printer0_dbus
-        test_runtime.exposure_image = None
 
         files = [
             self.EEPROM_FILE,
@@ -121,7 +115,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             if file.exists():
                 file.unlink()
 
-        self.temp_dir_project.cleanup()
         self.temp_dir_wizard_history.cleanup()
         print(f"<<<<<===== {self.id()} =====>>>>>")
         super().tearDown()  # closes logger!

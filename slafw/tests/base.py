@@ -31,12 +31,7 @@ from slafw.api.printer0 import Printer0
 from slafw.api.wizard0 import Wizard0
 from slafw.exposure.exposure import Exposure
 from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL
-from slafw.exposure.persistance import (
-    LAST_PROJECT_HW_CONFIG,
-    LAST_PROJECT_FACTORY_FILE,
-    LAST_PROJECT_CONFIG_FILE,
-    LAST_PROJECT_PICKLER,
-)
+from slafw.exposure.persistence import LAST_PROJECT_DATA
 from slafw.functions.system import set_configured_printer_model
 from slafw.hardware.printer_model import PrinterModel
 from slafw.image.exposure_image import ExposureImage
@@ -80,6 +75,7 @@ class SlafwTestCase(TestCase):
         super().setUp()
 
         self.temp_dir_obj = tempfile.TemporaryDirectory()  # pylint: disable = consider-using-with
+        self.temp_dir_project = tempfile.TemporaryDirectory()  # pylint: disable = consider-using-with
         self.TEMP_DIR = Path(self.temp_dir_obj.name)
 
         self.__base_patches = self.patches()
@@ -120,11 +116,7 @@ class SlafwTestCase(TestCase):
             patch("slafw.hardware.sl1.hardware.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.TEMP_DIR / TILT_CFG_LOCAL.name),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.TEMP_DIR / TOWER_CFG_LOCAL.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_HW_CONFIG", self.TEMP_DIR / LAST_PROJECT_HW_CONFIG.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_FACTORY_FILE", self.TEMP_DIR / LAST_PROJECT_FACTORY_FILE.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_CONFIG_FILE", self.TEMP_DIR / LAST_PROJECT_CONFIG_FILE.name),
-            patch("slafw.exposure.persistance.LAST_PROJECT_PICKLER", self.TEMP_DIR / LAST_PROJECT_PICKLER.name),
-            patch("slafw.exposure.exposure.LAST_PROJECT_PICKLER", self.TEMP_DIR / LAST_PROJECT_PICKLER.name),
+            patch("slafw.exposure.persistence.LAST_PROJECT_DATA", self.TEMP_DIR / LAST_PROJECT_DATA.name),
             patch("slafw.exposure.profiles.LAYER_PROFILES_LOCAL", self.TEMP_DIR / LAYER_PROFILES_LOCAL.name),
             patch("slafw.exposure.profiles.EXPOSURE_PROFILES_LOCAL", self.TEMP_DIR / EXPOSURE_PROFILES_LOCAL.name),
             patch("slafw.defines.ramdiskPath", str(self.TEMP_DIR)),
@@ -143,7 +135,10 @@ class SlafwTestCase(TestCase):
             patch("slafw.defines.factory_enable", factory_enable_path),
             patch("slafw.defines.exposure_panel_of_node", self.SAMPLES_DIR / "of_node" / get_printer_model().name.lower()),
             patch("slafw.defines.cpuSNFile", self.SAMPLES_DIR / "nvmem"),
+            patch("slafw.defines.previousPrints", Path(self.temp_dir_project.name)),
+            patch("slafw.defines.last_job", self.TEMP_DIR / "last_job"),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", self.SAMPLES_DIR / "cputemp"),
+            patch("slafw.functions.system.os", Mock()),
         ]
 
     def assertSameImage(self, a: Image, b: Image, threshold: int = 0, msg=None):
@@ -161,6 +156,7 @@ class SlafwTestCase(TestCase):
 
     def tearDown(self) -> None:
         logging.getLogger().removeHandler(self.stream_handler)
+        self.temp_dir_project.cleanup()
         self.temp_dir_obj.cleanup()
 
         for p in self.__base_patches:

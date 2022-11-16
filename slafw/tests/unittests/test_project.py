@@ -170,6 +170,32 @@ class TestProject(SlafwTestCase):
         self.assertEqual(self.ep.default, project.exposure_profile)
         project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "layer_change_safe_profile.sl1"))
         self.assertEqual(self.ep.safe, project.exposure_profile)
+        with self.assertRaises(ValueError):
+            project.exposure_profile_by_id = 3
+
+    def test_persistent_data(self):
+        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
+        persistent_data = project.persistent_data
+        self.assertEqual({'path': str(self.SAMPLES_DIR / "numbers.sl1"),
+                          'exposure_time_ms': 1000,
+                          'exposure_time_first_ms': 1000,
+                          'calibrate_time_ms': 1000,
+                          'calibrate_regions': 0,
+                          'exposure_profile_id': 0}, persistent_data)
+        persistent_data['path'] = "XXX/YYY.ZZZ"
+        persistent_data['exposure_time_ms'] = 999
+        persistent_data['exposure_time_first_ms'] = 8888
+        persistent_data['calibrate_time_ms'] = 777
+        persistent_data['exposure_profile_id'] = 1
+        project.persistent_data = persistent_data
+        self.assertEqual(persistent_data['path'], project.data.path)
+        self.assertEqual(persistent_data['exposure_time_ms'], project.exposure_time_ms)
+        self.assertEqual(persistent_data['exposure_time_first_ms'], project.exposure_time_first_ms)
+        self.assertEqual(persistent_data['calibrate_time_ms'], project.calibrate_time_ms)
+        self.assertEqual(persistent_data['exposure_profile_id'], project.exposure_profile_by_id)
+        expected = _layer_generator('numbers', 2, 50000, [999], (8888,))
+        self.assertEqual(expected, project.layers)
+
 
 if __name__ == '__main__':
     unittest.main()

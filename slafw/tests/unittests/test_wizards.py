@@ -207,12 +207,12 @@ class TestDisplayTest(TestWizardsBase):
     def test_display_test(self):
         wizard = DisplayTestWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_DISPLAY_TEST:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_DISPLAY_TEST:
                 wizard.prepare_displaytest_done()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
-            if wizard.state == WizardState.TEST_DISPLAY:
+            if state == WizardState.TEST_DISPLAY:
                 wizard.report_display(True)
 
         wizard.state_changed.connect(on_state_changed)
@@ -221,14 +221,14 @@ class TestDisplayTest(TestWizardsBase):
     def test_display_test_fail(self):
         wizard = DisplayTestWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_DISPLAY_TEST:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_DISPLAY_TEST:
                 wizard.prepare_displaytest_done()
-            if wizard.state == WizardState.TEST_DISPLAY:
+            if state == WizardState.TEST_DISPLAY:
                 wizard.report_display(False)
-            if wizard.state == WizardState.STOPPED:
+            if state == WizardState.STOPPED:
                 wizard.abort()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -253,10 +253,10 @@ class TestUpgradeWizard(TestWizardsBase):
     def test_sl1s_upgrade_confirm(self):
         wizard = SL1SUpgradeWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.SL1S_CONFIRM_UPGRADE:
+        def on_state_changed(state):
+            if state == WizardState.SL1S_CONFIRM_UPGRADE:
                 wizard.sl1s_confirm_upgrade()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -274,11 +274,11 @@ class TestUpgradeWizard(TestWizardsBase):
     def test_sl1s_upgrade_reject(self):
         wizard = SL1SUpgradeWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.SL1S_CONFIRM_UPGRADE:
+        def on_state_changed(state):
+            if state == WizardState.SL1S_CONFIRM_UPGRADE:
                 print("Rejecting upgrade")
                 wizard.sl1s_reject_upgrade()
-            if wizard.state == WizardState.CANCELED:
+            if state == WizardState.CANCELED:
                 print("aborting")
                 wizard.abort()
 
@@ -365,18 +365,18 @@ class TestWizards(TestWizardsBase):
         self.hw.tower.move = MagicMock(side_effect=side_effect_move)
         wizard = SelfTestWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_WIZARD_PART_1:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_WIZARD_PART_1:
                 wizard.prepare_wizard_part_1_done()
-            if wizard.state == WizardState.TEST_AUDIO:
+            if state == WizardState.TEST_AUDIO:
                 wizard.report_audio(True)
-            if wizard.state == WizardState.TEST_DISPLAY:
+            if state == WizardState.TEST_DISPLAY:
                 wizard.report_display(True)
-            if wizard.state == WizardState.PREPARE_WIZARD_PART_2:
+            if state == WizardState.PREPARE_WIZARD_PART_2:
                 wizard.prepare_wizard_part_2_done()
-            if wizard.state == WizardState.PREPARE_WIZARD_PART_3:
+            if state == WizardState.PREPARE_WIZARD_PART_3:
                 wizard.prepare_wizard_part_3_done()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -420,8 +420,8 @@ class TestWizards(TestWizardsBase):
         self.hw.config.uvWarmUpTime = 1
         wizard = SelfTestWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_WIZARD_PART_1:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_WIZARD_PART_1:
                 wizard.cancel()
 
         wizard.state_changed.connect(on_state_changed)
@@ -491,16 +491,16 @@ class TestWizards(TestWizardsBase):
     def test_unboxing_complete(self):
         wizard = CompleteUnboxingWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.REMOVE_SAFETY_STICKER:
+        def on_state_changed(state):
+            if state == WizardState.REMOVE_SAFETY_STICKER:
                 wizard.safety_sticker_removed()
-            if wizard.state == WizardState.REMOVE_SIDE_FOAM:
+            if state == WizardState.REMOVE_SIDE_FOAM:
                 wizard.side_foam_removed()
-            if wizard.state == WizardState.REMOVE_TANK_FOAM:
+            if state == WizardState.REMOVE_TANK_FOAM:
                 wizard.tank_foam_removed()
-            if wizard.state == WizardState.REMOVE_DISPLAY_FOIL:
+            if state == WizardState.REMOVE_DISPLAY_FOIL:
                 wizard.display_foil_removed()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -509,10 +509,10 @@ class TestWizards(TestWizardsBase):
     def test_unboxing_kit(self):
         wizard = KitUnboxingWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.REMOVE_DISPLAY_FOIL:
+        def on_state_changed(state):
+            if state == WizardState.REMOVE_DISPLAY_FOIL:
                 wizard.display_foil_removed()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -525,11 +525,11 @@ class TestWizards(TestWizardsBase):
         self.package.runtime_config.factory_mode = True
         wizard = PackingWizard(self.package)
 
-        def state_callback():
-            if wizard.state == WizardState.INSERT_FOAM:
+        def on_state_changed(state):
+            if state == WizardState.INSERT_FOAM:
                 wizard.foam_inserted()
 
-        wizard.state_changed.connect(state_callback)
+        wizard.state_changed.connect(on_state_changed)
         self._run_wizard(wizard)
         self._check_factory_reset(self.hw, unboxing=True, factory_mode=True)
 
@@ -632,19 +632,19 @@ class TestWizards(TestWizardsBase):
         self.hw.tower.move = MagicMock(side_effect=side_effect_move)
         wizard = CalibrationWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_CALIBRATION_INSERT_PLATFORM_TANK:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_CALIBRATION_INSERT_PLATFORM_TANK:
                 wizard.prepare_calibration_platform_tank_done()
-            if wizard.state == WizardState.PREPARE_CALIBRATION_TILT_ALIGN:
+            if state == WizardState.PREPARE_CALIBRATION_TILT_ALIGN:
                 wizard.prepare_calibration_tilt_align_done()
-            if wizard.state == WizardState.LEVEL_TILT:
+            if state == WizardState.LEVEL_TILT:
                 self.hw.tilt.position = Ustep(4992)
                 wizard.tilt_aligned()
-            if wizard.state == WizardState.PREPARE_CALIBRATION_PLATFORM_ALIGN:
+            if state == WizardState.PREPARE_CALIBRATION_PLATFORM_ALIGN:
                 wizard.prepare_calibration_platform_align_done()
-            if wizard.state == WizardState.PREPARE_CALIBRATION_FINISH:
+            if state == WizardState.PREPARE_CALIBRATION_FINISH:
                 wizard.prepare_calibration_finish_done()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -661,8 +661,8 @@ class TestWizards(TestWizardsBase):
     def test_calibration_fail(self):
         wizard = CalibrationWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_CALIBRATION_INSERT_PLATFORM_TANK:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_CALIBRATION_INSERT_PLATFORM_TANK:
                 wizard.cancel()
 
         wizard.state_changed.connect(on_state_changed)
@@ -676,8 +676,8 @@ class TestWizards(TestWizardsBase):
         display_usage = self.hw.exposure_screen.usage_s
         wizard = NewExpoPanelWizard(self.package)
 
-        def on_state_changed():
-            if wizard.state == WizardState.PREPARE_NEW_EXPO_PANEL:
+        def on_state_changed(state):
+            if state == WizardState.PREPARE_NEW_EXPO_PANEL:
                 wizard.new_expo_panel_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -802,18 +802,18 @@ class TestUVCalibration(TestWizardsBase):
         self._assert_final_uv_pwm(0)
 
     def _run_uv_calibration(self, wizard: UVCalibrationWizard, expected_state=WizardState.DONE):
-        def on_state_changed():
-            if wizard.state == WizardState.TEST_DISPLAY:
+        def on_state_changed(state):
+            if state == WizardState.TEST_DISPLAY:
                 wizard.report_display(True)
-            if wizard.state == WizardState.UV_CALIBRATION_PREPARE:
+            if state == WizardState.UV_CALIBRATION_PREPARE:
                 wizard.uv_calibration_prepared()
-            if wizard.state == WizardState.UV_CALIBRATION_PLACE_UV_METER:
+            if state == WizardState.UV_CALIBRATION_PLACE_UV_METER:
                 wizard.uv_meter_placed()
-            if wizard.state == WizardState.UV_CALIBRATION_APPLY_RESULTS:
+            if state == WizardState.UV_CALIBRATION_APPLY_RESULTS:
                 wizard.uv_apply_result()
-            if wizard.state == WizardState.STOPPED:
+            if state == WizardState.STOPPED:
                 wizard.abort()
-            if wizard.state == WizardState.SHOW_RESULTS:
+            if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 
         wizard.state_changed.connect(on_state_changed)
@@ -849,12 +849,12 @@ class TankSurfaceCleanerTest(TestWizardsBase):
         del self.hw
         super().tearDown()
 
-    def on_state_changed(self):
-        if self.wizard.state == WizardState.TANK_SURFACE_CLEANER_INIT:
+    def on_state_changed(self, state):
+        if state == WizardState.TANK_SURFACE_CLEANER_INIT:
             self.wizard.tank_surface_cleaner_init_done()
-        if self.wizard.state == WizardState.TANK_SURFACE_CLEANER_INSERT_CLEANING_ADAPTOR:
+        if state == WizardState.TANK_SURFACE_CLEANER_INSERT_CLEANING_ADAPTOR:
             self.wizard.insert_cleaning_adaptor_done()
-        if self.wizard.state == WizardState.TANK_SURFACE_CLEANER_REMOVE_CLEANING_ADAPTOR:
+        if state == WizardState.TANK_SURFACE_CLEANER_REMOVE_CLEANING_ADAPTOR:
             self.wizard.remove_cleaning_adaptor_done()
 
     def test_tank_surface_cleaner(self):

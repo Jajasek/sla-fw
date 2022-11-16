@@ -36,7 +36,7 @@ class Exposure0State(Enum):
     Exposure state enumeration
     """
 
-    # INIT = 0
+    INIT = 0
     PRINTING = 1
     GOING_UP = 2
     GOING_DOWN = 3
@@ -63,6 +63,7 @@ class Exposure0State(Enum):
     @staticmethod
     def from_exposure(state: ExposureState) -> Exposure0State:
         return {
+            ExposureState.INIT: Exposure0State.INIT,
             ExposureState.PRINTING: Exposure0State.PRINTING,
             ExposureState.GOING_UP: Exposure0State.GOING_UP,
             ExposureState.GOING_DOWN: Exposure0State.GOING_DOWN,
@@ -124,17 +125,14 @@ class Exposure0:
 
     def __init__(self, exposure: Exposure):
         self.exposure = exposure
-        self.logger = logging.getLogger(__name__)
+        self._logger = logging.getLogger(__name__)
 
         # Do not use lambdas as handlers. These would keep references to Exposure0
-        if self.exposure.change:
-            self.exposure.change.connect(self._handle_change)
+        self.exposure.data.changed.connect(self._handle_exposure_change)
         if self.exposure.hw:
             self.exposure.hw.cover_state_changed.connect(self._handle_cover_change_param)
         if self.exposure.hw.config:
             self.exposure.hw.config.add_onchange_handler(self._handle_config_change)
-        if self.exposure.project and self.exposure.project.path_changed:
-            self.exposure.project.path_changed.connect(self._handle_path_changed_param)
         if self.exposure.warning_occurred:
             self.exposure.warning_occurred.connect(self._on_warning_occurred)
 
@@ -148,7 +146,7 @@ class Exposure0:
     @auto_dbus
     @property
     def failure_reason(self) -> Dict[str, Any]:
-        return wrap_dict_data(PrinterException.as_dict(self.exposure.fatal_error))
+        return wrap_dict_data(PrinterException.as_dict(self.exposure.data.fatal_error))
 
     @auto_dbus
     @state_checked(Exposure0State.CONFIRM)
@@ -208,7 +206,7 @@ class Exposure0:
 
         :return: Warning dictionary
         """
-        return wrap_dict_data(PrinterWarning.as_dict(self.exposure.warning))
+        return wrap_dict_data(PrinterWarning.as_dict(self.exposure.data.warning))
 
     @auto_dbus
     @property
@@ -218,10 +216,10 @@ class Exposure0:
 
         :return: Dictionary mapping from check id to state id
         """
-        if not self.exposure.check_results:
+        if not self.exposure.data.check_results:
             return {}
 
-        return {check.value: state.value for check, state in self.exposure.check_results.items()}
+        return {check.value: state.value for check, state in self.exposure.data.check_results.items()}
 
     @auto_dbus
     @property
@@ -231,7 +229,7 @@ class Exposure0:
 
         :return: Layer number
         """
-        return self.exposure.actual_layer
+        return self.exposure.data.actual_layer
 
     @auto_dbus
     @property
@@ -251,9 +249,9 @@ class Exposure0:
 
         :return: Remaining time in minutes
         """
-        if self.exposure.estimated_total_time_ms > 2**31-1:
-            self.logger.error("Time remain out of int32 range: %d ms, capping to max value",
-                              self.exposure.estimated_total_time_ms)
+        if self.exposure.data.estimated_total_time_ms > 2**31-1:
+            self._logger.error("Time remain out of int32 range: %d ms, capping to max value",
+                              self.exposure.data.estimated_total_time_ms)
             return 2**31-1
         return self.exposure.estimate_remain_time_ms()
 
@@ -263,11 +261,11 @@ class Exposure0:
         """
         Estimated total print time in ms
         """
-        if self.exposure.estimated_total_time_ms > 2**31-1:
-            self.logger.error("Estimated total time out of int32 range: %d ms, capping to max value",
-                              self.exposure.estimated_total_time_ms)
+        if self.exposure.data.estimated_total_time_ms > 2**31-1:
+            self._logger.error("Estimated total time out of int32 range: %d ms, capping to max value",
+                              self.exposure.data.estimated_total_time_ms)
             return 2**31-1
-        return self.exposure.estimated_total_time_ms
+        return self.exposure.data.estimated_total_time_ms
 
     @auto_dbus
     @property
@@ -287,7 +285,7 @@ class Exposure0:
 
         :return: Timestamp
         """
-        return self.exposure.printStartTime.timestamp()
+        return self.exposure.data.print_start_time.timestamp()
 
     @auto_dbus
     @property
@@ -297,7 +295,7 @@ class Exposure0:
 
         :return: Timestamp
         """
-        return self.exposure.printEndTime.timestamp()
+        return self.exposure.data.print_end_time.timestamp()
 
     @auto_dbus
     @property
@@ -357,7 +355,7 @@ class Exposure0:
 
         :return: Project file with path
         """
-        return str(self.exposure.project.path)
+        return str(self.exposure.project.data.path)
 
     @auto_dbus
     @property
@@ -378,7 +376,7 @@ class Exposure0:
 
         :return: Volume in milliliters
         """
-        return self.exposure.resin_count
+        return self.exposure.data.resin_count_ml
 
     @auto_dbus
     @property
@@ -388,8 +386,8 @@ class Exposure0:
 
         :return: Volume in milliliters
         """
-        if self.exposure.remain_resin_ml:
-            return self.exposure.remain_resin_ml
+        if self.exposure.data.resin_remain_ml:
+            return self.exposure.data.resin_remain_ml
         return -1
 
     @auto_dbus
@@ -436,7 +434,7 @@ class Exposure0:
 
         :return: True if reached, False otherwise
         """
-        return self.exposure.warn_resin
+        return self.exposure.data.resin_warn
 
     @auto_dbus
     @property
@@ -446,7 +444,7 @@ class Exposure0:
 
         :return: True if reached, False otherwise
         """
-        return self.exposure.low_resin
+        return self.exposure.data.resin_low
 
     @auto_dbus
     @property
@@ -456,7 +454,7 @@ class Exposure0:
 
         :return: Number of seconds
         """
-        return self.exposure.remaining_wait_sec
+        return self.exposure.data.remaining_wait_sec
 
     @auto_dbus
     @property
@@ -466,7 +464,7 @@ class Exposure0:
 
         :return: Timestamp as float
         """
-        return (datetime.now(tz=timezone.utc) + timedelta(seconds=self.exposure.remaining_wait_sec)).timestamp()
+        return (datetime.now(tz=timezone.utc) + timedelta(seconds=self.exposure.data.remaining_wait_sec)).timestamp()
 
     @auto_dbus
     @property
@@ -476,8 +474,8 @@ class Exposure0:
 
         :return: Timestamp as float, or -1 of no layer exposed to UV
         """
-        if self.exposure.exposure_end:
-            return self.exposure.exposure_end.timestamp()
+        if self.exposure.data.exposure_end:
+            return self.exposure.data.exposure_end.timestamp()
         return -1
 
     @auto_dbus
@@ -488,7 +486,7 @@ class Exposure0:
 
         :return: State as integer
         """
-        return Exposure0State.from_exposure(self.exposure.state).value
+        return Exposure0State.from_exposure(self.exposure.data.state).value
 
     @auto_dbus
     @property
@@ -626,6 +624,7 @@ class Exposure0:
         self.exposure.inject_exception(code)
 
     _CHANGE_MAP = {
+        # exposure
         "state": {"state"},
         "actual_layer": {
             "current_layer",
@@ -634,36 +633,39 @@ class Exposure0:
             "position_nm",
             "expected_finish_timestamp",
         },
-        "resin_count": {"resin_used_ml"},
-        "remain_resin_ml": {"resin_remaining_ml"},
-        "warn_resin": {"resin_warn"},
-        "low_resin": {"resin_low"},
+        "resin_count_ml": {"resin_used_ml"},
+        "resin_remain_ml": {"resin_remaining_ml"},
+        "resin_warn": {"resin_warn"},
+        "resin_low": {"resin_low"},
         "remaining_wait_sec": {"remaining_wait_sec"},
-        "exposure_end": {"exposure_end"},
-        "warning": {"exposure_warning"},
-        "check_results": {"checks_state"},
-        "project": {
-            "exposure_time_ms",
-            "exposure_time_first_ms",
-            "exposure_time_calibrate_ms",
-            "calibration_regions",
-            "time_remain_ms",
-            "user_profile",
-        },
-        "printStartTime": {"print_start_timestamp"},
-        "printEndTime": {"print_end_timestamp"},
-        "fatal_error": {"failure_reason"},
         "estimated_total_time_ms": {"total_time_ms"},
+        "print_start_time": {"print_start_timestamp"},
+        "print_end_time": {"print_end_timestamp"},
+        "exposure_end": {"exposure_end"},
+        "check_results": {"checks_state"},
+        "warning": {"exposure_warning"},
+        "fatal_error": {"failure_reason"},
+        # project
+        "path": {"project_file"},
+        "exposure_time_ms": {"exposure_time_ms"},
+        "exposure_time_first_ms": {"exposure_time_first_ms"},
+        "calibrate_time_ms": {"exposure_time_calibrate_ms"},
+        "calibrate_regions": {"calibration_regions"},
+        "exposure_profile_id": {"user_profile"},
     }
 
     _SIGNAL_MAP = {
         "exception": {"error": "exception_occurred"},
     }
 
-    def _handle_change(self, key: str, _: Any):
+    def _handle_exposure_change(self, key: str, value: Any):
+        self._logger.debug("handle_exposure_change: %s set to %s", key, value)
         if key in self._CHANGE_MAP:
+            content = {}
             for changed in self._CHANGE_MAP[key]:
-                self.PropertiesChanged(self.__INTERFACE__, {changed: getattr(self, changed)}, [])
+                content[changed] = getattr(self, changed)
+            self._logger.debug("PropertiesChanged: %s", content)
+            self.PropertiesChanged(self.__INTERFACE__, content, [])
         if key in self._SIGNAL_MAP:
             for signal_name, get_change in self._SIGNAL_MAP[key].items():
                 getattr(self, signal_name)(getattr(self, get_change))
@@ -674,9 +676,6 @@ class Exposure0:
     def _handle_config_change(self, name: str, _: Any):
         if name == "coverCheck":
             self._handle_cover_change()
-
-    def _handle_path_changed_param(self, _):
-        self.PropertiesChanged(self.__INTERFACE__, {"project_file": self.project_file}, [])
 
     def _handle_cover_change_param(self, _):
         self._handle_cover_change()
