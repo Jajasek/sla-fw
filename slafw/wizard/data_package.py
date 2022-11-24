@@ -38,6 +38,7 @@ def fill_wizard_data_package(printer) -> WizardDataPackage:
 
 def make_config_writers(hw_config: ConfigWriter, layer_profiles: LayerProfilesSL1) -> Any:
     cw_items = [("hw_config", ConfigWriter, field(default=hw_config.get_writer(), init=False))]
-    for layer_profile in layer_profiles:
-        cw_items.append((layer_profile.name, ConfigWriter, field(default=layer_profile.get_writer(), init=False)))
+    if layer_profiles is not None:
+        for layer_profile in layer_profiles:
+            cw_items.append((layer_profile.name, ConfigWriter, field(default=layer_profile.get_writer(), init=False)))
     return make_dataclass("ConfigWriters", cw_items)()
