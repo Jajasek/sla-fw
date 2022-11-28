@@ -170,6 +170,7 @@ class BaseHardware:
         # pylint: disable = too-many-locals
         ot = {0: "CZP"}
         sn = "*INVALID*"
+        mac_hex = "*INVALID*"
         is_kit = True  # kit is more strict
         try:
             with open(defines.cpuSNFile, "rb") as nvmem:
