@@ -51,6 +51,7 @@ from slafw.exposure.persistance import (
     LAST_PROJECT_CONFIG_FILE,
     LAST_PROJECT_PICKLER,
 )
+from slafw.states.printer import PrinterState
 
 # gitlab CI job creates model folder in different location due to restricted permissions in Docker container
 # common path is /builds/project-0/model
@@ -182,6 +183,7 @@ class Virtual:
         self.admin0_dbus = bus.publish(Admin0.__INTERFACE__, Admin0(self.admin_manager, self.printer))
         print("Running printer")
         threading.Thread(target=self.printer_setup_body).start()  # Does not block, but requires Rauc on DBus
+        self.printer.set_state(PrinterState.RUNNING)
         self.glib_loop = GLib.MainLoop().run()
 
         def tear_down(signum, _):

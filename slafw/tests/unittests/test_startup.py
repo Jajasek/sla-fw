@@ -36,7 +36,7 @@ class TestStartupSL1S(SlafwTestCaseDBus, RefCheckTestCase):
 
     def test_expo_panel_log_first_record(self):
         self._run_printer()
-        self.assertEqual(self.printer.state, PrinterState.RUNNING)  # no wizard is running, no error is raised
+        self.assertEqual(self.printer.state, PrinterState.INIT)  # no wizard is running, no error is raised
         with open(defines.expoPanelLogPath, "r", encoding="utf-8") as f:
             log = json.load(f)
         self.assertEqual(1, len(log))  # log holds only one record
@@ -107,7 +107,7 @@ class TestStartupSL1(SlafwTestCaseDBus):
         self.printer.hw.exposure_screen.start = Mock(return_value=PrinterModel.SL1)
         set_configured_printer_model(PrinterModel.SL1)  # Set SL1 as the current model
 
-        self.assertEqual(self.printer.state, PrinterState.RUNNING)  # no wizard is running, no error is raised
+        self.assertEqual(self.printer.state, PrinterState.INIT)  # no wizard is running, no error is raised
         self.assertFalse(defines.expoPanelLogPath.exists())
 
     def _run_printer(self):

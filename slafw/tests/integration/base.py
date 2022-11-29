@@ -20,6 +20,7 @@ from slafw import defines, test_runtime
 from slafw.api.printer0 import Printer0
 from slafw.libPrinter import Printer
 from slafw.tests.base import SlafwTestCaseDBus, RefCheckTestCase
+from slafw.states.printer import PrinterState
 
 
 class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
@@ -86,6 +87,7 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
     def try_start_printer(self):
         try:
             self.printer.setup()
+            self.printer.set_state(PrinterState.RUNNING)
             # cProfile.runctx('self.printer.start()', globals=globals(), locals=locals())
         except Exception as exception:
             self.tearDown()

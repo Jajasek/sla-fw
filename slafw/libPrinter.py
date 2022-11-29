@@ -223,7 +223,6 @@ class Printer:
         self._firstboot()
         if self.hw.printer_model == PrinterModel.SL1 and not defines.printer_model.exists():
             set_configured_printer_model(self.hw.printer_model)  # Configure model for old SL1 printers
-        self._model_update()
 
         # UV calibration
         if not self.hw.config.is_factory_read() and not self.hw.isKit and self.hw.printer_model == PrinterModel.SL1:
@@ -254,8 +253,7 @@ class Printer:
                 self.hw.config.tankCleaningExposureTime = 30  # seconds
             self.hw.config.write()
 
-        # Finish startup
-        self.set_state(PrinterState.RUNNING)
+        # Finish setup
         self.logger.info("Printer started in %.03f seconds", monotonic() - start_time)
 
     def stop(self):
@@ -350,18 +348,19 @@ class Printer:
 
     def _model_update(self):
         config_model = get_configured_printer_model()
-        if self.hw.printer_model == config_model:
-            return
-
-        self.logger.info('Printer model change detected from "%s" to "%s"', config_model, self.hw.printer_model)
-        if self.hw.printer_model == PrinterModel.SL1S:
-            self.action_manager.start_wizard(SL1SUpgradeWizard(fill_wizard_data_package(self))).join()
-        elif self.hw.printer_model == PrinterModel.SL1:
-            self.action_manager.start_wizard(SL1DowngradeWizard(fill_wizard_data_package(self))).join()
-        try:
-            reset_hostname()  # set model specific default hostname
-        except PrinterException:
-            self.logger.exception("Failed to reset hostname after model ")
+        if self.hw.printer_model is not config_model:
+            self.logger.info('Printer model change detected from "%s" to "%s"',
+                             config_model.name, self.hw.printer_model.name)
+            if self.hw.printer_model == PrinterModel.SL1S:
+                upgrade = self.action_manager.start_wizard(SL1SUpgradeWizard(fill_wizard_data_package(self)))
+            elif self.hw.printer_model == PrinterModel.SL1:
+                upgrade = self.action_manager.start_wizard(SL1DowngradeWizard(fill_wizard_data_package(self)))
+            self.set_state(PrinterState.WIZARD, active=True)
+            upgrade.join()
+            try:
+                reset_hostname()  # set model specific default hostname
+            except PrinterException:
+                self.logger.exception("Failed to reset hostname after model ")
 
     def _compute_uv_pwm(self):
         if not self.hw.printer_model.options.has_UV_calculation:
@@ -550,6 +549,7 @@ class Printer:
         threading.Thread(target=self._make_ready_to_print, daemon=True).start()
 
     def _make_ready_to_print(self):
+        self._model_update()
         passing = True
         if not self.runtime_config.factory_mode and self.hw.config.showUnboxing:
             if self.hw.isKit:
@@ -608,6 +608,7 @@ class Printer:
             self.logger.info("UV calibration wizard finished")
 
         self.set_state(PrinterState.WIZARD, active=False)
+        self.set_state(PrinterState.RUNNING)
 
     def inject_exception(self, code: str):
         exception = tests.get_instance_by_code(code)
