@@ -802,10 +802,8 @@ class Printer0:
 
     @auto_dbus
     def run_tank_surface_cleaner_wizard(self) -> None:
-        if not self.printer.self_tested:
-            self.printer.check_printer_calibrated_before_print()
-        else:
-            self.printer.action_manager.start_wizard(TankSurfaceCleaner(fill_wizard_data_package(self.printer)))
+        self.printer.check_printer_calibrated_before_print()
+        self.printer.action_manager.start_wizard(TankSurfaceCleaner(fill_wizard_data_package(self.printer)))
 
     @auto_dbus
     def run_factory_reset_wizard(self) -> None:
