@@ -13,13 +13,14 @@ from gi.repository import GLib
 from pydbus import SystemBus
 
 from slafw import libPrinter
+from slafw import defines
 from slafw.api.admin0 import Admin0
 from slafw.api.printer0 import Printer0
 from slafw.api.standard0 import Standard0
 from slafw.admin.manager import AdminManager
 from slafw.logger_config import configure_log
 
-log_from_config = configure_log()
+log_from_config = configure_log(name=defines.component_name)
 logger = logging.getLogger()
 
 if log_from_config:

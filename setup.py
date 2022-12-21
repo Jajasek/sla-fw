@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 data_files = [
     ('/usr/share/slafw/scripts', glob('slafw/scripts/*')),
     ('/etc/sl1fw', ['slafw/hardware.cfg']),
-    ('/etc/sl1fw', ['slafw/loggerConfig.json']),
+    ('/etc/sl1fw', ['slafw/slafw-logger.json']),
     ('/usr/lib/systemd/system', glob('systemd/*.service')),
     ('/usr/lib/tmpfiles.d/', ['systemd/slafw-tmpfiles.conf']),
     ('/usr/share/dbus-1/system.d', glob('dbus/*'))

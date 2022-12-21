@@ -34,7 +34,7 @@ class RuntimeConfig:
         if value:
             self._logger.info("Setting loglevel to DEBUG (transient)")
             try:
-                set_log_level(logging.DEBUG, persistent=False)
+                set_log_level(level=logging.DEBUG, name="slafw", persistent=False)
             except Exception:
                 self._logger.exception("Failed to set loglevel")
 

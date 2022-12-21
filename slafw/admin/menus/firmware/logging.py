@@ -38,14 +38,14 @@ class LoggingMenu(SafeAdminMenu):
 
     @staticmethod
     def _get_debug_enabled() -> bool:
-        return get_log_level() == logging.DEBUG
+        return get_log_level(name=defines.component_name) == logging.DEBUG
 
     def _set_debug_enabled(self, value: bool) -> None:
         try:
             if value:
-                set_log_level(logging.DEBUG)
+                set_log_level(level=logging.DEBUG, name=defines.component_name)
             else:
-                set_log_level(logging.INFO)
+                set_log_level(level=logging.INFO, name=defines.component_name)
         except FailedToSetLogLevel:
             self.logger.exception("Failed to set loglevel from admin")
             self._control.enter(Error(self._control, text="Failed to set log level"))

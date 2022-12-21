@@ -13,6 +13,7 @@ from slafw import test_runtime
 reqMcVersion = "1.1.9"
 
 printerVariant = "default"
+component_name = "slafw"
 
 factoryMountPoint = Path("/usr/share/factory/defaults")
 persistentStorage = Path("/var/sl1fw")
@@ -23,7 +24,7 @@ firmwarePath = Path("/lib/firmware")
 ramdiskPath = "/run/slafw"
 mediaRootPath = "/run/media/system"
 configDir = Path("/etc/sl1fw")
-loggingConfig = configDir / "loggerConfig.json"
+loggingConfig = configDir / "slafw-logger.json"
 remoteConfig = configDir / "remoteConfig.toml"
 
 wizardHistoryPath = persistentStorage / "wizard_history" / "user_data"
