@@ -205,6 +205,7 @@ class Wayland:
         self.parameters: ExposureScreenParameters = parameters
         self.format_available = False
         self._stopped = False
+        self._wl_outputs: List[Any] = []
 
     def start(self, shm_format: int):
         self.bindings.shm_format = shm_format
@@ -229,6 +230,7 @@ class Wayland:
             raise RuntimeError("no wp_presentation found")
         if not self.format_available:
             raise RuntimeError("no suitable shm format available")
+        del self._wl_outputs
         self.main_layer = Layer(
                 self.bindings,
                 self.parameters.width_px,
@@ -290,6 +292,7 @@ class Wayland:
         elif interface == "wl_output":
             output = registry.bind(id_, WlOutput, version)
             output.dispatcher["mode"] = self._output_handler
+            self._wl_outputs.append(output)
         elif interface == "wp_presentation":
             self.logger.debug("got wp_presentation")
             self.bindings.presentation = registry.bind(id_, WpPresentation, version)
