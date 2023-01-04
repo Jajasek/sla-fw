@@ -2,7 +2,6 @@
 # Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from functools import cached_property
 from typing import Optional
 from unittest.mock import MagicMock
 
@@ -83,7 +82,7 @@ class MockAxis(Axis):
     def apply_all_profiles(self) -> None:
         pass
 
-    @cached_property
+    @property
     def sensitivity(self) -> int:
         return 0
 

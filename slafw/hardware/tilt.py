@@ -4,7 +4,6 @@
 
 import asyncio
 from abc import abstractmethod
-from functools import cached_property
 
 from slafw.configs.unit import Ustep
 from slafw.errors.errors import TiltMoveFailed, TiltHomeFailed
@@ -62,19 +61,19 @@ class Tilt(Axis):
     def name(self) -> str:
         return "tilt"
 
-    @cached_property
+    @property
     def sensitivity(self) -> int:
         return self._config.tiltSensitivity
 
-    @cached_property
+    @property
     def home_position(self) -> Ustep:
         return Ustep(0)
 
-    @cached_property
+    @property
     def config_height_position(self) -> Ustep:
         return self._config.tiltHeight
 
-    @cached_property
+    @property
     def minimal_position(self) -> Ustep:
         return self.home_position
 

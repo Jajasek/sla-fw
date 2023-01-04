@@ -166,7 +166,7 @@ class DoNotRunTestDirectlyFromBaseClass:
         def fan(self) -> Fan:
             ...
 
-        @cached_property
+        @property
         @abstractmethod
         def index(self) -> int:
             ...
@@ -213,7 +213,7 @@ class TestSL1FanUVLEDX(DoNotRunTestDirectlyFromBaseClass.BaseSL1FanTest):
     def fan(self) -> Fan:
         return SL1FanUVLED(self.mcc, self.config, reference=self.temp)
 
-    @cached_property
+    @property
     def index(self) -> int:
         return 0
 
@@ -223,7 +223,7 @@ class TestSL1FanBlower(DoNotRunTestDirectlyFromBaseClass.BaseSL1FanTest):
     def fan(self) -> Fan:
         return SL1FanBlower(self.mcc, self.config)
 
-    @cached_property
+    @property
     def index(self) -> int:
         return 1
 
@@ -233,7 +233,7 @@ class TestSL1FanRear(DoNotRunTestDirectlyFromBaseClass.BaseSL1FanTest):
     def fan(self) -> Fan:
         return SL1FanRear(self.mcc, self.config)
 
-    @cached_property
+    @property
     def index(self) -> int:
         return 2
 

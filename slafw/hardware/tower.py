@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from abc import abstractmethod
-from functools import cached_property
 
 from slafw.configs.unit import Nm
 from slafw.errors.errors import TowerMoveFailed, TowerHomeFailed
@@ -61,54 +60,54 @@ class Tower(Axis):
     def name(self) -> str:
         return "tower"
 
-    @cached_property
+    @property
     def sensitivity(self) -> int:
         return self._config.towerSensitivity
 
-    @cached_property
+    @property
     def home_position(self) -> Nm:
         return self._config.tower_height_nm
 
-    @cached_property
+    @property
     def config_height_position(self) -> Nm:
         return self.home_position
 
-    @cached_property
+    @property
     def minimal_position(self) -> Nm:
         return Nm(0)
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def min_nm(self) -> Nm:
         return -(self._config.max_tower_height_mm + Nm(5)) * 1_000_000
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def above_surface_nm(self) -> Nm:
         return -(self._config.max_tower_height_mm - Nm(5)) * 1_000_000
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def max_nm(self) -> Nm:
         return 2 * self._config.max_tower_height_mm * 1_000_000
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def end_nm(self) -> Nm:
         return self._config.max_tower_height_mm * 1_000_000
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def calib_pos_nm(self) -> Nm:  # pylint: disable=no-self-use
         return Nm(1_000_000)
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def resin_start_pos_nm(self) -> Nm:  # pylint: disable=no-self-use
         return Nm(36_000_000)
 
     # FIXME: move to the config
-    @cached_property
+    @property
     def resin_end_pos_nm(self) -> Nm:  # pylint: disable=no-self-use
         return Nm(1_000_000)
 

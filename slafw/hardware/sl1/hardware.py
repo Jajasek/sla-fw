@@ -176,11 +176,9 @@ class HardwareSL1(BaseHardware):
             self.rear_fan.enabled = self.config.fan3Enabled
 
         if key == "tiltSensitivity":
-            self.tilt.__dict__.pop("sensitivity", None) # invalidate the cache
             self.tilt.apply_all_profiles()
 
         if key == "towerSensitivity":
-            self.tower.__dict__.pop("sensitivity", None) # invalidate the cache
             self.tower.apply_all_profiles()
 
     def initDefaults(self):

@@ -7,7 +7,6 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from enum import unique, Enum
-from functools import cached_property
 from typing import List, Dict, Any
 
 from PySignal import Signal
@@ -73,7 +72,7 @@ class Axis(ABC):
     def name(self) -> str:
         """return axis name"""
 
-    @cached_property
+    @property
     @abstractmethod
     def home_position(self) -> Unit:
         """
@@ -82,7 +81,7 @@ class Axis(ABC):
         Tilt - bottom position (0)
         """
 
-    @cached_property
+    @property
     @abstractmethod
     def config_height_position(self) -> Unit:
         """
@@ -91,7 +90,7 @@ class Axis(ABC):
         Tilt - level position (config.tiltHeight)
         """
 
-    @cached_property
+    @property
     @abstractmethod
     def minimal_position(self) -> Unit:
         """
@@ -336,7 +335,7 @@ class Axis(ABC):
     def apply_all_profiles(self) -> None:
         """refresh stepper profiles in MC"""
 
-    @cached_property
+    @property
     @abstractmethod
     def sensitivity(self) -> int:
         """return config axis sensitivity value"""
