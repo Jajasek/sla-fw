@@ -399,7 +399,7 @@ class TestWizards(TestWizardsBase):
         self.assertEqual("1.0.0", data["mcFwVersion"])
         self.assertEqual("6c", data["mcBoardRev"])
 
-        self.assertEqual(120000000, data["tower_height_nm"])
+        self.assertEqual(150000000, data["tower_height_nm"])
         self.assertEqual(4928, data["tiltHeight"])
         self.assertIn("uvPwm", data)
 

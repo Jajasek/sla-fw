@@ -55,7 +55,7 @@ class TestIntegrationExposure0(SlaFwIntegrationTestCaseBase):
         self._wait_for_state(Exposure0State.PRINTING, 60)
         self.assertEqual(self.exposure0.failure_reason, PrinterException.as_dict(None))
         self._wait_for_state(Exposure0State.GOING_UP, 30)
-        self._wait_for_state(Exposure0State.FINISHED, 30)
+        self._wait_for_state(Exposure0State.FINISHED, 35)
         self.assertEqual(100, self.exposure0.progress)
 
         # Check zipfile is closed after print

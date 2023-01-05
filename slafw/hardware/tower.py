@@ -76,40 +76,33 @@ class Tower(Axis):
     def minimal_position(self) -> Nm:
         return Nm(0)
 
-    # FIXME: move to the config
     @property
     def min_nm(self) -> Nm:
-        return -(self._config.max_tower_height_mm + Nm(5)) * 1_000_000
+        return -Nm((self._config.default_tower_height_mm + 5) * 1_000_000)
 
-    # FIXME: move to the config
     @property
     def above_surface_nm(self) -> Nm:
-        return -(self._config.max_tower_height_mm - Nm(5)) * 1_000_000
+        return -Nm((self._config.default_tower_height_mm - 5) * 1_000_000)
 
-    # FIXME: move to the config
     @property
     def max_nm(self) -> Nm:
-        return 2 * self._config.max_tower_height_mm * 1_000_000
+        return Nm(2 * self._config.default_tower_height_mm * 1_000_000)
 
-    # FIXME: move to the config
     @property
     def end_nm(self) -> Nm:
-        return self._config.max_tower_height_mm * 1_000_000
+        return Nm(self._config.default_tower_height_mm * 1_000_000)
 
-    # FIXME: move to the config
     @property
-    def calib_pos_nm(self) -> Nm:  # pylint: disable=no-self-use
-        return Nm(1_000_000)
+    def calib_pos_nm(self) -> Nm:
+        return self._config.tower_calib_position_nm
 
-    # FIXME: move to the config
     @property
-    def resin_start_pos_nm(self) -> Nm:  # pylint: disable=no-self-use
-        return Nm(36_000_000)
+    def resin_start_pos_nm(self) -> Nm:
+        return self._config.tower_resin_measure_start_nm
 
-    # FIXME: move to the config
     @property
     def resin_end_pos_nm(self) -> Nm:  # pylint: disable=no-self-use
-        return Nm(1_000_000)
+        return self._config.tower_resin_measure_end_nm
 
     def _move_api_min(self) -> None:
         self.move(self._config.calib_tower_offset_nm)

@@ -365,6 +365,7 @@ class TestTower(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
         self.assertEqual(self.axis._target_position, self.config.calib_tower_offset_nm)
 
     def test_move_api_max(self) -> None:
+        self.axis.position = self.pos
         self.axis._move_api_max()
         self.assertTrue(self.axis.moving)
         self.assertEqual(self.axis._target_position, self.config.tower_height_nm)
