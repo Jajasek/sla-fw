@@ -788,7 +788,7 @@ class Printer0:
 
     @auto_dbus
     def run_tank_surface_cleaner_wizard(self) -> None:
-        self.printer.check_printer_calibrated_before_print()
+        # This wizard uses stallguard to touch the display, no calibration is needed
         self.printer.action_manager.start_wizard(TankSurfaceCleaner(fill_wizard_data_package(self.printer)))
 
     @auto_dbus

@@ -56,7 +56,9 @@ class HomeTowerFinish(DangerousCheck):
         super().__init__(package, WizardCheckType.TOWER_HOME_FINISH, Configuration(None, None), [Resource.TOWER])
 
     async def async_task_run(self, actions: UserActionBroker):
-        await self._package.hw.tower.sync_ensure_async()
+        hw = self._package.hw
+        hw.tower.actual_profile = hw.tower.profiles.homingFast
+        await hw.tower.move_ensure_async(hw.tower.home_position)
 
 
 class TiltHome(DangerousCheck):
