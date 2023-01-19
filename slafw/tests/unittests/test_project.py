@@ -15,7 +15,7 @@ from slafw.errors.warnings import PrintingDirectlyFromMedia
 from slafw.hardware.sl1.hardware import HardwareSL1
 from slafw.project.project import Project, ProjectLayer, LayerCalibrationType
 from slafw.tests.base import SlafwTestCase
-from slafw.utils.bounding_box import BBox
+from slafw.project.bounding_box import BBox
 from slafw.hardware.printer_model import PrinterModel
 from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 

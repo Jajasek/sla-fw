@@ -33,7 +33,7 @@ from slafw.errors.warnings import PrintingDirectlyFromMedia, ProjectSettingsModi
 from slafw.configs.project import ProjectConfig
 from slafw.hardware.base.hardware import BaseHardware
 from slafw.project.functions import get_white_pixels
-from slafw.utils.bounding_box import BBox
+from slafw.project.bounding_box import BBox
 from slafw.api.decorators import range_checked
 from slafw.exposure.profiles import SingleExposureProfileSL1, ExposureProfilesSL1, LayerProfilesSL1
 

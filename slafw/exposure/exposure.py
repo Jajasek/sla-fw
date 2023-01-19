@@ -58,7 +58,7 @@ from slafw.hardware.power_led_action import WarningAction, ErrorAction
 from slafw.project.functions import check_ready_to_print
 from slafw.project.project import Project
 from slafw.states.exposure import ExposureState, ExposureCheck, ExposureCheckResult
-from slafw.utils.traceable_collections import TraceableDict
+from slafw.exposure.traceable_collections import TraceableDict
 from slafw.exposure.profiles import SingleLayerProfileSL1
 from slafw.wizard.data_package import WizardDataPackage
 

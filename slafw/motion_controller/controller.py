@@ -32,8 +32,8 @@ from slafw.motion_controller.states import (
 from slafw.errors.errors import MotionControllerException, MotionControllerWrongRevision, MotionControllerWrongFw, \
     MotionControllerNotResponding, MotionControllerWrongResponse
 from slafw.motion_controller.trace import LineTrace, LineMarker, Trace
+from slafw.motion_controller.value_checker import ValueChecker, UpdateInterval
 from slafw.functions.decorators import safe_call
-from slafw.utils.value_checker import ValueChecker, UpdateInterval
 
 
 class MotionController:

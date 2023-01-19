@@ -11,7 +11,7 @@ from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.base import SlafwTestCase
 from slafw.image.resin_calibration import Area, AreaWithLabel, AreaWithLabelStripe, Calibration
 from slafw.tests.mocks.hardware import HardwareMock
-from slafw.utils.bounding_box import BBox
+from slafw.project.bounding_box import BBox
 
 from slafw.configs.hw import HwConfig
 from slafw.project.project import Project

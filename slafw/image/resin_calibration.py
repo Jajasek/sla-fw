@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from slafw import defines
 from slafw.project.project import LayerCalibrationType
-from slafw.utils.bounding_box import BBox
+from slafw.project.bounding_box import BBox
 
 
 class Area(BBox):

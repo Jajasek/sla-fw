@@ -20,7 +20,7 @@ from slafw.hardware.base.exposure_screen import ExposureScreenParameters
 from slafw.image.resin_calibration import Calibration
 from slafw.image.cairo import inverse
 from slafw.project.functions import get_white_pixels
-from slafw.utils.bounding_box import BBox
+from slafw.project.bounding_box import BBox
 
 
 class ProjectFlags(IntFlag):

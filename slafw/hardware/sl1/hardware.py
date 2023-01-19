@@ -38,8 +38,8 @@ from slafw.hardware.sl1.tower import TowerSL1
 from slafw.hardware.sl1.uv_led import SL1UVLED, SL1SUVLED
 from slafw.hardware.sl1s_uvled_booster import Booster
 from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.value_checker import ValueChecker, UpdateInterval
 from slafw.tests.mocks.exposure_screen import VirtualExposureScreen
-from slafw.utils.value_checker import ValueChecker, UpdateInterval
 
 
 class HardwareSL1(BaseHardware):

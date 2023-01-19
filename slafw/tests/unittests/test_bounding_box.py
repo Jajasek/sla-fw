@@ -8,7 +8,7 @@
 import unittest
 
 from slafw.tests.base import SlafwTestCase
-from slafw.utils.bounding_box import BBox
+from slafw.project.bounding_box import BBox
 
 
 class TestBBox(SlafwTestCase):
