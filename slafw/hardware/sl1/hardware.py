@@ -28,6 +28,7 @@ from slafw.errors.errors import MotionControllerException
 from slafw.functions.decorators import safe_call
 from slafw.hardware.a64.temp_sensor import A64CPUTempSensor
 from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.base.exposure_screen import VirtualExposureScreen
 from slafw.hardware.printer_model import PrinterModel
 from slafw.hardware.sl1.exposure_screen import SL1ExposureScreen, SL1SExposureScreen
 from slafw.hardware.sl1.fan import SL1FanUVLED, SL1FanBlower, SL1FanRear
@@ -39,7 +40,6 @@ from slafw.hardware.sl1.uv_led import SL1UVLED, SL1SUVLED
 from slafw.hardware.sl1s_uvled_booster import Booster
 from slafw.motion_controller.controller import MotionController
 from slafw.motion_controller.value_checker import ValueChecker, UpdateInterval
-from slafw.tests.mocks.exposure_screen import VirtualExposureScreen
 
 
 class HardwareSL1(BaseHardware):

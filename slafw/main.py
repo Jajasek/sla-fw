@@ -14,6 +14,7 @@ from pydbus import SystemBus
 
 from slafw import libPrinter
 from slafw import defines
+from slafw import __full_version__
 from slafw.api.admin0 import Admin0
 from slafw.api.printer0 import Printer0
 from slafw.api.standard0 import Standard0
@@ -29,6 +30,7 @@ else:
     logger.info("Embedded logger configuration was used")
 
 logger.info("Logging is set to level %s", logging.getLevelName(logger.level))
+logger.info("Version: %s", __full_version__)
 
 warnings.simplefilter("ignore")
 

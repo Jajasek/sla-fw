@@ -52,33 +52,3 @@ class MockExposureScreen(ExposureScreen):
 
     def clear_usage(self):
         self.fake_usage_s = 0
-
-
-class VirtualExposureScreen(ExposureScreen):
-    @cached_property
-    def parameters(self) -> ExposureScreenParameters:
-        return ExposureScreenParameters(
-            size_px=(360, 640),
-            thumbnail_factor=5,
-            output_factor=4,
-            pixel_size_nm=47250,
-            refresh_delay_ms=0,
-            monochromatic=False,
-            bgr_pixels=False,
-        )
-
-    def start_counting_usage(self):
-        pass
-
-    def stop_counting_usage(self):
-        pass
-
-    @property
-    def usage_s(self) -> int:
-        return 0
-
-    def save_usage(self):
-        pass
-
-    def clear_usage(self):
-        pass

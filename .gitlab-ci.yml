@@ -12,6 +12,7 @@ before_script:
   - eval $(ssh-agent -s)
   - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
   - ssh-keyscan github.com >> ~/.ssh/known_hosts
+  - echo "__full_version__ = 'TEST EXECUTION'" > slafw/__init__.py
 
 build:
   stage: build

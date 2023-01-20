@@ -10,7 +10,7 @@ from slafw.hardware.sl1.exposure_screen import SL1SExposureScreen, SL1ExposureSc
 from slafw.hardware.sl1.uv_led import SL1UVLED, SL1SUVLED
 from slafw.tests.base import SlafwTestCase
 from slafw.hardware.printer_model import PrinterModel
-from slafw.tests.mocks.exposure_screen import VirtualExposureScreen
+from slafw.hardware.base.exposure_screen import VirtualExposureScreen
 from slafw.tests.mocks.motion_controller import MotionControllerMock
 from slafw.tests.mocks.temp_sensor import MockTempSensor
 from slafw.tests.mocks.uv_led import MockUVLED
