@@ -8,11 +8,11 @@ from pathlib import Path
 
 from slafw import defines
 from slafw.hardware.base.exposure_screen import ExposureScreen, ExposureScreenParameters
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
 class SL1xExposureScreen(ExposureScreen, ABC):
-    def __init__(self, mcc: MotionController):
+    def __init__(self, mcc: MotionControllerSL1):
         super().__init__()
         self._mcc = mcc
         self._mcc.statistics_changed.connect(self._on_statistics_changed)

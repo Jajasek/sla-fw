@@ -2,14 +2,14 @@
 # Copyright (C) 2022 Prusa Research s.r.o. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 from slafw.errors.errors import MotionControllerException
 from slafw.hardware.power_led import PowerLedActions, PowerLed
 
 
 class PowerLedSL1(PowerLed):
 
-    def __init__(self, mcc: MotionController):
+    def __init__(self, mcc: MotionControllerSL1):
         super().__init__()
         self._mcc = mcc
         self._error_level_counter = 0

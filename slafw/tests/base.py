@@ -106,11 +106,11 @@ class SlafwTestCase(TestCase):
         factory_enable_path.touch()
 
         return [
-            patch("slafw.motion_controller.controller.chip"),
-            patch("slafw.motion_controller.controller.find_line"),
-            patch("slafw.motion_controller.controller.line_request"),
-            patch("slafw.motion_controller.controller.UInput"),
-            patch("slafw.motion_controller.controller.serial", mc_port),
+            patch("slafw.motion_controller.sl1_controller.chip"),
+            patch("slafw.motion_controller.sl1_controller.find_line"),
+            patch("slafw.motion_controller.sl1_controller.line_request"),
+            patch("slafw.motion_controller.sl1_controller.UInput"),
+            patch("slafw.motion_controller.base_controller.serial", mc_port),
             patch("slafw.libUvLedMeterMulti.serial.tools.list_ports"),
             patch("slafw.hardware.base.exposure_screen.Wayland", Mock()),
             patch("slafw.hardware.sl1.hardware.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),

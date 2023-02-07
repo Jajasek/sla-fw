@@ -10,7 +10,7 @@ from slafw.configs.hw import HwConfig
 from slafw.configs.writer import ConfigWriter
 from slafw.hardware.base.fan import Fan
 from slafw.hardware.base.temp_sensor import TempSensor
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
 class SL1Fan(Fan):
@@ -18,7 +18,7 @@ class SL1Fan(Fan):
     # pylint: disable = too-many-instance-attributes
     def __init__(
         self,
-        mcc: MotionController,
+        mcc: MotionControllerSL1,
         name: str,
         index: int,
         min_rpm: int,
@@ -81,7 +81,7 @@ class SL1Fan(Fan):
 
 
 class SL1FanUVLED(SL1Fan):
-    def __init__(self, mcc: MotionController, config: HwConfig, reference: TempSensor):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig, reference: TempSensor):
         super().__init__(
             mcc,
             "UV LED",
@@ -101,7 +101,7 @@ class SL1FanUVLED(SL1Fan):
 
 
 class SL1FanBlower(SL1Fan):
-    def __init__(self, mcc: MotionController, config: HwConfig):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig):
         super().__init__(
             mcc,
             "Blower",
@@ -118,7 +118,7 @@ class SL1FanBlower(SL1Fan):
 
 
 class SL1FanRear(SL1Fan):
-    def __init__(self, mcc: MotionController, config: HwConfig):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig):
         super().__init__(
             mcc,
             "Rear",

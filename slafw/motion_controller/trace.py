@@ -7,8 +7,6 @@ from collections import deque
 from enum import Enum
 from typing import Deque
 
-from slafw import defines
-
 
 class LineMarker(Enum):
     INPUT = ">"
@@ -75,7 +73,7 @@ class Trace:
 
         :return: Trace string
         """
-        return f"last {defines.traces} lines:\n" + "\n".join([str(x) for x in self.traces])
+        return f"last {len(self.traces)} lines:\n" + "\n".join([str(x) for x in self.traces])
 
     def __bytes__(self):
         return b"\n".join([bytes(x) for x in self.traces])

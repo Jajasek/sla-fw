@@ -14,12 +14,12 @@ from slafw.hardware.tower import Tower
 from slafw.hardware.base.profiles import SingleProfile, ProfileSet
 from slafw.hardware.tilt import MovingProfilesTilt
 from slafw.hardware.tower import MovingProfilesTower
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
 class MockAxis(Axis):
     # pylint: disable = too-many-arguments
-    def __init__(self, mcc: MotionController, config: HwConfig,
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig,
                  power_led: PowerLed):
         super().__init__(config, power_led)
         self._mcc = mcc

@@ -38,7 +38,7 @@ from slafw.hardware.sl1.tilt import TiltSL1
 from slafw.hardware.sl1.tower import TowerSL1
 from slafw.hardware.sl1.uv_led import SL1UVLED, SL1SUVLED
 from slafw.hardware.sl1s_uvled_booster import Booster
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 from slafw.motion_controller.value_checker import ValueChecker, UpdateInterval
 
 
@@ -46,7 +46,7 @@ class HardwareSL1(BaseHardware):
     def __init__(self, hw_config: HwConfig, printer_model: PrinterModel):
         super().__init__(hw_config, printer_model)
 
-        self.mcc = MotionController(defines.motionControlDevice)
+        self.mcc = MotionControllerSL1()
         self.sl1s_booster = Booster()
 
         if printer_model == PrinterModel.SL1:
@@ -136,7 +136,7 @@ class HardwareSL1(BaseHardware):
         self.exposure_screen.exit()
 
     async def _value_refresh_task_body(self):
-        # This is deprecated, move value checkers to MotionController
+        # This is deprecated, move value checkers to MotionControllerSL1
         checkers = [
             ValueChecker(self.getResinSensorState, self.resin_sensor_state_changed),
             self._tilt_position_checker,
@@ -194,22 +194,22 @@ class HardwareSL1(BaseHardware):
 
     @property
     def mcFwVersion(self):
-        return self.mcc.fw["version"]
+        return self.mcc.fw.version
 
     @property
     def mcFwRevision(self):
-        return self.mcc.fw["revision"]
+        return self.mcc.fw.revision
 
     @property
     def mcBoardRevision(self):
-        if self.mcc.board["revision"] > -1 and self.mcc.board["subRevision"] != "":
-            return f"{self.mcc.board['revision']:d}{self.mcc.board['subRevision']}"
+        if self.mcc.board.revision > -1 and self.mcc.board.subRevision != "":
+            return f"{self.mcc.board.revision:d}{self.mcc.board.subRevision}"
 
         return "*INVALID*"
 
     @property
     def mcSerialNo(self):
-        return self.mcc.board["serial"]
+        return self.mcc.board.serial
 
     def eraseEeprom(self):
         self.mcc.do("!eecl")

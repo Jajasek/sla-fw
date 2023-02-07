@@ -10,7 +10,6 @@ from pathlib import Path
 import slafw
 from slafw import test_runtime
 
-reqMcVersion = "1.1.9"
 
 printerVariant = "default"
 component_name = "slafw"
@@ -75,7 +74,6 @@ cpuSNFile = "/sys/bus/nvmem/devices/sunxi-sid0/nvmem"
 
 script_dir = Path("/usr/share/slafw/scripts")
 
-motionControlDevice = "/dev/ttyS2"
 mc_debug_port = 8192
 uv_meter_device = "/dev/uvmeter"
 
@@ -121,7 +119,6 @@ apikeyFile = configDir / "api.key"
 uvLedMeterMaxWait_s = 10
 
 logsBase = "/var/log/journal"
-traces = 30
 printer_summary = Path(ramdiskPath) / "printer_summary"
 
 exposure_time_min_ms = 1000

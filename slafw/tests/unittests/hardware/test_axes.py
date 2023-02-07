@@ -21,7 +21,7 @@ from slafw.hardware.axis import Axis, HomingStatus
 from slafw.hardware.printer_model import PrinterModel
 from slafw.hardware.sl1.tilt import TiltSL1
 from slafw.hardware.sl1.tower import TowerSL1
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 from slafw.tests.base import SlafwTestCase
 from slafw.exposure.profiles import LayerProfilesSL1
 
@@ -42,7 +42,7 @@ class DoNotRunTestDirectlyFromBaseClass:
             super().setUp()
             self.config = HwConfig()
             self.power_led = Mock()
-            self.mcc = MotionController(defines.motionControlDevice)
+            self.mcc = MotionControllerSL1()
             self.mcc.open()
             self.printer_model = PrinterModel.SL1
 

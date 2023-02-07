@@ -6,11 +6,15 @@ from unittest.mock import Mock
 
 from PySignal import Signal
 
+from slafw.motion_controller.base_controller import Board
+
 
 class MotionControllerMock:
     # pylint: disable = too-many-instance-attributes
     def __init__(self, revision: int, subrevision: str):
-        self.board = {"revision": revision, "subRevision": subrevision}
+        self.board = Board()
+        self.board.revision = revision
+        self.board.subRevision = subrevision
         self.temps_changed = Signal()
         self.value_refresh_failed = Signal()
         self.fans_error_changed = Signal()

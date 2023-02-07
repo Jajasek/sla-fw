@@ -10,7 +10,7 @@ from slafw.api.devices import HardwareDeviceId
 from slafw.configs.hw import HwConfig
 from slafw.errors.errors import UvTempSensorFailed, TempSensorFailed
 from slafw.hardware.base.temp_sensor import TempSensor
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
 class SL1TempSensor(TempSensor):
@@ -18,7 +18,7 @@ class SL1TempSensor(TempSensor):
     def __init__(
         self,
         name: str,
-        mcc: MotionController,
+        mcc: MotionControllerSL1,
         index: int,
         minimal: Optional[float] = None,
         maximal: Optional[float] = None,
@@ -56,7 +56,7 @@ class SL1TempSensor(TempSensor):
 class SL1xTempSensorUV(SL1TempSensor):
     def __init__(
         self,
-        mcc: MotionController,
+        mcc: MotionControllerSL1,
         index: int,
         config: HwConfig,
     ):
@@ -79,19 +79,19 @@ class SL1xTempSensorUV(SL1TempSensor):
 
 class SL1TempSensorUV(SL1xTempSensorUV):
     # pylint: disable = too-many-arguments
-    def __init__(self, mcc: MotionController, config: HwConfig):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig):
         super().__init__(mcc=mcc, index=0, config=config)
 
 
 class SL1STempSensorUV(SL1xTempSensorUV):
     # pylint: disable = too-many-arguments
-    def __init__(self, mcc: MotionController, config: HwConfig):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig):
         super().__init__(mcc=mcc, index=2, config=config)
 
 
 class SL1TempSensorAmbient(SL1TempSensor):
     # pylint: disable = too-many-arguments
-    def __init__(self, mcc: MotionController):
+    def __init__(self, mcc: MotionControllerSL1):
         super().__init__(
             name="Ambient",
             mcc=mcc,

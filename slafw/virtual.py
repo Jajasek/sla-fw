@@ -85,12 +85,12 @@ class Virtual:
         prev_prints = self.temp / "previous_prints"
 
         patches: List[patch] = [
-            patch("slafw.motion_controller.controller.serial", slafw.tests.mocks.mc_port),
+            patch("slafw.motion_controller.base_controller.serial", slafw.tests.mocks.mc_port),
             patch("slafw.libUvLedMeterMulti.serial", slafw.tests.mocks.mc_port),
-            patch("slafw.motion_controller.controller.UInput", Mock()),
-            patch("slafw.motion_controller.controller.chip", Mock()),
-            patch("slafw.motion_controller.controller.find_line", Mock()),
-            patch("slafw.motion_controller.controller.line_request", Mock()),
+            patch("slafw.motion_controller.sl1_controller.UInput", Mock()),
+            patch("slafw.motion_controller.sl1_controller.chip", Mock()),
+            patch("slafw.motion_controller.sl1_controller.find_line", Mock()),
+            patch("slafw.motion_controller.sl1_controller.line_request", Mock()),
             patch("slafw.functions.files.get_save_path", self.fake_save_path),
             patch("slafw.hardware.sl1.hardware.HardwareSL1.isCoverClosed", Mock(return_value=True)),
             patch(

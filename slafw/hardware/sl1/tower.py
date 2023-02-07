@@ -15,7 +15,7 @@ from slafw.hardware.power_led import PowerLed
 from slafw.hardware.sl1.axis import AxisSL1
 from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1, TOWER_CFG_LOCAL
 from slafw.hardware.tower import Tower
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 from slafw.exposure.profiles import SingleLayerProfileSL1
 
 
@@ -23,7 +23,7 @@ class TowerSL1(Tower, AxisSL1):
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, mcc: MotionController, config: HwConfig, power_led: PowerLed, printer_model: PrinterModel):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig, power_led: PowerLed, printer_model: PrinterModel):
         super().__init__(config, power_led)
         self._mcc = mcc
         defaults = Path(defines.dataPath) / printer_model.name / f"default_{self.name}_moving_profiles.json" # type: ignore[attr-defined]

@@ -18,7 +18,7 @@ from slafw.hardware.sl1.tower import TowerSL1
 from slafw.hardware.sl1.axis import AxisSL1
 from slafw.hardware.sl1.tilt_profiles import MovingProfilesTiltSL1, TILT_CFG_LOCAL
 from slafw.hardware.tilt import Tilt
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 from slafw.exposure.profiles import SingleLayerProfileSL1
 
 
@@ -27,7 +27,7 @@ class TiltSL1(Tilt, AxisSL1):
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-arguments
 
-    def __init__(self, mcc: MotionController, config: HwConfig,
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig,
                  power_led: PowerLed, tower: TowerSL1, printer_model: PrinterModel):
         super().__init__(config, power_led)
         self._mcc = mcc

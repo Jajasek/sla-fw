@@ -11,11 +11,11 @@ from slafw.errors.errors import UVLEDsVoltagesDifferTooMuch, BoosterError, UVLED
 from slafw.hardware.base.temp_sensor import TempSensor
 from slafw.hardware.base.uv_led import UVLED, UvLedParameters
 from slafw.hardware.sl1s_uvled_booster import Booster
-from slafw.motion_controller.controller import MotionController
+from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
 class UVLEDSL1x(UVLED, ABC):
-    def __init__(self, mcc: MotionController, uv_led_temp: TempSensor):
+    def __init__(self, mcc: MotionControllerSL1, uv_led_temp: TempSensor):
         super().__init__()
         self._mcc = mcc
         self._uv_led_temp = uv_led_temp
@@ -85,10 +85,10 @@ class UVLEDSL1x(UVLED, ABC):
 
     @property
     def _is500khz(self) -> bool:
-        if not isinstance(self._mcc.board["revision"], int):
-            raise ValueError(f"Board revision not a number: \"{self._mcc.board['revision']}\"")
-        return self._mcc.board["revision"] > 6 or (
-            self._mcc.board["revision"] == 6 and self._mcc.board["subRevision"] == "c"
+        if not isinstance(self._mcc.board.revision, int):
+            raise ValueError(f"Board revision not a number: \"{self._mcc.board.revision}\"")
+        return self._mcc.board.revision > 6 or (
+            self._mcc.board.revision == 6 and self._mcc.board.subRevision == "c"
         )
 
     def _check_overheat(self):
@@ -179,7 +179,7 @@ class SL1UVLED(UVLEDSL1x):
 
 
 class SL1SUVLED(UVLEDSL1x):
-    def __init__(self, mcc: MotionController, booster: Booster, temp_sensor: TempSensor):
+    def __init__(self, mcc: MotionControllerSL1, booster: Booster, temp_sensor: TempSensor):
         super().__init__(mcc, temp_sensor)
         self._booster = booster
 
