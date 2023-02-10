@@ -29,7 +29,7 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import FactoryResetCheckFailure
 from slafw.functions.files import ch_mode_owner, get_all_supported_files
-from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvpwm
+from slafw.functions.system import FactoryMountedRW, reset_hostname, compute_uvpwm, set_update_channel
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType, SyncCheck, DangerousCheck
 from slafw.wizard.setup import Configuration, Resource
@@ -382,3 +382,14 @@ class ResetTouchUI(ResetCheck):
 
     def _restart_backlight_service(self):
         pydbus.SystemBus().get(self.SYSTEMD_INTERFACE).StopUnit(self.SYSTEMD_BACKLIGHT, "replace")
+
+class ResetUpdateChannel(ResetCheck):
+    """
+    Set update channel to stable
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(WizardCheckType.RESET_UPDATE_CHANNEL, *args, **kwargs)
+
+    def reset_task_run(self, actions: UserActionBroker):
+        set_update_channel(channel="stable")

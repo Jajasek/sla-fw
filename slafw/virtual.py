@@ -137,7 +137,7 @@ class Virtual:
             patch("slafw.wizard.checks.factory_reset.ResetHttpDigest.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetTouchUI.reset_task_run", Mock()),
-            patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock()),
+            patch("slafw.wizard.checks.factory_reset.ResetUpdateChannel.reset_task_run", Mock()),
             patch("slafw.functions.system.os", Mock()),
         ]
 

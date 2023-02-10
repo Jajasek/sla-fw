@@ -349,7 +349,7 @@ class TestWizards(TestWizardsBase):
             "slafw.wizard.checks.factory_reset.ResetTouchUI._restart_backlight_service", self.backlight_state.touch
         ), patch(
             "slafw.wizard.checks.factory_reset.ResetTouchUI.TOUCH_UI_CONFIG", self.touch_ui_config
-        ):
+        ), patch("slafw.wizard.checks.factory_reset.set_update_channel"):
             super()._run_wizard(wizard, limit_s, expected_state)
 
     def _run_self_test(self, expected_state=WizardState.DONE) -> dict:

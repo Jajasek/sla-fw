@@ -26,6 +26,7 @@ from slafw.wizard.checks.factory_reset import (
     FinishPackingMoves,
     DisableAccess,
     ResetTouchUI,
+    ResetUpdateChannel,
 )
 from slafw.wizard.group import CheckGroup
 from slafw.wizard.setup import Configuration
@@ -55,6 +56,7 @@ class ResetSettingsGroup(CheckGroup):
             ResetHWConfig(package, disable_unboxing=disable_unboxing, hard_errors=hard_errors),
             DisableAccess(),
             ResetTouchUI(),
+            ResetUpdateChannel(hard_errors=hard_errors),
         ]
         if erase_projects:
             checks.append(EraseProjects(hard_errors=hard_errors))

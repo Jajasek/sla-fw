@@ -82,6 +82,7 @@ class WizardCheckType(Enum):
     TOWER_GENTLY_UP = 79
     WAITING_FOR_USER = 80
     TOWER_HOME_FINISH = 81
+    RESET_UPDATE_CHANNEL = 82
 
 
 class BaseCheck(ABC):

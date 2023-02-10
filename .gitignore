@@ -6,4 +6,4 @@ dist
 *.egg-info
 *.mo
 .coverage
-.venv
+.venv*
