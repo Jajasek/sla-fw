@@ -112,12 +112,12 @@ class ResetHttpDigest(ResetCheck):
             self._logger.exception("Failed to reset http digest config")
 
 
-class ResetWifi(ResetCheck):
+class ResetNetwork(ResetCheck):
     NETWORK_MANAGER = "org.freedesktop.NetworkManager"
     NM_SETTINGS_CONNECTION_FLAG_NM_GENERATED = 0x02
 
     def __init__(self, *args, **kwargs):
-        super().__init__(WizardCheckType.RESET_WIFI, *args, **kwargs)
+        super().__init__(WizardCheckType.RESET_NETWORK, *args, **kwargs)
 
     def reset_task_run(self, actions: UserActionBroker):
         system_bus = pydbus.SystemBus()
