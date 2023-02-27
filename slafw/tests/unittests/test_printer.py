@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from time import sleep
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import patch, Mock, PropertyMock
 
 from slafw.errors.errors import UnknownPrinterModel
 from slafw.hardware.printer_model import PrinterModel
@@ -101,6 +100,16 @@ class TestPrinter(SlafwTestCaseDBus, RefCheckTestCase):
         self_tested_callback.assert_called_once()
         mechanically_calibrated_callback.assert_called_once()
         uv_calibrated_callback.assert_called_once()
+
+    @patch("slafw.libPrinter.Printer.id", PropertyMock(return_value="ABCDEF01"))
+    @patch("distro.version")
+    def test_help_page_url(self, distro_version):
+        distro_version.return_value = "1.7.1"
+        self.assertEqual("/ABCDEF01/1.7.1", self.printer.help_page_url)
+        distro_version.return_value = "1.8.0-alpha.2.master.3+d33e1031-dirty"
+        self.assertEqual("/ABCDEF01/1.8.0", self.printer.help_page_url)
+        distro_version.return_value = "25.18.150-dev"
+        self.assertEqual("/ABCDEF01/25.18.150", self.printer.help_page_url)
 
     @patch("slafw.functions.system.os")
     def test_finish_poweroff(self, os_mock):

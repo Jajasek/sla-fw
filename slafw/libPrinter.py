@@ -478,7 +478,7 @@ class Printer:
     def help_page_url(self) -> str:
         url = ""
         if self.data_privacy:
-            fw_version = re.sub(r"(\d*)\.(\d*)\.(\d*)-.*", r"\g<1>\g<2>\g<3>", distro.version())
+            fw_version = re.sub(r"([\.\d]*)[^\.\d].*", r"\g<1>", distro.version())
             url += f"/{self.id}/{fw_version}"
 
         return url
