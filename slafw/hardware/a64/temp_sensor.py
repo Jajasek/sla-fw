@@ -6,7 +6,7 @@ from asyncio import sleep
 from pathlib import Path
 from typing import Optional
 
-from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.hardware.temp_sensor import TempSensor
 
 
 class A64CPUTempSensor(TempSensor):

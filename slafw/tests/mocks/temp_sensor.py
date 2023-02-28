@@ -5,7 +5,7 @@
 from typing import Optional
 from unittest.mock import Mock
 
-from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.hardware.temp_sensor import TempSensor
 
 
 class MockTempSensor(TempSensor):

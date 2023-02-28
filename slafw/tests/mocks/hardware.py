@@ -9,7 +9,7 @@ from PySignal import Signal
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.mocks.axis import MockTower, MockTilt
 from slafw.tests.mocks.exposure_screen import MockExposureScreen

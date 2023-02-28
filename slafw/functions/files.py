@@ -18,7 +18,7 @@ from logging import Logger
 
 from slafw import defines, test_runtime
 from slafw.hardware.printer_model import PrinterModel
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 
 
 def get_save_path() -> Optional[Path]:

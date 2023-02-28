@@ -9,7 +9,7 @@ import re
 
 from slafw.defines import dataPath
 from slafw.libPrinter import Printer
-from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.profiles import SingleProfile, ProfileSet
 from slafw.admin.control import AdminControl
 from slafw.admin.items import (
     AdminItem,

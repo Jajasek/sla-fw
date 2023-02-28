@@ -8,7 +8,7 @@ from time import time
 from enum import Enum, unique
 
 from slafw.configs.unit import Nm
-from slafw.hardware.base.profiles import SingleProfile
+from slafw.hardware.profiles import SingleProfile
 from slafw.hardware.tower import MovingProfilesTower
 from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker

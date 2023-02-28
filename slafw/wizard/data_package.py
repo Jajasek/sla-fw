@@ -6,7 +6,7 @@ from typing import Any
 from dataclasses import dataclass, field, make_dataclass
 import weakref
 
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.configs.writer import ConfigWriter
 from slafw.configs.runtime import RuntimeConfig
 from slafw.image.exposure_image import ExposureImage

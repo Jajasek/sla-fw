@@ -5,7 +5,7 @@
 from functools import cached_property
 from typing import Dict, Any, Callable
 
-from slafw.hardware.base.uv_led import UVLED, UvLedParameters
+from slafw.hardware.uv_led import UVLED, UvLedParameters
 
 
 class MockUVLED(UVLED):

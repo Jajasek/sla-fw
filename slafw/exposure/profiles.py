@@ -5,7 +5,7 @@
 from slafw import defines
 from slafw.configs.value import DictOfConfigs, BoolValue, IntValue, ProfileIndex
 from slafw.configs.unit import Ustep, Nm, Ms
-from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.profiles import SingleProfile, ProfileSet
 from slafw.hardware.sl1.tilt_profiles import MovingProfilesTiltSL1
 from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1
 

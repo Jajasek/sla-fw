@@ -7,7 +7,7 @@
 from functools import cached_property
 from unittest.mock import Mock
 
-from slafw.hardware.base.exposure_screen import ExposureScreen, ExposureScreenParameters
+from slafw.hardware.exposure_screen import ExposureScreen, ExposureScreenParameters
 
 
 class MockExposureScreen(ExposureScreen):

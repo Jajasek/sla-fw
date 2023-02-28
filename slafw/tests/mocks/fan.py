@@ -4,8 +4,8 @@
 
 from typing import Optional
 
-from slafw.hardware.base.fan import Fan
-from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.hardware.fan import Fan
+from slafw.hardware.temp_sensor import TempSensor
 from slafw.configs.writer import ConfigWriter
 
 

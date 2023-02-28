@@ -37,8 +37,8 @@ from slafw.errors import tests
 from slafw.errors.errors import ReprintWithoutHistory, PrinterException
 from slafw.functions.files import get_all_supported_files
 from slafw.functions.system import shut_down
-from slafw.hardware.base.fan import Fan
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.fan import Fan
+from slafw.hardware.hardware import BaseHardware
 from slafw.hardware.power_led_action import WarningAction
 from slafw.hardware.sl1.uv_led import SL1UVLED
 from slafw.project.functions import check_ready_to_print
@@ -865,20 +865,17 @@ class Printer0:
     def remove_oneclick_inhibitor(self, name: str) -> None:
         self.printer.remove_oneclick_inhibitor(name)
 
+    # TODO rename to uvled_serial
     @auto_dbus
     @property
     @cached()
     def booster_serial(self) -> str:
         """
-        Get booster board serial number
+        Get UVLED electronic board serial number
 
-        :return: booster board serial number
+        :return: UVLED electronic board serial number
         """
-        # TODO: booster could be encapsulated inside UvLed
-        try:
-            return self.printer.hw.sl1s_booster.board_serial_no
-        except AttributeError:
-            return "NA"
+        return self.printer.hw.uv_led.serial
 
     @auto_dbus
     @property

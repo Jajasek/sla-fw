@@ -9,7 +9,7 @@ from typing import Callable, Dict, Any
 
 from PySignal import Signal
 
-from slafw.hardware.base.component import HardwareComponent
+from slafw.hardware.component import HardwareComponent
 
 
 @dataclass(eq=False)
@@ -124,4 +124,10 @@ class UVLED(HardwareComponent, ABC):
     def parameters(self) -> UvLedParameters:
         """
         UV LED related parameters
+        """
+
+    @cached_property
+    def serial(self) -> str:
+        """
+        UV LED electronic serial number
         """

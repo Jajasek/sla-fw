@@ -16,7 +16,7 @@ from slafw.configs.unit import Unit, Nm
 from slafw.errors.errors import MotionControllerException
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.power_led_action import WarningAction
-from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.profiles import SingleProfile, ProfileSet
 
 
 def parse_axis(text: str, axis: str) -> int:

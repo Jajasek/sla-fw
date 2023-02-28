@@ -9,7 +9,7 @@ from slafw import defines
 from slafw.api.devices import HardwareDeviceId
 from slafw.configs.hw import HwConfig
 from slafw.errors.errors import UvTempSensorFailed, TempSensorFailed
-from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.hardware.temp_sensor import TempSensor
 from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 

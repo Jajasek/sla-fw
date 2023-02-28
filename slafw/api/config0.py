@@ -16,7 +16,7 @@ from slafw.configs.hw import HwConfig
 from slafw.configs.value import Value, NumericValue, ListValue, TextValue
 
 if TYPE_CHECKING:
-    from slafw.hardware.base.hardware import BaseHardware
+    from slafw.hardware.hardware import BaseHardware
 
 
 def wrap_hw_config(cls: Config0):

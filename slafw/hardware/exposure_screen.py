@@ -22,7 +22,7 @@ from pywayland.protocol.xdg_shell import XdgWmBase
 from pywayland.utils import AnonymousFile
 
 from slafw import defines
-from slafw.hardware.base.component import HardwareComponent
+from slafw.hardware.component import HardwareComponent
 
 
 @dataclass(eq=False)

@@ -26,7 +26,7 @@ from slafw import defines
 from slafw.functions.system import get_update_channel
 from slafw.configs.toml import TomlConfig
 from slafw.configs.stats import TomlConfigStats
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 
 
 def create_summary(hw: BaseHardware, logger: logging.Logger, summary_path:

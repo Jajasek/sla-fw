@@ -15,13 +15,12 @@ from PySignal import Signal
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.hardware.axis import Axis
-from slafw.hardware.base.exposure_screen import ExposureScreen
-from slafw.hardware.base.fan import Fan
-from slafw.hardware.base.temp_sensor import TempSensor
-from slafw.hardware.base.uv_led import UVLED
+from slafw.hardware.exposure_screen import ExposureScreen
+from slafw.hardware.fan import Fan
+from slafw.hardware.temp_sensor import TempSensor
+from slafw.hardware.uv_led import UVLED
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.printer_model import PrinterModel
-from slafw.hardware.sl1s_uvled_booster import Booster
 from slafw.hardware.tilt import Tilt
 from slafw.hardware.tower import Tower
 
@@ -40,7 +39,6 @@ class BaseHardware:
     cpu_temp: TempSensor
     exposure_screen: ExposureScreen
     power_led: PowerLed
-    sl1s_booster: Booster
 
     def __init__(self, hw_config: HwConfig, printer_model: PrinterModel):
         self.logger = logging.getLogger(__name__)

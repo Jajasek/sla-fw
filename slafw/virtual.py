@@ -142,7 +142,7 @@ class Virtual:
         ]
 
         if not os.environ.get("WAYLAND_DISPLAY") or printer_model != PrinterModel.VIRTUAL:
-            patches.append(patch("slafw.hardware.base.exposure_screen.Wayland", WaylandMock))
+            patches.append(patch("slafw.hardware.exposure_screen.Wayland", WaylandMock))
 
         copyfile(SAMPLES_DIR / "hardware-virtual.cfg", hardware_file)
         copyfile(SAMPLES_DIR / "hardware.toml", hardware_file_factory)

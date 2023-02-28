@@ -8,7 +8,7 @@
 import logging
 import sys
 
-from slafw.hardware.sl1s_uvled_booster import Booster
+from slafw.hardware.sl1.sl1s_uvled_booster import Booster
 
 logging.basicConfig(format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s", level = logging.DEBUG)
 

@@ -6,7 +6,7 @@ import mmap
 from unittest.mock import Mock
 from tempfile import TemporaryFile
 
-from slafw.hardware.base.exposure_screen import ExposureScreenParameters
+from slafw.hardware.exposure_screen import ExposureScreenParameters
 
 class WaylandMock:
     # pylint: disable = too-many-instance-attributes

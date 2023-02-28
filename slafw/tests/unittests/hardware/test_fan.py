@@ -13,7 +13,7 @@ from unittest.mock import Mock
 
 from slafw.configs.hw import HwConfig
 from slafw.configs.writer import ConfigWriter
-from slafw.hardware.base.fan import Fan
+from slafw.hardware.fan import Fan
 from slafw.hardware.sl1.fan import SL1FanUVLED, SL1FanBlower, SL1FanRear
 from slafw.tests.base import SlafwTestCase
 from slafw.tests.mocks.motion_controller import MotionControllerMock

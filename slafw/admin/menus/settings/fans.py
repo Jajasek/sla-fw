@@ -8,7 +8,7 @@ from functools import partial
 from time import sleep
 
 from slafw.libPrinter import Printer
-from slafw.hardware.base.fan import Fan
+from slafw.hardware.fan import Fan
 from slafw.admin.control import AdminControl
 from slafw.admin.items import AdminIntValue, AdminBoolValue, AdminLabel
 from slafw.admin.menus.settings.base import SettingsMenu

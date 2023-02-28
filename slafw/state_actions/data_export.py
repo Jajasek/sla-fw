@@ -23,7 +23,7 @@ from aiohttp.client_exceptions import ClientConnectorError
 
 from slafw.errors.errors import NotConnected, ConnectionFailed, NotEnoughInternalSpace, NoExternalStorage
 from slafw.functions.files import get_save_path, usb_remount
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.states.data_export import ExportState, StoreType
 
 

@@ -7,7 +7,7 @@ from functools import cached_property
 from pathlib import Path
 
 from slafw import defines
-from slafw.hardware.base.exposure_screen import ExposureScreen, ExposureScreenParameters
+from slafw.hardware.exposure_screen import ExposureScreen, ExposureScreenParameters
 from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 

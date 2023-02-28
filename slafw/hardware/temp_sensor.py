@@ -7,7 +7,7 @@ from typing import Optional
 
 from PySignal import Signal
 
-from slafw.hardware.base.component import HardwareComponent
+from slafw.hardware.component import HardwareComponent
 
 
 class TempSensor(HardwareComponent, ABC):

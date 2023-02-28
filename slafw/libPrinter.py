@@ -19,7 +19,7 @@ from typing import Optional, Set, Any
 import distro
 from PySignal import Signal
 from pydbus import SystemBus
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 
 from slafw import defines
 from slafw.api.config0 import Config0

@@ -6,8 +6,7 @@ from __future__ import annotations
 
 from abc import ABC
 
-from slafw.hardware.base.printer_model import PrinterModelBase
-from slafw.hardware.printer_model import PrinterModel
+from slafw.hardware.printer_model import PrinterModelBase, PrinterModel
 from slafw.hardware.printer_options import PrinterOptions
 
 

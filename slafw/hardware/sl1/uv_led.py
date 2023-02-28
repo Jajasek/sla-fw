@@ -8,9 +8,9 @@ from functools import cached_property
 from typing import Callable, Dict, Any, Tuple
 
 from slafw.errors.errors import UVLEDsVoltagesDifferTooMuch, BoosterError, UVLEDsDisconnected, UVLEDsRowFailed
-from slafw.hardware.base.temp_sensor import TempSensor
-from slafw.hardware.base.uv_led import UVLED, UvLedParameters
-from slafw.hardware.sl1s_uvled_booster import Booster
+from slafw.hardware.temp_sensor import TempSensor
+from slafw.hardware.uv_led import UVLED, UvLedParameters
+from slafw.hardware.sl1.sl1s_uvled_booster import Booster
 from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
@@ -136,6 +136,10 @@ class SL1UVLED(UVLEDSL1x):
             param_p=0.75,
         )
 
+    @cached_property
+    def serial(self) -> str:
+        return "NA"
+
     async def selftest(self, callback: Callable[[float], None] = None) -> Dict[str, Any]:
         self.pwm = 0
         self.on()
@@ -209,6 +213,10 @@ class SL1SUVLED(UVLEDSL1x):
             intensity_error_threshold=1,
             param_p=0.75,
         )
+
+    @cached_property
+    def serial(self) -> str:
+        return self._booster.board_serial_no
 
     async def selftest(self, callback: Callable[[float], None] = None) -> Dict[str, Any]:
         try:  # check may be interrupted by another check or canceled

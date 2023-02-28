@@ -8,7 +8,7 @@ import unittest
 from slafw.errors.errors import ConfigException
 from slafw.tests.base import SlafwTestCase
 
-from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.profiles import SingleProfile, ProfileSet
 from slafw.hardware.sl1.tilt_profiles import MovingProfilesTiltSL1
 from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1
 from slafw.configs.value import IntValue, DictOfConfigs

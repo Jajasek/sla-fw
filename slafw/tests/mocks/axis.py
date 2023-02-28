@@ -11,7 +11,7 @@ from slafw.hardware.axis import Axis, HomingStatus
 from slafw.hardware.power_led import PowerLed
 from slafw.hardware.tilt import Tilt
 from slafw.hardware.tower import Tower
-from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.profiles import SingleProfile, ProfileSet
 from slafw.hardware.tilt import MovingProfilesTilt
 from slafw.hardware.tower import MovingProfilesTower
 from slafw.motion_controller.sl1_controller import MotionControllerSL1

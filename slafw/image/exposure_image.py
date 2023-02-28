@@ -17,7 +17,7 @@ from PIL import Image, ImageOps
 
 from slafw import defines
 from slafw.errors.errors import PreloadFailed
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.project.project import Project
 from slafw.project.functions import get_white_pixels
 from slafw.image.resin_calibration import Calibration

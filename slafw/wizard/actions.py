@@ -9,7 +9,7 @@ from typing import Optional, Callable, Deque
 
 from PySignal import Signal
 
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.states.wizard import WizardState
 
 @dataclass

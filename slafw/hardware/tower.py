@@ -7,7 +7,7 @@ from abc import abstractmethod
 from slafw.configs.unit import Nm
 from slafw.errors.errors import TowerMoveFailed, TowerHomeFailed
 from slafw.hardware.axis import Axis
-from slafw.hardware.base.profiles import SingleProfile, ProfileSet
+from slafw.hardware.profiles import SingleProfile, ProfileSet
 
 
 class MovingProfilesTower(ProfileSet):

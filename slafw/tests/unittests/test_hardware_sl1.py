@@ -50,7 +50,7 @@ class TestSL1Hardware(SlafwTestCase):
         return super().patches() + [
             patch("slafw.motion_controller.sl1_controller.MotionControllerSL1.TEMP_UPDATE_INTERVAL_S", 0.1),
             patch("slafw.motion_controller.sl1_controller.MotionControllerSL1.FAN_UPDATE_INTERVAL_S", 0.1),
-            patch("slafw.hardware.base.fan.Fan.AUTO_CONTROL_INTERVAL_S", 0.1),
+            patch("slafw.hardware.fan.Fan.AUTO_CONTROL_INTERVAL_S", 0.1),
             patch("slafw.defines.cpuSNFile", str(self.SAMPLES_DIR / "nvmem")),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", self.TEMP_DIR / "cputemp"),
             patch("slafw.defines.counterLog", str(self.TEMP_DIR / "uvcounter-log.json")),

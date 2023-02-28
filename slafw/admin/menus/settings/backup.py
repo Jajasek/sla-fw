@@ -25,7 +25,7 @@ from slafw.functions.files import get_export_file_name, get_save_path
 from slafw.errors.errors import ConfigException
 from slafw.state_actions.data_export import DataExport, UsbExport, ServerUpload
 from slafw.states.data_export import ExportState
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.hardware.sl1.tower_profiles import TOWER_CFG_LOCAL
 from slafw.hardware.sl1.tilt_profiles import TILT_CFG_LOCAL
 from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL

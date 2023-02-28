@@ -7,11 +7,40 @@
 from __future__ import annotations
 
 from typing import Dict
+from abc import ABC, abstractmethod
 
 from slafw import defines
 from slafw.errors.errors import UnknownPrinterModel
-from slafw.hardware.base.printer_model import PrinterModelBase
 from slafw.hardware.printer_options import PrinterOptions
+
+
+class PrinterModelBase(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        ...
+
+    @property
+    def extensions(self) -> set[str]:
+        # TODO: remove code related to handling projects.
+        # Filemanager should be the only one who takes care about files
+        return {self.extension}
+
+    @property
+    def extension(self) -> str:
+        # TODO: remove code related to handling projects.
+        # Filemanager should be the only one who takes care about files
+        return "." + str(self.name).lower()
+
+    @property
+    @abstractmethod
+    def options(self) -> PrinterOptions:
+        ...
+
+    @property
+    @abstractmethod
+    def value(self) -> int:
+        ...
 
 
 class PrinterModelMeta(type):

@@ -10,8 +10,8 @@ from typing import Optional
 
 from PySignal import Signal
 
-from slafw.hardware.base.component import HardwareComponent
-from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.hardware.component import HardwareComponent
+from slafw.hardware.temp_sensor import TempSensor
 from slafw.configs.writer import ConfigWriter
 
 

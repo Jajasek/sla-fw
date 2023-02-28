@@ -13,7 +13,7 @@ from slafw.admin.items import AdminAction, AdminTextValue, AdminBoolValue, Admin
 from slafw.admin.menus.dialogs import Error, Wait
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.configs.runtime import RuntimeConfig
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.states.wizard import WizardId
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.factory_reset import SendPrinterData

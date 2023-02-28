@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import Optional
 from typing import List
 
-from slafw.hardware.base.profiles import SingleProfile
+from slafw.hardware.profiles import SingleProfile
 from slafw.configs.value import IntValue
 from slafw.hardware.axis import Axis
 from slafw.errors.errors import MotionControllerException

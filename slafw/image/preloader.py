@@ -16,7 +16,7 @@ import numpy
 from PIL import Image
 
 from slafw import defines
-from slafw.hardware.base.exposure_screen import ExposureScreenParameters
+from slafw.hardware.exposure_screen import ExposureScreenParameters
 from slafw.image.resin_calibration import Calibration
 from slafw.image.cairo import inverse
 from slafw.project.functions import get_white_pixels

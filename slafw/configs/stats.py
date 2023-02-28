@@ -6,7 +6,7 @@
 
 import subprocess
 from slafw.configs.toml import TomlConfig
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 
 
 class TomlConfigStatsException(Exception):

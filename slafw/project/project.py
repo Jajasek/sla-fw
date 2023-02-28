@@ -31,7 +31,7 @@ from slafw.errors.errors import ProjectErrorNotFound, ProjectErrorCantRead, Proj
                                 ProjectErrorWrongPrinterModel
 from slafw.errors.warnings import PrintingDirectlyFromMedia, ProjectSettingsModified, VariantMismatch, PrinterWarning
 from slafw.configs.project import ProjectConfig
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.project.functions import get_white_pixels
 from slafw.project.bounding_box import BBox
 from slafw.api.decorators import range_checked

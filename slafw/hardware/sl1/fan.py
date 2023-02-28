@@ -8,8 +8,8 @@ from slafw import defines
 
 from slafw.configs.hw import HwConfig
 from slafw.configs.writer import ConfigWriter
-from slafw.hardware.base.fan import Fan
-from slafw.hardware.base.temp_sensor import TempSensor
+from slafw.hardware.fan import Fan
+from slafw.hardware.temp_sensor import TempSensor
 from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 

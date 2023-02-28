@@ -11,7 +11,7 @@ from slafw import defines
 from slafw.errors.errors import DisplayUsageError
 from slafw.functions.generate import display_usage_heatmap
 from slafw.functions.files import get_export_file_name
-from slafw.hardware.base.hardware import BaseHardware
+from slafw.hardware.hardware import BaseHardware
 from slafw.state_actions.data_export import DataExport, UsbExport, ServerUpload
 from slafw.state_actions.logs.summary import create_summary
 

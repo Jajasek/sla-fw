@@ -9,7 +9,7 @@ from PIL import Image
 
 from slafw.errors.errors import NotUVCalibrated, NotMechanicallyCalibrated
 from slafw.configs.hw import HwConfig
-from slafw.hardware.base.uv_led import UvLedParameters
+from slafw.hardware.uv_led import UvLedParameters
 
 
 def get_white_pixels(image: Image) -> int:
