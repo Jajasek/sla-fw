@@ -331,6 +331,7 @@ class Standard0:
         exposure = self._current_expo
         project = exposure.project
         data = {
+            "instance_id": exposure.data.instance_id,
             "current_layer": exposure.data.actual_layer + 1,
             "total_layers": project.total_layers,
             "remaining_material": exposure.data.resin_remain_ml if exposure.data.resin_remain_ml else -1,
