@@ -1,5 +1,4 @@
 evdev
-serial
 readerwriterlock
 distro
 bitstring
