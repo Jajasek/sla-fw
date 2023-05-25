@@ -127,7 +127,7 @@ exposure_time_first_min_ms = 10000
 exposure_time_first_max_ms = 120000
 exposure_time_calibrate_min_ms = 100
 exposure_time_calibrate_max_ms = 5000
-exposure_time_first_extra_layers = 2    # first layer always have exposure_time_first
+first_extra_slow_layers = 3
 
 fan_check_override = test_runtime.testing
 default_hostname = "prusa-"

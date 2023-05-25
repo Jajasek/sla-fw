@@ -119,7 +119,7 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
 
         # project changes
         self.manager.exposure.project.data.path = "/nice/path/file.suffix"
-        self.manager.exposure.project.exposure_time_ms = 2000
+        self.manager.exposure.project.exposure_time_ms = 2080
         self.manager.exposure.project.exposure_time_first_ms = 10000
         self.manager.exposure.project.calibrate_regions = 9
         self.manager.exposure.project.calibrate_time_ms = 3000
@@ -127,16 +127,16 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
         sleep(.1)
         signal_list = [
                 call(uri, {"project_file": "/nice/path/file.suffix"}, []),
-                call(uri, {"exposure_time_ms": 2000}, []),
-                call(uri, {"total_time_ms": 13740}, []),
+                call(uri, {"exposure_time_ms": 2080}, []),
+                call(uri, {"total_time_ms": 13860}, []),
                 call(uri, {"exposure_time_first_ms": 10000}, []),
-                call(uri, {"total_time_ms": 31740}, []),
+                call(uri, {"total_time_ms": 30860}, []),
                 call(uri, {"calibration_regions": 9}, []),
-                call(uri, {"total_time_ms": 47740}, []),
+                call(uri, {"total_time_ms": 46860}, []),
                 call(uri, {"exposure_time_calibrate_ms": 3000}, []),
-                call(uri, {"total_time_ms": 79740}, []),
+                call(uri, {"total_time_ms": 78860}, []),
                 call(uri, {"user_profile": 1}, []),
-                call(uri, {"total_time_ms": 90740}, []),
+                call(uri, {"total_time_ms": 89860}, []),
         ]
         receiver.receive.assert_has_calls(signal_list)
         # exposure changes

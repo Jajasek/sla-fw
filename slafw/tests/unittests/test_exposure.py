@@ -88,7 +88,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self._check_serialize(new_exposure)
 
     def _check_serialize(self, exposure: Exposure):
-        self.assertEqual(15740, exposure.estimate_remain_time_ms())
+        self.assertEqual(15628, exposure.estimate_remain_time_ms())
         self.assertEqual(2000, exposure.project.exposure_time_first_ms)
         self.assertEqual(2000, exposure.project.layers[0].times_ms[0])
 
@@ -240,22 +240,23 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         exposure = self._start_exposure(hw, TestExposure.PROJECT_LAYER_CHANGE, exposure_image)
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
-        # 13 slow layers at beginning + 4 large layers in project
-        self.assertEqual(exposure.slow_layers_done, 13 + 4)
+        # 10 self._config.fadeLayers + 3 defines.first_extra_slow_layers + 4 large layers in project
+        self.assertEqual(exposure.slow_layers_done, 17)
 
         hw.config.forceSlowTiltHeight = 100000  # 100 um -> force 2 slow layers
         exposure = self._start_exposure(hw, TestExposure.PROJECT_LAYER_CHANGE, exposure_image)
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
-        # 13 slow layers at beginning + 4 large layers in project + 4 layers after area change
-        self.assertEqual(exposure.slow_layers_done, 13 + 4 + 4)
+        # 10 self._config.fadeLayers + 3 defines.first_extra_slow_layers + \
+        # 4 large layers in project + 4 layers after area change
+        self.assertEqual(exposure.slow_layers_done, 21)
 
     def test_exposure_profile(self):
         self.hw.config.limit4fast = 100
         exposure = self._start_exposure(self.hw, TestExposure.PROJECT_LAYER_CHANGE)
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
-        # 13 slow layers at beginning
+        # 10 self._config.fadeLayers + 3 defines.first_extra_slow_layers
         self.assertEqual(exposure.slow_layers_done, 13)
         self.assertEqual(205040, exposure.estimate_total_time_ms())
 

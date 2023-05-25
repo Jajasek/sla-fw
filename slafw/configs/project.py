@@ -44,10 +44,28 @@ class ProjectConfig(IniConfig):
     layerHeightFirst = FloatValue(0.05)
     fadeLayers = IntValue(
         10,
-        minimum=0,
+        minimum=2,
         maximum=200,
         key="numFade",
-        doc="Number of layers used for transition from first layer exposure time to standard exposure time.",
+        doc="""Number of layers used for transition from first layer exposure time to standard exposure time and
+            elephant foot compensation.
+
+            CAUTION! Keep in mind that Prusa Slicer counterintuitively includes both the `Initial exposure time`
+            layer and standard `Exposure times` layer into the `Faded layers`.
+
+            For example with settings:
+
+            - Faded layers = 5
+            - Initial exposure time = 10 s
+            - Exposure time = 1 s
+            - Elephant foot compensation = 1 mm
+
+            results in:
+
+            - 1st layer is compensated the most (by 1 mm) and exposed for 10 s.
+            - 2nd to 4th layers are proportionally elephant foot compensated (by 0.75, 0.5 and 0.25 mm) and exposed \
+            for 7.75, 5.5 and 3.25 s.
+            - 5th layer is NOT compensated and exposed by standard Exposure time for 1 s."""
     )
 
     calibrateRegions = IntValue(0, doc="Number of calibration regions (2, 4, 6, 8, 9, 10), 0 = off")

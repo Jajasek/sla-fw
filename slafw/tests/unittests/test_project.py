@@ -132,14 +132,14 @@ class TestProject(SlafwTestCase):
 
         self.assertEqual(project.total_layers, 20, "Check total layers count")
         self.assertEqual(project.total_height_nm, 1e6, "Total height calculation")
-        self.assertEqual(project.count_remain_time(), 481150, "Total time calculation")
+        self.assertEqual(project.count_remain_time(), 398650, "Total time calculation")
         self.assertEqual(project.count_remain_time(layers_done = 10), 178700, "Half time calculation")
 
         result = _layer_generator('sl1_linear_calibration_pattern',
                 20,
                 50000,
                 [7500, 500, 500, 500, 500, 500, 500, 500, 500, 500],
-                [35000, 35000, 35000, 28125, 21250, 14375, 7500])
+                [35000, 21250, 7500])
         self.assertEqual(project.layers, result, "Calibration layers")
         consumed_resin_slicer = project.used_material_nl / 1e6
         project.analyze()
@@ -193,7 +193,7 @@ class TestProject(SlafwTestCase):
         self.assertEqual(persistent_data['exposure_time_first_ms'], project.exposure_time_first_ms)
         self.assertEqual(persistent_data['calibrate_time_ms'], project.calibrate_time_ms)
         self.assertEqual(persistent_data['exposure_profile_id'], project.exposure_profile_by_id)
-        expected = _layer_generator('numbers', 2, 50000, [999], (8888,))
+        expected = _layer_generator('numbers', 2, 50000, [999], [8888, 8011])
         self.assertEqual(expected, project.layers)
 
 

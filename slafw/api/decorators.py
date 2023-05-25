@@ -232,7 +232,7 @@ def python_to_dbus_value_type(data: Any):
     if type(data) in PYTHON_TO_DBUS_TYPE:
         return PYTHON_TO_DBUS_TYPE[type(data)]
 
-    if isinstance(data, tuple):
+    if isinstance(data, (tuple, frozenset)):
         items = [python_to_dbus_value_type(item) for item in data]
         return "(" + "".join(items) + ")"
 
@@ -267,7 +267,7 @@ def wrap_value(data: Any) -> Variant:
     if isinstance(data, dict):
         return wrap_dict_value(data)
 
-    if isinstance(data, tuple):
+    if isinstance(data, (tuple, frozenset)):
         return Variant(python_to_dbus_value_type(data), data)
 
     if isinstance(data, list):

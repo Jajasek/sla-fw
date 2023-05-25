@@ -235,7 +235,7 @@ class Project:
             self.warnings.add(VariantMismatch(defines.printerVariant, self._config.printerVariant))
         altered_values = self._config.get_altered_values()
         if altered_values:
-            self.warnings.add(ProjectSettingsModified(altered_values))
+            self.warnings.add(ProjectSettingsModified(frozenset(altered_values.items())))
 
     def _build_layers_description(self, to_print: list):
         first = True
@@ -259,14 +259,20 @@ class Project:
         self._fill_layers_times()
 
     def _fill_layers_times(self):
+        """
+        Compatible with implementation in Slicer (2.6.0-beta2)
+        - first faded layer always uses exposure_time_first_ms and is the most elephant foot compensated
+        - last faded layer always uses exposure_time_ms and is not compensated for elephant foot
+
+        This leaves us with the minimum of 2 fade layers.
+        """
         fade_layers = self._config.fadeLayers
-        time_loss = (self.data.exposure_time_first_ms - self.data.exposure_time_ms) // (fade_layers + 1)
-        extra_layers = defines.exposure_time_first_extra_layers
+        time_loss = (self.data.exposure_time_first_ms - self.data.exposure_time_ms) / (fade_layers - 1)
         for i, layer in enumerate(self.layers):
-            if i <= extra_layers:
+            if i == 0:
                 t = self.data.exposure_time_first_ms
-            elif i <= fade_layers + extra_layers:
-                t = self.data.exposure_time_first_ms - (i - extra_layers) * time_loss
+            elif i < fade_layers - 1:
+                t = int(self.data.exposure_time_first_ms - i * time_loss)
             else:
                 t = self.data.exposure_time_ms
             if self.data.calibrate_regions:
@@ -277,7 +283,7 @@ class Project:
             else:
                 layer.times_ms = (t,)
 
-    def analyze(self, force: bool = False ):
+    def analyze(self, force: bool = False):
         """
         Analyze project and fill layer's 'bbox' and 'consumed_resin_nl' where needed
 
@@ -420,7 +426,7 @@ class Project:
     @property
     @functools.lru_cache()
     def first_slow_layers(self) -> int:
-        return self._config.fadeLayers + defines.exposure_time_first_extra_layers + 1
+        return self._config.fadeLayers + defines.first_extra_slow_layers
 
     def copy_and_check(self):
         # TODO pathlib stuff
