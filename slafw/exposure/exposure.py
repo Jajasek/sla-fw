@@ -97,6 +97,20 @@ class ExposureCheckRunner:
     async def run(self):
         ...
 
+class DelayedEndCheck(ExposureCheckRunner):
+    def __init__(self, *args, **kwargs):
+        super().__init__(ExposureCheck.DELAYED_TIME, *args, **kwargs)
+
+    async def run(self):
+        expected_start = self.expo.project.delayed_end_time - self.expo.estimate_total_time_ms() // 1000
+
+        if expected_start > datetime.now(tz=timezone.utc).timestamp():
+            expected_start_formated = datetime.fromtimestamp(expected_start).strftime("%d.%m.%Y %H:%M")
+            self.logger.info("Waiting for delayed start at %s", expected_start_formated)
+
+        while expected_start > datetime.now(tz=timezone.utc).timestamp() and self.expo.state != ExposureState.CANCELED:
+            await asyncio.sleep(1)
+
 
 class TempsCheck(ExposureCheckRunner):
     def __init__(self, *args, **kwargs):
@@ -498,7 +512,13 @@ class Exposure:
 
         :return: Timestamp as float
         """
+        delayed_end_datetime = datetime.fromtimestamp(self.project.delayed_end_time, tz=timezone.utc)
+
+        if delayed_end_datetime - datetime.now(tz=timezone.utc) > timedelta(milliseconds=self.estimate_total_time_ms()):
+            return self.project.delayed_end_time
+
         end = datetime.now(tz=timezone.utc) + timedelta(milliseconds=self.estimate_remain_time_ms())
+
         return end.timestamp()
 
     def stats_seen(self):
@@ -771,6 +791,7 @@ class Exposure:
             await ResinCheck(self).start()
             await StartPositionsCheck(self).start()
             await StirringCheck(self).start()
+            await DelayedEndCheck(self).start()
 
     def run_exposure(self):
         # TODO: Where is this supposed to be called from?

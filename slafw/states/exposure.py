@@ -53,6 +53,7 @@ class ExposureCheck(Enum):
     RESIN = 6
     START_POSITIONS = 7
     STIRRING = 8
+    DELAYED_TIME = 9
 
 
 @unique
