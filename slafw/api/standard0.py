@@ -620,7 +620,7 @@ class Standard0:
 
             sl1
             {
-                'name': 'Original Prusa Sl1',
+                'name': 'Original Prusa SL1',
                 'firmware': '1.5.0',
                 'sn': 'CZPX1234X000XK0001',
                 'eth_mac': '10:00:10:00:10:00',
@@ -629,7 +629,7 @@ class Standard0:
             }
         """
         return {
-            "name": "Original Prusa Sl1",
+            "name": "Original Prusa SL1",
             "firmware": distro.version(),
             "sn": self._printer.hw.cpuSerialNo.lstrip(" *"),
             "eth_mac": self._info_eth_mac,
