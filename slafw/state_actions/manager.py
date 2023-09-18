@@ -58,7 +58,7 @@ class ActionManager:
         return exposure
 
     def load_exposure(self, exposure_pickler: ExposurePickler) -> Optional[Exposure]:
-        exposure = exposure_pickler.load()
+        exposure = exposure_pickler.load(filename=None, instance_id=self._get_job_id())
         if not exposure:
             return None
         exposure_pickler.cleanup_last_data()

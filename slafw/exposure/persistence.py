@@ -43,14 +43,14 @@ class ExposurePickler:
             self._logger.exception("Failed to save exposure:")
 
 
-    def load(self, filename: Optional[Path] = None) -> Optional[Exposure]:
+    def load(self, filename: Optional[Path] = None, instance_id = 0) -> Optional[Exposure]:
         if filename is None:
             filename = LAST_PROJECT_DATA
         self._logger.debug("Loading exposure data from '%s'", str(filename))
         try:
             with filename.open("r") as file:
                 data = json.load(file)
-            exposure = Exposure(0, self.package)
+            exposure = Exposure(instance_id, self.package)
             exposure.read_project(data["project"]["path"])
             exposure.project.persistent_data = data.pop("project")
             newdata: Dict[str, Any] = {}
