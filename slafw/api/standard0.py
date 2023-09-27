@@ -343,6 +343,7 @@ class Standard0:
             "exposureTimeFirst": project.exposure_time_first_ms,
             "exposureUserProfile": project.exposure_profile_by_id,
             "path": str(project.origin_path),
+            "resin_low": exposure.data.resin_low,
         }
         if exposure.data.print_start_time.microsecond == 0:
             data["time_elapsed"] = 0
@@ -383,6 +384,7 @@ class Standard0:
         """
         return wrap_dict_data(
             {
+                "is_calibrated": self._printer.is_calibrated,
                 "cover_closed": self._printer.hw.isCoverClosed(),
                 "temperatures": self.getTemperaturesDict(),
                 "fans": self.getFansRpmDict(),
