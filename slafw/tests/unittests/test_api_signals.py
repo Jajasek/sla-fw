@@ -4,9 +4,13 @@
 
 import unittest
 import weakref
+
 from time import sleep
 from unittest.mock import Mock, call
 from datetime import datetime, timedelta, timezone
+
+import time_machine
+
 from pydbus import SystemBus
 
 from slafw.api.printer0 import Printer0
@@ -106,7 +110,6 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
         receiver.receive.assert_called_with(PrinterWarning.as_dict(AmbientTemperatureOutOfRange(128.48)))
         # TODO more
 
-
     def test_Exposure0_signals(self):
         self.manager.new_exposure(self.pickler, TestExposureSignals.PROJECT)
         # test on recreated Exposure object
@@ -118,27 +121,36 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
         exposure0.onPropertiesChanged = receiver.receive
 
         # project changes
-        self.manager.exposure.project.data.path = "/nice/path/file.suffix"
-        self.manager.exposure.project.exposure_time_ms = 2080
-        self.manager.exposure.project.exposure_time_first_ms = 10000
-        self.manager.exposure.project.calibrate_regions = 9
-        self.manager.exposure.project.calibrate_time_ms = 3000
-        self.manager.exposure.project.exposure_profile_by_id = 1
-        sleep(.1)
-        signal_list = [
+        with time_machine.travel(datetime.fromtimestamp(0)):
+            self.manager.exposure.project.data.path = "/nice/path/file.suffix"
+            self.manager.exposure.project.exposure_time_ms = 2080
+            self.manager.exposure.project.exposure_time_first_ms = 10000
+            self.manager.exposure.project.calibrate_regions = 9
+            self.manager.exposure.project.calibrate_time_ms = 3000
+            self.manager.exposure.project.exposure_profile_by_id = 1
+            self.manager.exposure.project.delayed_end_time = datetime.now().timestamp()
+            sleep(.1)
+            signal_list = [
                 call(uri, {"project_file": "/nice/path/file.suffix"}, []),
                 call(uri, {"exposure_time_ms": 2080}, []),
+                call(uri, {"delayed_end_time": 13}, []),
                 call(uri, {"total_time_ms": 13860}, []),
                 call(uri, {"exposure_time_first_ms": 10000}, []),
+                call(uri, {"delayed_end_time": 30}, []),
                 call(uri, {"total_time_ms": 30860}, []),
                 call(uri, {"calibration_regions": 9}, []),
+                call(uri, {"delayed_end_time": 46}, []),
                 call(uri, {"total_time_ms": 46860}, []),
                 call(uri, {"exposure_time_calibrate_ms": 3000}, []),
+                call(uri, {"delayed_end_time": 78}, []),
                 call(uri, {"total_time_ms": 78860}, []),
                 call(uri, {"user_profile": 1}, []),
                 call(uri, {"total_time_ms": 89860}, []),
-        ]
-        receiver.receive.assert_has_calls(signal_list)
+                call(uri, {"delayed_end_time": 0}, []),
+            ]
+
+            receiver.receive.assert_has_calls(signal_list)
+
         # exposure changes
         now = datetime.now(tz=timezone.utc)
         then = now + timedelta(hours=1)

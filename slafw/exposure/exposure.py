@@ -102,6 +102,9 @@ class DelayedEndCheck(ExposureCheckRunner):
         super().__init__(ExposureCheck.DELAYED_TIME, *args, **kwargs)
 
     async def run(self):
+        if not self.expo.hw.config.delayedEnd:
+            return
+
         expected_start = self.expo.project.delayed_end_time - self.expo.estimate_total_time_ms() // 1000
 
         if expected_start > datetime.now(tz=timezone.utc).timestamp():
@@ -790,8 +793,8 @@ class Exposure:
             await CoverCheck(self).start()
             await ResinCheck(self).start()
             await StartPositionsCheck(self).start()
-            await StirringCheck(self).start()
             await DelayedEndCheck(self).start()
+            await StirringCheck(self).start()
 
     def run_exposure(self):
         # TODO: Where is this supposed to be called from?

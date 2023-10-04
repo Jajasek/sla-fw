@@ -288,6 +288,7 @@ class HwConfig(IniConfig):
     resinSensor = BoolValue(True, doc="If True the the resin sensor will be used to measure resin level before print.")
     autoOff = BoolValue(True, doc="If True the printer will be shut down after print.")
     mute = BoolValue(False, doc="Mute motion controller speaker if set to True.")
+    delayedEnd = BoolValue(True, doc="Disable delayed end time check if set to False")
     showWizard = BoolValue(True, doc="Display wizard at startup if True.")
     showUnboxing = BoolValue(True, doc="Display unboxing wizard at startup if True.")
     raw_calibrated = BoolValue(False, key="calibrated")

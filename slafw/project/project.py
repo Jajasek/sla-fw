@@ -377,7 +377,6 @@ class Project:
     def delayed_end_time(self, value: int) -> None:
         if self.data.delayed_end_time != value:
             self.data.delayed_end_time = value
-            self._times_changed()
 
     @property
     def calibrate_time_ms(self) -> int:
@@ -557,5 +556,6 @@ class Project:
     def _times_changed(self):
         self.logger.debug("For the times they are a-changin'")
         self._fill_layers_times()
+        self._set_expected_end_time()
         self.count_remain_time.cache_clear()
         self.times_changed.emit()
