@@ -280,6 +280,7 @@ class Standard0:
             "uv_led": self._printer.hw.uv_led_fan.rpm,
             "blower": self._printer.hw.blower_fan.rpm,
             "rear": self._printer.hw.rear_fan.rpm,
+            "rear_target": self._printer.hw.rear_fan.target_rpm,
         }
 
     def getTemperaturesDict(self):
