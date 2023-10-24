@@ -72,6 +72,10 @@ class PrinterModel(metaclass=PrinterModelMeta):
                 return model
         raise UnknownPrinterModel
 
+    @property
+    def extensions(self) -> set[str]:
+        return set()
+
 
 class PrinterModelNone(PrinterModelBase):
     @property

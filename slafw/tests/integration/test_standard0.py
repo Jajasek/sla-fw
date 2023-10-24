@@ -45,7 +45,7 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
     def test_read_printer_values(self):
         self.assertEqual(Standard0State.SELECTED.value, self.standard0.state)
         self.assertKeysIn(['temp_led', 'temp_amb', 'cpu_temp'], self.standard0.hw_temperatures)
-        self.assertDictEqual({'uv_led': 0, 'blower': 0, 'rear': 0}, self.standard0.hw_fans)
+        self.assertDictEqual({'uv_led': 0, 'blower': 0, 'rear': 0, 'rear_target': 1000}, self.standard0.hw_fans)
         self.assertKeysIn(['cover_closed', 'temperatures', 'fans', 'state'], self.standard0.hw_telemetry)
         self.assertDictEqual({'type': 'digest', 'password': '32LF9aXN'}, self.standard0.net_authorization)
 

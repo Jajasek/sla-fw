@@ -640,6 +640,42 @@ class Standard0:
             "uuid": self._info_uuid,
         }
 
+    @auto_dbus
+    @property
+    def config(self) -> Dict[str, bool]:
+        """
+        cover_check: bool
+        is_calibrated: bool
+        auto_off: bool
+        resin_sensor: bool
+
+        .. code-block:: python
+
+            sl1
+            {
+                "cover_check": True,
+                "is_calibrated": True,
+                "auto_off": False,
+                "resin_sensor": True
+            }
+        """
+        return {
+            "cover_check": self._printer.hw.config.coverCheck,
+            "is_calibrated": self._printer.hw.config.calibrated,
+            "auto_off": self._printer.hw.config.autoOff,
+            "resin_sensor": self._printer.hw.config.resinSensor,
+        }
+
+    @auto_dbus
+    @property
+    def project_extensions(self) -> List[str]:
+        """
+        Returns list of supported extensions
+
+        :return: List[str]
+        """
+        return list(self._printer.hw.printer_model.extensions)
+
     # Error
 
     @auto_dbus
