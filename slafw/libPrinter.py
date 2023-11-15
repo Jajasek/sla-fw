@@ -16,7 +16,6 @@ from pathlib import Path
 from time import monotonic
 from typing import Optional, Set, Any
 
-import distro
 from PySignal import Signal
 from pydbus import SystemBus
 from slafw.hardware.hardware import BaseHardware
@@ -175,11 +174,11 @@ class Printer:
     def do_setup(self):
         # pylint: disable = too-many-statements
         self.logger.info("Printer starting, PID: %d", os.getpid())
-        self.logger.info("System version: %s", distro.version())
         start_time = monotonic()
 
         self.logger.info("Initializing libHardware")
         self.hw = HardwareSL1(self.hw_config, PrinterModel())
+        self.logger.info("System version: %s", self.hw.system_version)
 
         self.hw.uv_led_temp.overheat_changed.connect(self._on_uv_led_temp_overheat)
         self.hw.uv_led_fan.error_changed.connect(self._on_uv_fan_error)
@@ -194,7 +193,7 @@ class Printer:
         #     self.logger.warning("Factory mode disabled for kit")
         #
 
-        self.inet = Network(self.hw.cpuSerialNo)
+        self.inet = Network(self.hw.cpuSerialNo, self.hw.system_version)
         self.exposure_image = ExposureImage(self.hw)
 
         self.logger.info("Registering remaining D-Bus services")
@@ -478,7 +477,7 @@ class Printer:
     def help_page_url(self) -> str:
         url = ""
         if self.data_privacy:
-            fw_version = re.sub(r"([\.\d]*)[^\.\d].*", r"\g<1>", distro.version())
+            fw_version = re.sub(r"([\.\d]*)[^\.\d].*", r"\g<1>", self.hw.system_version)
             url += f"/{self.id}/{fw_version}"
 
         return url

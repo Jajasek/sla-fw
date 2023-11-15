@@ -13,7 +13,6 @@ from typing import Optional, Any, Dict, Callable
 from urllib.request import urlopen, Request
 from io import BytesIO
 
-import distro
 import pydbus
 from PySignal import Signal
 
@@ -27,10 +26,10 @@ class Network:
     REPORT_INTERVAL_S = 0.25
     NM_DEVICE_TYPE_ETHERNET = 1
 
-    def __init__(self, cpu_serial_no: str):
+    def __init__(self, cpu_serial_no: str, system_version: str):
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing")
-        self.version_id = distro.version()
+        self.version_id = system_version
         self.cpu_serial_no = cpu_serial_no
         self.assign_active = None
         self.net_change = Signal()

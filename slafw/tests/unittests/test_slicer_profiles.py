@@ -32,7 +32,7 @@ class TestSlicerProfiles(SlafwTestCaseDBus):
         self.assertEqual(profile.vendor, profile2test.vendor, "vendor")
         self.assertEqual(profile.printer, profile2test.printer, "printer")
 
-        downloader = ProfileDownloader(Network("CZPX1234X123XC12345"), profile.vendor)
+        downloader = ProfileDownloader(Network("CZPX1234X123XC12345", "1.0.0"), profile.vendor)
         new_version = downloader.check_updates()
         self.assertIsNotNone(new_version)
         with tempfile.NamedTemporaryFile() as tf:

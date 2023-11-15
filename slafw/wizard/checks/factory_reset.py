@@ -11,7 +11,6 @@ from asyncio import sleep, gather
 from pathlib import Path
 from shutil import rmtree, copyfile
 
-import distro
 from gi.repository import GLib
 
 import pydbus
@@ -293,7 +292,7 @@ class SendPrinterData(SyncCheck):
 
         # Compose data to single dict, ensure basic data are present
         mqtt_data = {
-            "osVersion": distro.version(),
+            "osVersion": self._hw.system_version,
             "a64SerialNo": self._hw.cpuSerialNo,
             "mcSerialNo": self._hw.mcSerialNo,
             "mcFwVersion": self._hw.mcFwVersion,

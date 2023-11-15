@@ -36,6 +36,7 @@ def fill_wizard_data_package(printer) -> WizardDataPackage:
         exposure_profiles=printer.exposure_profiles,
     )
 
+
 def make_config_writers(hw_config: ConfigWriter, layer_profiles: LayerProfilesSL1) -> Any:
     cw_items = [("hw_config", ConfigWriter, field(default=hw_config.get_writer(), init=False))]
     if layer_profiles is not None:

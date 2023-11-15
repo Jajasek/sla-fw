@@ -5,8 +5,6 @@
 from dataclasses import dataclass, asdict
 from typing import Dict, Any, Optional
 
-import distro
-
 from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import Check, WizardCheckType
@@ -37,7 +35,7 @@ class SystemInfoTest(Check):
         self._logger.debug("Obtaining system information")
 
         self._result_data = CheckData(
-            distro.version(),
+            self._hw.system_version,
             self._hw.cpuSerialNo,
             self._hw.mcSerialNo,
             self._hw.mcFwVersion,

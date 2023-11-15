@@ -630,7 +630,7 @@ class Standard0:
         """
         return {
             "name": "Original Prusa SL1",
-            "firmware": distro.version(),
+            "firmware": distro.os_release_attr("version").split(" ")[0],
             "sn": self._printer.hw.cpuSerialNo.lstrip(" *"),
             "eth_mac": self._info_eth_mac,
             "wlan_mac": self._info_wlan_mac,

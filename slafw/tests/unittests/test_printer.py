@@ -102,13 +102,11 @@ class TestPrinter(SlafwTestCaseDBus, RefCheckTestCase):
         uv_calibrated_callback.assert_called_once()
 
     @patch("slafw.libPrinter.Printer.id", PropertyMock(return_value="ABCDEF01"))
-    @patch("distro.version")
-    def test_help_page_url(self, distro_version):
-        distro_version.return_value = "1.7.1"
+    @patch("slafw.hardware.hardware.BaseHardware.system_version",
+           PropertyMock(side_effect=["1.7.1", "1.8.0-alpha.2+master.3.d33e1031-dirty", "25.18.150-dev"]))
+    def test_help_page_url(self):
         self.assertEqual("/ABCDEF01/1.7.1", self.printer.help_page_url)
-        distro_version.return_value = "1.8.0-alpha.2.master.3+d33e1031-dirty"
         self.assertEqual("/ABCDEF01/1.8.0", self.printer.help_page_url)
-        distro_version.return_value = "25.18.150-dev"
         self.assertEqual("/ABCDEF01/25.18.150", self.printer.help_page_url)
 
     @patch("slafw.functions.system.os")

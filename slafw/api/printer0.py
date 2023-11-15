@@ -14,7 +14,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Dict, TYPE_CHECKING, Any, Optional
 
-import distro
 import pydbus
 from deprecation import deprecated
 from pydbus.generic import signal
@@ -399,7 +398,7 @@ class Printer0:
 
         :return: System distribution name
         """
-        return distro.name()
+        return self.printer.hw.system_name
 
     @auto_dbus
     @property
@@ -410,7 +409,7 @@ class Printer0:
 
         :return: System distribution version
         """
-        return distro.version()
+        return self.printer.hw.system_version
 
     @auto_dbus
     @property

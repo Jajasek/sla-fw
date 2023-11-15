@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from threading import Thread
 from time import sleep
 
-import distro
 import psutil
 
 from slafw import defines
@@ -73,7 +72,7 @@ class SystemInfoMenu(AdminMenu):
         self._thread.join()
 
     def _run(self):
-        self.os_version.set(f"OS version: {distro.version()}")
+        self.os_version.set(f"OS version: {self._printer.hw.system_version}")
         self.a64_sn.set(f"A64 serial: {self._printer.hw.cpuSerialNo}")
         self.emmc_sn.set(f"eMMC serial: {self._printer.hw.emmc_serial}")
         self.mc_sn.set(f"MC serial: {self._printer.hw.mcSerialNo}")

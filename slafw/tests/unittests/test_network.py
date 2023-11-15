@@ -32,7 +32,7 @@ class TestExamples(SlafwTestCaseDBus, RefCheckTestCase):
 
     def test_download(self):
         # pylint: disable = no-self-use
-        network = Network("TEST")
+        network = Network("TEST", "1.0.0")
         with TemporaryFile() as temp:
             callback = Mock()
             network.download_url(

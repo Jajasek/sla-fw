@@ -10,7 +10,6 @@ from threading import Thread
 from time import sleep
 from os import unlink
 
-import distro
 import pydbus
 
 from slafw.admin.control import AdminControl
@@ -48,7 +47,8 @@ class NetUpdate(AdminMenu):
         self._thread.join()
 
     def _download_list(self):
-        query_url = f"{self.FIRMWARE_LIST_URL}/?serial={self._printer.hw.cpuSerialNo}&version={distro.version()}"
+        query_url = f"{self.FIRMWARE_LIST_URL}/?serial={self._printer.hw.cpuSerialNo}&version" \
+                     f"={self._printer.hw.system_version}"
 
         with tempfile.TemporaryFile() as tf:
             self._printer.inet.download_url(

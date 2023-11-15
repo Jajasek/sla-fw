@@ -9,6 +9,7 @@ from time import sleep
 from typing import Dict
 
 import bitstring
+import distro
 import pydbus
 from PySignal import Signal
 
@@ -87,6 +88,16 @@ class BaseHardware:
         """
         init default values
         """
+
+    @property
+    def system_version(self) -> str:
+        """Return a semver OS version of the image as string."""
+        return distro.os_release_attr("version").split(" ")[0]
+
+    @property
+    def system_name(self) -> str:
+        """Return an OS name of the image as string."""
+        return distro.name()
 
     @property
     def cpuSerialNo(self):
