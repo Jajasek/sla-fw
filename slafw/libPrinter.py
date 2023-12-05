@@ -282,7 +282,7 @@ class Printer:
         self.logger.info("connecting cz.prusa3d.sl1.filemanager0 DBus signals")
         self._dbus_subscriptions.append(
             self._system_bus.subscribe(
-                object="/cz/prusa3d/sl1/filemanager0", signal="MediaInserted", signal_fired=self._media_inserted
+                object="/cz/prusa3d/sl1/filemanager0", signal="OneClickPrintFile", signal_fired=self._one_click_file
             )
         )
         self._dbus_subscriptions.append(
@@ -443,7 +443,7 @@ class Printer:
 
         return url
 
-    def _media_inserted(self, _, __, ___, ____, params):
+    def _one_click_file(self, _, __, ___, ____, params):
         if self._oneclick_inhibitors:
             self.logger.info("Oneclick inhibited by: %s", self._oneclick_inhibitors)
             return
@@ -459,7 +459,7 @@ class Printer:
         except (NotUVCalibrated, NotMechanicallyCalibrated):
             self.run_make_ready_to_print()
         except Exception:
-            self.logger.exception("Error handling media inserted event")
+            self.logger.exception("Error handling one click file event")
             raise
 
     def _media_ejected(self, _, __, ___, ____, params):

@@ -273,8 +273,7 @@ class TestIntegrationPrinter0Uncalibrated(SlaFwIntegrationTestCaseBase):
 
         # Test print start
         # pylint: disable=protected-access
-        self.printer._media_inserted(1, 2, 3, 4,
-                [str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension)),])
+        self.printer._one_click_file(1, 2, 3, 4, [str(self.SAMPLES_DIR / ("numbers" + self.printer.hw.printer_model.extension))])
 
         # There might be a delay between inserting the media and running "make_ready_to_print"
         time.sleep(3)
