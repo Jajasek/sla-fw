@@ -666,16 +666,6 @@ class Standard0:
             "resin_sensor": self._printer.hw.config.resinSensor,
         }
 
-    @auto_dbus
-    @property
-    def project_extensions(self) -> List[str]:
-        """
-        Returns list of supported extensions
-
-        :return: List[str]
-        """
-        return list(self._printer.hw.printer_model.extensions)
-
     # Error
 
     @auto_dbus
