@@ -741,17 +741,26 @@ class Exposure:
                 self.logger.error('Undefined command: "%s" ignored', command)
 
             self.logger.info("Exiting exposure thread on state: %s", self.state)
-        except (Exception, CancelledError) as exception:
-            self.logger.exception("Exposure thread exception")
-            if not isinstance(exception, CancelledError):
-                self.data.fatal_error = exception
-            if not isinstance(exception, (TiltFailed, TowerFailed)):
-                self._final_go_up()
-            if isinstance(exception, (WarningEscalation, CancelledError)):
-                self.state = ExposureState.CANCELED
-            else:
-                self.state = ExposureState.FAILURE
 
+        except CancelledError:
+            self.logger.exception("Exposure thread canceled.")
+            self.state = ExposureState.CANCELED
+        except WarningEscalation as e:
+            self.logger.exception("Exposure thread canceled due to WarningEscalation.")
+            self.data.fatal_error = e
+            self.state = ExposureState.CANCELED
+        except Exception as e:
+            self.logger.exception("Exposure thread failed.")
+            self.data.fatal_error = e
+            self.state = ExposureState.FAILURE
+        finally:
+            try:
+                # Rise the tower if you can -> current exception is not related to tower or tilt function
+                if self.data.fatal_error not in (None, TiltFailed, TowerFailed, TiltHomeFailed, TowerMoveFailed):
+                    self._final_go_up()
+            except Exception as e:
+                if self.data.fatal_error is None:
+                    self.data.fatal_error = e
         if self.project:
             self.project.data_close()
         self._print_end_hw_off()
@@ -995,10 +1004,12 @@ class Exposure:
         return True
 
     def _final_go_up(self):
+        previous_state = self.state  # Store previous state to revert to it when done.
         self.state = ExposureState.GOING_UP
         self.hw.motors_stop()
         self.hw.tower.actual_profile = self.hw.tower.profiles.homingFast
         self.hw.tower.move_ensure(self.hw.config.tower_height_nm)
+        self.state = previous_state
 
     def _print_end_hw_off(self):
         self.hw.uv_led.off()
