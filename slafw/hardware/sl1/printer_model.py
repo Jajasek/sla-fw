@@ -16,6 +16,10 @@ class PrinterModelSL1(PrinterModelBase):
         return "SL1"
 
     @property
+    def label_name(self) -> str:
+        return "Original Prusa SL1"
+
+    @property
     def value(self) -> int:
         return 1
 
@@ -48,6 +52,10 @@ class PrinterModelSL1S(PrinterModelSL1SCommon):
         return "SL1S"
 
     @property
+    def label_name(self) -> str:
+        return "Original Prusa SL1S SPEED"
+
+    @property
     def value(self) -> int:
         return 2
 
@@ -56,6 +64,10 @@ class PrinterModelM1(PrinterModelSL1SCommon):
     @property
     def name(self):
         return "M1"
+
+    @property
+    def label_name(self) -> str:
+        return "Original Prusa Medical One"
 
     @property
     def value(self) -> int:

@@ -21,6 +21,11 @@ class PrinterModelBase(ABC):
         ...
 
     @property
+    @abstractmethod
+    def label_name(self) -> str:
+        ...
+
+    @property
     def extensions(self) -> set[str]:
         # TODO: remove code related to handling projects.
         # Filemanager should be the only one who takes care about files
@@ -83,6 +88,10 @@ class PrinterModelNone(PrinterModelBase):
         return "NONE"
 
     @property
+    def label_name(self) -> str:
+        return "NONE"
+
+    @property
     def value(self) -> int:
         return 0
 
@@ -104,6 +113,10 @@ class PrinterModelNone(PrinterModelBase):
 class PrinterModelVirtual(PrinterModelBase):
     @property
     def name(self) -> str:
+        return "VIRTUAL"
+
+    @property
+    def label_name(self) -> str:
         return "VIRTUAL"
 
     @property
