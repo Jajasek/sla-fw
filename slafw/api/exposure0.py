@@ -140,6 +140,10 @@ class Exposure0:
     def exception(self, value: Dict[str, Any]):
         pass
 
+    @auto_dbus_signal
+    def about_to_be_deleted(self):
+        pass
+
     def _on_warning_occurred(self, warning: Warning):
         self.exception(wrap_dict_data(PrinterWarning.as_dict(warning)))
 

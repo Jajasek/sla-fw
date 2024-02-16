@@ -122,6 +122,7 @@ class ActionManager:
     def _shrink_exposures_to(self, limit: int):
         while self._exposure_dbus_objects.qsize() > limit:
             exposure0, registration = self._exposure_dbus_objects.get()
+            exposure0.about_to_be_deleted()  # Notify clients
             registration.unregister()
             # TODO: it is not nice to touch pydbus signal internals, we would better fix the library
             # The map holds strong reference to the Exposure0 preventing release of the exposure from RAM.
@@ -129,6 +130,7 @@ class ActionManager:
             # pylint: disable=no-member
             # type: ignore[attr-defined]
             del Exposure0.exception.map[exposure0]
+            del Exposure0.about_to_be_deleted.map[exposure0]
 
     @property
     def exposure(self) -> Optional[Exposure]:
