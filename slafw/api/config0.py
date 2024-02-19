@@ -70,7 +70,8 @@ def wrap_property(func_name=None):
         if f.fset:
             @functools.wraps(f.fset)
             def setter(self, value):
-                setattr(self.config, name, value)
+                attr = getattr(self.config, name)
+                setattr(self.config, name, type(attr)(value))
 
             return property(fget=getter, fset=setter)
 
