@@ -1,13 +1,15 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
 import unittest
+from pathlib import Path
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
+from slafw.configs.unit import Ms, Nm, Ustep
 from slafw.errors.errors import ProjectErrorNotFound, ProjectErrorNotEnoughLayers, \
                                 ProjectErrorCorrupted, ProjectErrorWrongPrinterModel, \
                                 ProjectErrorCantRead, ProjectErrorCalibrationInvalid
@@ -17,7 +19,7 @@ from slafw.project.project import Project, ProjectLayer, LayerCalibrationType
 from slafw.tests.base import SlafwTestCase
 from slafw.project.bounding_box import BBox
 from slafw.hardware.printer_model import PrinterModel
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
+from slafw.exposure.profiles import ExposureProfileSL1, EXPOSURE_PROFILES_DEFAULT_NAME
 
 
 def _layer_generator(name, count, height_nm, times_ms, layer_times_ms):
@@ -47,32 +49,30 @@ class TestProject(SlafwTestCase):
         self.file2copy = self.SAMPLES_DIR / "Resin_calibration_object.sl1"
         (dummy, filename) = os.path.split(self.file2copy)
         self.destfile = defines.previousPrints / filename
-        self.ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
-        self.lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
 
     def test_notfound(self):
         with self.assertRaises(ProjectErrorNotFound):
-            Project(self.hw, self.ep, self.lp, "bad_file")
+            Project(self.hw, "bad_file")
 
     def test_empty(self):
         with self.assertRaises(ProjectErrorCantRead):
-            Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "empty_file.sl1"))
+            Project(self.hw, str(self.SAMPLES_DIR / "empty_file.sl1"))
 
     def test_truncated(self):
         with self.assertRaises(ProjectErrorCantRead):
-            Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "test_truncated.sl1"))
+            Project(self.hw, str(self.SAMPLES_DIR / "test_truncated.sl1"))
 
     def test_nolayers(self):
         with self.assertRaises(ProjectErrorNotEnoughLayers):
-            Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "test_nolayer.sl1"))
+            Project(self.hw, str(self.SAMPLES_DIR / "test_nolayer.sl1"))
 
     def test_corrupted(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "test_corrupted.sl1"))
+        project = Project(self.hw, str(self.SAMPLES_DIR / "test_corrupted.sl1"))
         with self.assertRaises(ProjectErrorCorrupted):
             project.copy_and_check()
 
     def test_copy_and_check(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.file2copy))
+        project = Project(self.hw, str(self.file2copy))
         project.copy_and_check()
         self.assertFalse(PrintingDirectlyFromMedia() in project.warnings, "Printed directly warning issued")
         self.destfile.unlink()
@@ -81,7 +81,7 @@ class TestProject(SlafwTestCase):
         statvfs = os.statvfs(defines.previousPrints.parent)
         backup = defines.internalReservedSpace
         defines.internalReservedSpace = statvfs.f_frsize * statvfs.f_bavail
-        project = Project(self.hw, self.ep, self.lp, str(self.file2copy))
+        project = Project(self.hw, str(self.file2copy))
         project.copy_and_check()
         self.assertTrue(PrintingDirectlyFromMedia() in project.warnings, "Printed directly warning not issued")
         defines.internalReservedSpace = backup
@@ -92,7 +92,7 @@ class TestProject(SlafwTestCase):
         backup2 = defines.internalProjectPath
         defines.internalReservedSpace = statvfs.f_frsize * statvfs.f_bavail
         defines.internalProjectPath = str(self.SAMPLES_DIR)
-        project = Project(self.hw, self.ep, self.lp, str(self.file2copy))
+        project = Project(self.hw, str(self.file2copy))
         project.copy_and_check()
         self.assertFalse(PrintingDirectlyFromMedia() in project.warnings, "Printed directly warning issued")
         self.destfile.unlink()
@@ -102,10 +102,10 @@ class TestProject(SlafwTestCase):
     def test_printer_model(self):
         hw = HardwareSL1(self.hw_config, PrinterModel.SL1S)
         with self.assertRaises(ProjectErrorWrongPrinterModel):
-            Project(hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
+            Project(hw, str(self.SAMPLES_DIR / "numbers.sl1"))
 
     def test_read(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
+        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
         print(project)
 
         self.assertEqual(project.name, "numbers", "Check project name")
@@ -127,13 +127,13 @@ class TestProject(SlafwTestCase):
         #self.assertAlmostEqual(consumed_resin_slicer, project.used_material_nl / 1e6, delta=0.1, msg="Resin count")
 
     def test_read_calibration(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
+        project = Project(self.hw, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
         print(project)
 
         self.assertEqual(project.total_layers, 20, "Check total layers count")
         self.assertEqual(project.total_height_nm, 1e6, "Total height calculation")
-        self.assertEqual(project.count_remain_time(), 398650, "Total time calculation")
-        self.assertEqual(project.count_remain_time(layers_done = 10), 178700, "Half time calculation")
+        self.assertEqual(394650, project.count_remain_time(), "Total time calculation")
+        self.assertEqual(project.count_remain_time(layers_done = 10), 176700, "Half time calculation")
 
         result = _layer_generator('sl1_linear_calibration_pattern',
                 20,
@@ -149,7 +149,7 @@ class TestProject(SlafwTestCase):
         # TODO analyze check
 
     def test_project_modification(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
+        project = Project(self.hw, str(self.SAMPLES_DIR / "Resin_calibration_linear_object.sl1"))
         with self.assertRaises(ProjectErrorCalibrationInvalid):
             project.calibrate_regions = 3
 
@@ -160,39 +160,103 @@ class TestProject(SlafwTestCase):
 
         # project.config.write("projectconfig.txt")
 
+    def test_project_with_json_config(self):
+        self.hw = HardwareSL1(self.hw_config, PrinterModel.SL1S)
+        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers_json.sl1s"))
+        profile = {
+            "area_fill": 42,
+            "below_area_fill": {
+                "delay_before_exposure_ms": Ms(1),
+                "delay_after_exposure_ms": Ms(2),
+                "tower_hop_height_nm": Nm(1000000),
+                "tower_profile": 4,
+                "use_tilt": True,
+                "tilt_down_initial_profile": 6,
+                "tilt_down_offset_steps": Ustep(3),
+                "tilt_down_offset_delay_ms": Ms(4),
+                "tilt_down_finish_profile": 2,
+                "tilt_down_cycles": 2,
+                "tilt_down_delay_ms": Ms(10),
+                "tilt_up_initial_profile": 2,
+                "tilt_up_offset_steps": Ustep(600),
+                "tilt_up_offset_delay_ms": Ms(20),
+                "tilt_up_finish_profile": 6,
+                "tilt_up_cycles": 3,
+                "tilt_up_delay_ms": Ms(30),
+                "moves_time_ms": Ms(2100)
+            },
+            "above_area_fill": {
+                "delay_before_exposure_ms": Ms(1000),
+                "delay_after_exposure_ms": Ms(2000),
+                "tower_hop_height_nm": Nm(500000),
+                "tower_profile": 4,
+                "use_tilt": False,
+                "tilt_down_initial_profile": 6,
+                "tilt_down_offset_steps": Ustep(2),
+                "tilt_down_offset_delay_ms": Ms(3),
+                "tilt_down_finish_profile": 4,
+                "tilt_down_cycles": 4,
+                "tilt_down_delay_ms": Ms(5),
+                "tilt_up_initial_profile": 2,
+                "tilt_up_offset_steps": Ustep(601),
+                "tilt_up_offset_delay_ms": Ms(6),
+                "tilt_up_finish_profile": 6,
+                "tilt_up_cycles": 5,
+                "tilt_up_delay_ms": Ms(22),
+                "moves_time_ms": Ms(4300)
+            }
+        }
+        self.assertEqual(profile["area_fill"], project.exposure_profile.area_fill)
+        for key, value in profile["above_area_fill"].items():
+            self.assertEqual(value, getattr(project.exposure_profile.above_area_fill, key))
+        for key, value in profile["below_area_fill"].items():
+            self.assertEqual(value, getattr(project.exposure_profile.below_area_fill, key))
 
     def test_project_remaining_time_estimate(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
-        self.assertEqual(13740, project.count_remain_time(0, 0))
+        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
+        # 2 * 1000 ms - exposure_time
+        # 2 * 5300 ms - layers of fast tilt time (SL1)
+        # 2 * 370 ms - layers of tower move and magic computational delay constant
+        # SUM: 13340 ms
+        self.assertEqual(13340, project.count_remain_time(0, 0))
 
     def test_project_exposure_profile(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "layer_change.sl1"))
-        self.assertEqual(self.ep.default, project.exposure_profile)
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "layer_change_safe_profile.sl1"))
-        self.assertEqual(self.ep.safe, project.exposure_profile)
-        with self.assertRaises(ValueError):
-            project.exposure_profile_by_id = 3
+        project = Project(self.hw, str(self.SAMPLES_DIR / "layer_change.sl1"))
+        file_name = "fast" + EXPOSURE_PROFILES_DEFAULT_NAME
+        profile = ExposureProfileSL1(
+            default_file_path=Path(defines.dataPath) / "SL1" / file_name)
+        self.assertEqual(profile.as_dictionary(), project.exposure_profile.as_dictionary())
+
+        project = Project(self.hw, str(self.SAMPLES_DIR / "layer_change_safe_profile.sl1"))
+        file_name = "slow" + EXPOSURE_PROFILES_DEFAULT_NAME
+        profile = ExposureProfileSL1(
+            default_file_path=Path(defines.dataPath) / "SL1" / file_name)
+        self.assertEqual(profile.as_dictionary(), project.exposure_profile.as_dictionary())
 
     def test_persistent_data(self):
-        project = Project(self.hw, self.ep, self.lp, str(self.SAMPLES_DIR / "numbers.sl1"))
+        project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
         persistent_data = project.persistent_data
+        file_name = "fast" + EXPOSURE_PROFILES_DEFAULT_NAME
+        profile = ExposureProfileSL1(
+            default_file_path=Path(defines.dataPath) / "SL1" / file_name).as_dictionary()
         self.assertEqual({'path': str(self.SAMPLES_DIR / "numbers.sl1"),
                           'exposure_time_ms': 1000,
                           'exposure_time_first_ms': 1000,
                           'calibrate_time_ms': 1000,
                           'calibrate_regions': 0,
-                          'exposure_profile_id': 0}, persistent_data)
+                          'exposure_profile': profile}, persistent_data)
         persistent_data['path'] = "XXX/YYY.ZZZ"
         persistent_data['exposure_time_ms'] = 999
         persistent_data['exposure_time_first_ms'] = 8888
         persistent_data['calibrate_time_ms'] = 777
-        persistent_data['exposure_profile_id'] = 1
+        persistent_data['exposure_profile'] = profile
+        persistent_data['exposure_profile']['area_fill'] = 42
         project.persistent_data = persistent_data
         self.assertEqual(persistent_data['path'], project.data.path)
         self.assertEqual(persistent_data['exposure_time_ms'], project.exposure_time_ms)
         self.assertEqual(persistent_data['exposure_time_first_ms'], project.exposure_time_first_ms)
         self.assertEqual(persistent_data['calibrate_time_ms'], project.calibrate_time_ms)
-        self.assertEqual(persistent_data['exposure_profile_id'], project.exposure_profile_by_id)
+        self.assertEqual(persistent_data['exposure_profile']['area_fill'], project.exposure_profile.as_dictionary()["area_fill"])
         expected = _layer_generator('numbers', 2, 50000, [999], [8888, 8011])
         self.assertEqual(expected, project.layers)
 

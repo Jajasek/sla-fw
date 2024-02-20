@@ -3,7 +3,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2021-2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2021-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
@@ -44,7 +44,6 @@ from slafw.tests.mocks.sl1s_uvled_booster import BoosterMock
 from slafw.tests.mocks.wayland import WaylandMock
 from slafw.hardware.sl1.tilt_profiles import TILT_CFG_LOCAL
 from slafw.hardware.sl1.tower_profiles import TOWER_CFG_LOCAL
-from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL
 from slafw.exposure.persistence import LAST_PROJECT_DATA
 from slafw.states.printer import PrinterState
 
@@ -101,8 +100,6 @@ class Virtual:
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.temp / TILT_CFG_LOCAL.name),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.temp / TOWER_CFG_LOCAL.name),
             patch("slafw.exposure.persistence.LAST_PROJECT_DATA", self.temp / LAST_PROJECT_DATA.name),
-            patch("slafw.exposure.profiles.LAYER_PROFILES_LOCAL", self.temp / LAYER_PROFILES_LOCAL.name),
-            patch("slafw.exposure.profiles.EXPOSURE_PROFILES_LOCAL", self.temp / EXPOSURE_PROFILES_LOCAL.name),
             patch("slafw.hardware.a64.temp_sensor.A64CPUTempSensor.CPU_TEMP_PATH", SAMPLES_DIR / "cputemp"),
             patch("slafw.defines.hwConfigPath", hardware_file),
             patch("slafw.defines.hwConfigPathFactory", hardware_file_factory),

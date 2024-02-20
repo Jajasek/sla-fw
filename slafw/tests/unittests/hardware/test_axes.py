@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020-2021 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
@@ -23,7 +23,8 @@ from slafw.hardware.sl1.tilt import TiltSL1
 from slafw.hardware.sl1.tower import TowerSL1
 from slafw.motion_controller.sl1_controller import MotionControllerSL1
 from slafw.tests.base import SlafwTestCase
-from slafw.exposure.profiles import LayerProfilesSL1
+from slafw.exposure.profiles import ExposureProfileSL1
+
 
 # pylint: disable = protected-access
 # pylint: disable = too-many-public-methods
@@ -268,7 +269,7 @@ class TestTilt(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
         super().setUp()
         tower = TowerSL1(self.mcc, self.config, self.power_led, self.printer_model)
         self.axis = TiltSL1(self.mcc, self.config, self.power_led, tower, self.printer_model)
-        self.layer_profiles = LayerProfilesSL1(factory_file_path=self.SAMPLES_DIR / "profiles_layer.json")
+        self.exposure_profile = ExposureProfileSL1(factory_file_path=self.SAMPLES_DIR / "fast_default_exposure_profile.json")
         self.pos = self.axis.config_height_position / 4 # aprox 1000 usteps
         self.unit = Ustep
         self.incompatible_unit = Nm
@@ -312,17 +313,17 @@ class TestTilt(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
 
     # TODO: test better
     def test_layer_up(self):
-        self.axis.layer_up_wait(self.layer_profiles.fast)
+        self.axis.layer_up_wait(self.exposure_profile.below_area_fill)
         self.assertAlmostEqual(self.axis.config_height_position, self.axis.position)
 
     # TODO test better
     def test_layer_down(self):
-        asyncio.run(self.axis.layer_down_wait_async(self.layer_profiles.fast))
+        asyncio.run(self.axis.layer_down_wait_async(self.exposure_profile.below_area_fill))
         self.assertLessEqual(abs(self.axis.position),
                              Ustep(defines.tiltHomingTolerance))
 
     def test_stir_resin(self):
-        asyncio.run(self.axis.stir_resin_async(self.layer_profiles.fast))
+        asyncio.run(self.axis.stir_resin_async(self.exposure_profile.below_area_fill))
         self.assertEqual(self.axis.position, self.config.tiltHeight)
 
 

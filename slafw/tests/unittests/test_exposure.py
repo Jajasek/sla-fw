@@ -1,14 +1,16 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
+from pathlib import Path
 from time import sleep
 from typing import Optional
 
 from unittest.mock import Mock, patch, MagicMock, AsyncMock, call
 
+from slafw.configs.project import ExpUserProfile
 from slafw.tests.base import SlafwTestCaseDBus, RefCheckTestCase
 from slafw.hardware.sl1.hardware import HardwareSL1
 from slafw.hardware.printer_model import PrinterModel
@@ -24,7 +26,8 @@ from slafw.errors.warnings import PrintingDirectlyFromMedia, ResinNotEnough
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Nm, Ms
 from slafw.exposure.exposure import Exposure
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
+from slafw.exposure.profiles import EXPOSURE_PROFILES_DEFAULT_NAME, \
+    ExposureProfileSL1, SingleLayerProfileSL1
 from slafw.exposure.persistence import ExposurePickler
 from slafw.states.exposure import ExposureState
 from slafw.tests.mocks.hardware import HardwareMock, setupHw
@@ -49,9 +52,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self.exposure_image.__class__ = ExposureImage
         self.exposure_image.__reduce__ = lambda x: (Mock, ())
         self.exposure_image.sync_preloader.return_value = 100
-        self.ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
-        self.lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
-        self.pickler = ExposurePickler(WizardDataPackage(self.hw, None, None, self.exposure_image, self.ep, self.lp))
+        self.pickler = ExposurePickler(WizardDataPackage(self.hw, None, None, self.exposure_image))
 
     def tearDown(self):
         self.hw.exit()
@@ -62,7 +63,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         hw.connect()
         hw.start()
         with self.assertRaises(NotUVCalibrated):
-            exposure = Exposure(0, WizardDataPackage(hw, None, None, self.exposure_image, self.ep, self.lp))
+            exposure = Exposure(0, WizardDataPackage(hw, None, None, self.exposure_image))
             exposure.read_project(TestExposure.PROJECT)
 
     def test_exposure_init(self):
@@ -76,19 +77,29 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
 
     def test_exposure_serialise(self):
         exposure = Exposure(0, self.pickler.package)
-        exposure.exposure_profiles.default.delay_after_exposure_large_fill_ms = 23755
         exposure.read_project(TestExposure.PROJECT)
+        adjusted_profile = list(exposure.project.exposure_profile.above_area_fill.dump())
+        # set above_area_fill.delay_after_exposure_ms. This value is not taken
+        # into account when calculating times, because there is only 2 fast layers
+        adjusted_profile[1] = 23755
+        exposure.project.exposure_profile_set(0, tuple(adjusted_profile))
         exposure.project.exposure_time_first_ms = 2000
         self._check_serialize(exposure)
         self.pickler.save(exposure)
         new_exposure = self.pickler.load()
-        self.assertEqual(exposure.exposure_profiles, new_exposure.exposure_profiles)
-        self.assertEqual(exposure.project.exposure_profile, new_exposure.project.exposure_profile)
+        self.assertEqual(
+            exposure.project.exposure_profile.as_dictionary(),
+            new_exposure.project.exposure_profile.as_dictionary())
         self.assertEqual(exposure.project.layers, new_exposure.project.layers)
         self._check_serialize(new_exposure)
 
     def _check_serialize(self, exposure: Exposure):
-        self.assertEqual(15628, exposure.estimate_remain_time_ms())
+        # 2000 ms - exposure_time_first_ms
+        # 1888 ms - 2nd layer exposure with 10 fade layers
+        # 2 * 5300 ms - layers of fast tilt time (SL1)
+        # 2 * 370 ms - layers of tower move and magic computational delay constant
+        # SUM: 15228 ms
+        self.assertEqual(15228, exposure.estimate_remain_time_ms())
         self.assertEqual(2000, exposure.project.exposure_time_first_ms)
         self.assertEqual(2000, exposure.project.layers[0].times_ms[0])
 
@@ -232,7 +243,6 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         defines.livePreviewImage = str(self.TEMP_DIR / "live.png")
         defines.displayUsageData = str(self.TEMP_DIR / "display_usage.npz")
         hw = setupHw()
-        hw.config.limit4fast = 45
         exposure_image = ExposureImage(hw)
         exposure_image.start()
 
@@ -252,31 +262,47 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self.assertEqual(exposure.slow_layers_done, 21)
 
     def test_exposure_profile(self):
-        self.hw.config.limit4fast = 100
         exposure = self._start_exposure(self.hw, TestExposure.PROJECT_LAYER_CHANGE)
+        exposure.project.exposure_profile.area_fill = 100
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
         # 10 self._config.fadeLayers + 3 defines.first_extra_slow_layers
         self.assertEqual(exposure.slow_layers_done, 13)
-        self.assertEqual(205040, exposure.estimate_total_time_ms())
+
+        # Project PROJECT_LAYER_CHANGE uses fast exposure profile.
+        #
+        # 32 * 100 ms - exposure_time
+        # 13 * 1000 ms - delay_before_exposure slow (SL1)
+        # 13 * 5800 ms - layers of slow tilt time (SL1)
+        # 19 * 5300 ms - layers of fast tilt time (SL1)
+        # 32 * 370 ms - layers of tower move and magic computational delay constant
+        # SUM: 19640 ms
+        self.assertEqual(190640, exposure.estimate_total_time_ms())
 
         delay = 10  # 0.01 s
-        self.lp.slow.delay_before_exposure_ms = Ms(delay)
+
         exposure = self._start_exposure(self.hw, TestExposure.PROJECT_LAYER_CHANGE_SAFE)
+        exposure.project.exposure_profile.below_area_fill.delay_before_exposure_ms = Ms(delay)
+        exposure.project.exposure_profile.above_area_fill.delay_before_exposure_ms = Ms(delay)
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
 
-        delay_time = exposure.project.total_layers * delay
-        force_slow_time = exposure.project._layers_fast * \
-            int(self.lp.fast.moves_time_ms - self.lp.super_fast.moves_time_ms) # pylint: disable = protected-access
-        self.assertEqual(201040 + delay_time + force_slow_time, exposure.estimate_total_time_ms())
+        # Project PROJECT_LAYER_CHANGE_SAFE uses slow exposure profile where
+        # profile below and above is the same.
+        #
+        # 32 * 100 ms - exposure_time
+        # 32 * 10 ms - overwritten delay_before_exposure_ms
+        # 32 * 8000 ms - layers of slow tilt time (SL1)
+        # 32 * 370 ms - layers of tower move and magic computational delay constant
+        # SUM: 271360 ms
+        self.assertEqual(271360, exposure.estimate_total_time_ms())
 
     def _start_exposure(self, hw, project = None, expo_img = None) -> Exposure:
         if project is None:
             project = TestExposure.PROJECT
         if expo_img is None:
             expo_img = self.exposure_image
-        exposure = Exposure(0, WizardDataPackage(hw, None, None, expo_img, self.ep, self.lp))
+        exposure = Exposure(0, WizardDataPackage(hw, None, None, expo_img))
         exposure.read_project(project)
         exposure.startProject()
         exposure.confirm_print_start()
@@ -335,196 +361,212 @@ class TestLayers(SlafwTestCaseDBus):
         self.hw.tilt.layer_up_wait_async = AsyncMock()
         self.hw.tilt.layer_down_wait_async = AsyncMock()
 
-        self.ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
-        print(self.ep)
-        self.lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
-        print(self.lp)
-        package = WizardDataPackage(self.hw, None, None, self.exposure_image, self.ep, self.lp)
+        package = WizardDataPackage(self.hw, None, None, self.exposure_image)
         self.exposure = Exposure(0, package)
         self.exposure._exposure_simple = MagicMock()    # pylint: disable = protected-access
-        self.exposure.read_project(TestExposure.PROJECT_LAYER_CHANGE)
-        self.exposure.startProject()
-
-        # verify "input" parameters
-        self.assertEqual(36864, self.hw.white_pixels_threshold)
-        self.assertEqual(13, self.exposure.project.first_slow_layers)
+        self._sfp: SingleLayerProfileSL1 = None
+        self._lfp: SingleLayerProfileSL1 = None
 
     def tearDown(self):
         self.exposure = None
         self.hw.exit()
         super().tearDown()
 
-    @patch("slafw.exposure.exposure.sleep")
-    def test_default_profile(self, sleep_mock):
+    def _start_project(self):
+        self.exposure.read_project(TestExposure.PROJECT_LAYER_CHANGE)
+        self.exposure.startProject()
+        # set area_fill to 1 since it is no longer in samples/hardware.cfg
+        self.exposure.project.exposure_profile.area_fill = 1
+
+        self._sfp = self.exposure.project.exposure_profile.below_area_fill
+        self._lfp = self.exposure.project.exposure_profile.above_area_fill
+
+        # verify "input" parameters
+        self.assertEqual(1, self.exposure.project.exposure_profile.area_fill)
+        self.assertEqual(13, self.exposure.project.first_slow_layers)
+
+    @patch("slafw.exposure.exposure.sleep") # do it faster, much faster ;-)
+    def test_fast_profile(self, sleep_mock):
         self.sleep_mock = sleep_mock
+        self._start_project()
         expected_results = {
             "start_inside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.fast)],
-                "tilt_down_calls" : [call(self.lp.fast)],
+                "tilt_up_calls" : [call(self._lfp)],
+                "tilt_down_calls" : [call(self._lfp)],
                 "sleep" : [call(1.0)],
             },
             "start_last" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_fast)],
-                "tilt_down_calls" : [call(self.lp.super_fast)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(1.0)],
             },
             "start_outside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_fast)],
-                "tilt_down_calls" : [call(self.lp.super_fast)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : []
             },
             "big_first" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.fast)],
-                "tilt_down_calls" : [call(self.lp.fast)],
+                "tilt_up_calls" : [call(self._lfp)],
+                "tilt_down_calls" : [call(self._lfp)],
                 "sleep" : [],
             },
             "big_inside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.fast)],
-                "tilt_down_calls" : [call(self.lp.fast)],
+                "tilt_up_calls" : [call(self._lfp)],
+                "tilt_down_calls" : [call(self._lfp)],
                 "sleep" : [call(1.0)],
             },
             "big_last" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_fast)],
-                "tilt_down_calls" : [call(self.lp.super_fast)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(1.0)],
             },
             "big_outside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_fast)],
-                "tilt_down_calls" : [call(self.lp.super_fast)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : []
             },
             "last" : {
                 "tower_move_calls" : [],
                 "tilt_up_calls" : [],
-                "tilt_down_calls" : [call(self.lp.super_fast)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : []
             },
         }
-        self._check_all_layer_variants(self.ep.default.idx, expected_results)
+        self._check_all_layer_variants(0, expected_results)
 
     @patch("slafw.exposure.exposure.sleep")
-    def test_safe_profile(self, sleep_mock):
+    @patch("slafw.configs.project.ProjectConfig.expUserProfile", 1)
+    def test_slow_profile(self, sleep_mock):
         self.sleep_mock = sleep_mock
+        self._start_project()
+        # slow profile has the same parameters for below and above area fill
+        self.assertEqual(self._lfp, self._sfp)
         expected_results = {
             "start_inside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "start_last" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "start_outside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "big_first" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "big_inside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "big_last" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "big_outside" : {
                 "tower_move_calls" : [call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.slow)],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
             "last" : {
                 "tower_move_calls" : [],
                 "tilt_up_calls" : [],
-                "tilt_down_calls" : [call(self.lp.slow)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.0)],
             },
         }
-        self._check_all_layer_variants(self.ep.safe.idx, expected_results)
+        self._check_all_layer_variants(1, expected_results)
 
     @patch("slafw.exposure.exposure.sleep")
+    @patch("slafw.configs.project.ProjectConfig.expUserProfile", 2)
     def test_high_viscosity_profile(self, sleep_mock):
         self.sleep_mock = sleep_mock
+        self._start_project()
+        # high viscosity profile has the same parameters for below and above area fill
+        self.assertEqual(self._lfp, self._sfp)
         expected_results = {
             "start_inside" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "start_last" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "start_outside" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "big_first" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "big_inside" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "big_last" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "big_outside" : {
                 "tower_move_calls" : [call(Nm(5000000)), call(Nm(0))],
-                "tilt_up_calls" : [call(self.lp.super_slow)],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_up_calls" : [call(self._sfp)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
             "last" : {
                 "tower_move_calls" : [call(Nm(5000000))],
                 "tilt_up_calls" : [],
-                "tilt_down_calls" : [call(self.lp.super_slow)],
+                "tilt_down_calls" : [call(self._sfp)],
                 "sleep" : [call(3.5)],
             },
         }
-        self._check_all_layer_variants(self.ep.high_viscosity.idx, expected_results)
+        self._check_all_layer_variants(2, expected_results)
 
     def _check_all_layer_variants(self, user_profile_id, expected_results):
-        self.exposure.project.exposure_profile_by_id = user_profile_id
-
+        file_name = ExpUserProfile(user_profile_id).name + EXPOSURE_PROFILES_DEFAULT_NAME
+        exposure_profiles_path = Path(defines.dataPath) / "SL1" / file_name
+        ep = ExposureProfileSL1(
+            default_file_path=exposure_profiles_path)
         # start - first layers (3 + numFade)
         test_parameters = {
-                "actual_layer_profile" : self.lp[self.ep[user_profile_id].large_fill_layer_profile],
+                "actual_layer_profile" : ep.above_area_fill,
                 "actual_layer" : 0,
                 "white_pixels" : 100}
         print("start_inside")
@@ -539,7 +581,7 @@ class TestLayers(SlafwTestCaseDBus):
             print(i)
             self._check_layer_variant({}, expected_results["start_outside"])
 
-        # big exposured area (limit4fast and 1 mm after)
+        # big exposured area (are_fill and 1 mm after)
         test_parameters = { "actual_layer" : 1000, "white_pixels" : 40000}
         print("big_first")
         self._check_layer_variant(test_parameters, expected_results["big_first"])

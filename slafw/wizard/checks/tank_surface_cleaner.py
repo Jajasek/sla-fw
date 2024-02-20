@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2020-2021 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
@@ -23,10 +23,10 @@ class GentlyUpProfile(Enum):
     available profiles for "GentlyUp" operation.
     """
 
-    SPEED0 = 0
-    SPEED1 = 1
-    SPEED2 = 2
-    SPEED3 = 3
+    SPEED0 = 0 # moveSlow
+    SPEED1 = 1 # superSlow
+    SPEED2 = 2 # homingSlow
+    SPEED3 = 3 # resinSensor
 
     def map_to_tower_profile(self, profiles: MovingProfilesTower) -> SingleProfile:
         """Transform the value passed from the frontend via configuration into a name of an actual tower profile"""
@@ -81,7 +81,7 @@ class TiltUp(DangerousCheck):
         self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        await self._package.hw.tilt.layer_up_wait_async(self._package.layer_profiles.fast)
+        await self._package.hw.tilt.layer_up_wait_async(self._package.hw.exposure_profile.below_area_fill)
 
 
 class TowerSafeDistance(DangerousCheck):
@@ -173,7 +173,9 @@ class GentlyUp(Check):
         self._logger.info("GentlyUp with %s -> %s", up_profile.name, tower_profile.idx)
         self._package.hw.tower.actual_profile = tower_profile
 
-        await self._package.hw.tilt.layer_down_wait_async(self._package.layer_profiles.slow)
+        await self._package.hw.tilt.layer_down_wait_async(
+            self._package.hw.exposure_profile.above_area_fill
+        )
         # TODO: constant in code !!!
         target_position = Nm(50_000_000)
         for _ in range(3):

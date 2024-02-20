@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2022 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from typing import Collection, Optional
@@ -22,16 +22,15 @@ from slafw.admin.items import (
 )
 from slafw.admin.safe_menu import SafeAdminMenu
 from slafw.admin.menu import AdminMenu
-from slafw.admin.menus.dialogs import Info, Wait, Error
+from slafw.admin.menus.dialogs import Info, Error
 from slafw.hardware.axis import Axis
 from slafw.hardware.tower import MovingProfilesTower
 from slafw.hardware.tilt import MovingProfilesTilt
 from slafw.hardware.power_led_action import WarningAction
 from slafw.functions.files import get_save_path, usb_remount, get_export_file_name
 from slafw.errors.errors import NoExternalStorage, TiltHomeFailed
-from slafw.configs.value import ProfileIndex, BoolValue
+from slafw.configs.value import ProfileIndex, BoolValue, TextValue
 from slafw.configs.unit import Nm, Ms
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 
 CAMEL2SNAKE = re.compile(r'(?<!^)(?=[A-Z])')
 
@@ -94,10 +93,6 @@ class EditProfiles(AdminMenu):
     def _get_items(self, printer: Printer, pset: ProfileSet, axis: Optional[Axis] = None) -> Collection[AdminItem]:
         if isinstance(pset, (MovingProfilesTilt, MovingProfilesTower)):
             icon = "steppers_color"
-        elif isinstance(pset, ExposureProfilesSL1):
-            icon = "uv_calibration"
-        elif isinstance(pset, LayerProfilesSL1):
-            icon = "statistics_color"
         else:
             icon = ""
         for profile in pset:
@@ -127,7 +122,7 @@ class EditProfileItems(SafeAdminMenu):
         self._temp_profile = None
         self._temp = profile.get_writer()
         self.add_back()
-        if isinstance(self._pset, (MovingProfilesTilt, MovingProfilesTower, LayerProfilesSL1)):
+        if isinstance(self._pset, (MovingProfilesTilt, MovingProfilesTower)):
             self.add_items(
                 (
                     AdminAction("Test profile", self.test_profile, "touchscreen-icon"),
@@ -148,6 +143,8 @@ class EditProfileItems(SafeAdminMenu):
 #            elif value.unit is not None and issubclass(value.unit, Nm | Ms):
             elif value.unit is not None and any((issubclass(value.unit, Nm), issubclass(value.unit, Ms))):
                 yield AdminFixedValue.from_value(name, self._temp, value.key, icon="edit_white")
+            elif isinstance(value, TextValue):
+                yield AdminLabel.from_value(name, self._temp, value.key, "edit_white")
             else:
                 yield AdminIntValue.from_value(name, self._temp, value.key, 1, "edit_white")
 
@@ -165,8 +162,6 @@ class EditProfileItems(SafeAdminMenu):
         if isinstance(self._pset, (MovingProfilesTilt, MovingProfilesTower)):
             self._axis.actual_profile = self._temp_profile
             getattr(self._control, f"{self._axis.name}_moves")()
-        elif isinstance(self._pset, LayerProfilesSL1):
-            self._control.enter(Wait(self._control, self._do_layer_profile_test))
         else:
             raise RuntimeError(f"Unknown profiles type: {type(self._pset)}")
 

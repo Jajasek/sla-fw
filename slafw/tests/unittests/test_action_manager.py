@@ -1,11 +1,10 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2022 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
 from unittest.mock import Mock
 
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 from slafw.exposure.persistence import ExposurePickler
 from slafw.image.exposure_image import ExposureImage
 from slafw.state_actions.manager import ActionManager
@@ -22,9 +21,7 @@ class TestActionManager(SlafwTestCaseDBus, RefCheckTestCase):
         exposure_image.__class__ = ExposureImage
         exposure_image.__reduce__ = lambda x: (Mock, ())
         exposure_image.sync_preloader.return_value = 100
-        ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
-        lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
-        self.pickler = ExposurePickler(WizardDataPackage(self.hw, None, None, exposure_image, ep, lp))
+        self.pickler = ExposurePickler(WizardDataPackage(self.hw, None, None, exposure_image))
 
     def tearDown(self):
         self.hw.exit()

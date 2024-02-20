@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from slafw.errors.errors import (
 )
 from slafw.errors.warnings import PrinterWarning
 from slafw.exposure.exposure import Exposure
+from slafw.project.project import LayerProfileTuple
 from slafw.states.exposure import ExposureState
 
 
@@ -591,14 +592,37 @@ class Exposure0:
     def exposure_time_ms(self, value: int) -> None:
         self.exposure.project.exposure_time_ms = value
 
-    @property
-    def user_profile(self) -> int:
-        return self.exposure.project.exposure_profile_by_id
+    @auto_dbus
+    def user_profile_get(self, below: bool) -> LayerProfileTuple:
+        """
+        Get exposure profile for below or above area fill
+
+        :return: Tuple with exposure profile data
+        """
+        if below:
+            return tuple(self.exposure.project.exposure_profile.below_area_fill.dump())  # type: ignore[return-value]
+        return tuple(self.exposure.project.exposure_profile.above_area_fill.dump())  # type: ignore[return-value]
 
     @auto_dbus
-    @user_profile.setter
-    def user_profile(self, value: int) -> None:
-        self.exposure.project.exposure_profile_by_id = value
+    def user_profile_set(self, below: bool, data: LayerProfileTuple) -> None:
+        self.exposure.project.exposure_profile_set(below, data)
+
+    @auto_dbus
+    @property
+    def area_fill(self) -> int:
+        """
+        Percentage of area of current layer
+        Printer selects below or above profiles based on this value.
+
+        :return: Area fill percentage
+        """
+        return self.exposure.project.exposure_profile.area_fill
+
+    @auto_dbus
+    @range_checked(0, 100)
+    @area_fill.setter
+    def area_fill(self, value: int) -> None:
+        self.exposure.project.exposure_profile.area_fill = value
 
     @property
     def exposure_time_first_ms(self) -> int:

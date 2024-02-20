@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
@@ -16,10 +16,10 @@ from pydbus import SystemBus
 from slafw.api.printer0 import Printer0
 from slafw.api.standard0 import Standard0
 from slafw.api.exposure0 import Exposure0, Exposure0State
+from slafw.configs.unit import Ms
 from slafw.errors.warnings import PrinterWarning, ResinLow, AmbientTemperatureOutOfRange, AmbientTooCold
 from slafw.errors.errors import PrinterException, FanFailed
 from slafw.exposure.persistence import ExposurePickler
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 from slafw.image.exposure_image import ExposureImage
 from slafw.state_actions.manager import ActionManager
 from slafw.states.exposure import ExposureState, ExposureCheck, ExposureCheckResult
@@ -39,9 +39,7 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
         exposure_image.__class__ = ExposureImage
         exposure_image.__reduce__ = lambda x: (Mock, ())
         exposure_image.sync_preloader.return_value = 100
-        ep = ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json")
-        lp = LayerProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_layer.json")
-        package = WizardDataPackage(self.hw, None, None, exposure_image, ep, lp)
+        package = WizardDataPackage(self.hw, None, None, exposure_image)
         self.manager = ActionManager()
         self.printer = Printer(self.hw, self.manager)
         self.printer0 = Printer0(self.printer)
@@ -127,25 +125,30 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
             self.manager.exposure.project.exposure_time_first_ms = 10000
             self.manager.exposure.project.calibrate_regions = 9
             self.manager.exposure.project.calibrate_time_ms = 3000
-            self.manager.exposure.project.exposure_profile_by_id = 1
+            profile = self.manager.exposure.project.exposure_profile
+            profile.below_area_fill.delay_before_exposure_ms = Ms(1000)
+            self.manager.exposure.project.exposure_profile_set(
+                1,
+                tuple(profile.below_area_fill.dump())
+            )
             self.manager.exposure.project.delayed_end_time = datetime.now().timestamp()
             sleep(.1)
             signal_list = [
                 call(uri, {"project_file": "/nice/path/file.suffix"}, []),
                 call(uri, {"exposure_time_ms": 2080}, []),
                 call(uri, {"delayed_end_time": 13}, []),
-                call(uri, {"total_time_ms": 13860}, []),
+                call(uri, {"total_time_ms": 13460}, []),
                 call(uri, {"exposure_time_first_ms": 10000}, []),
                 call(uri, {"delayed_end_time": 30}, []),
-                call(uri, {"total_time_ms": 30860}, []),
+                call(uri, {"total_time_ms": 30460}, []),
                 call(uri, {"calibration_regions": 9}, []),
                 call(uri, {"delayed_end_time": 46}, []),
-                call(uri, {"total_time_ms": 46860}, []),
+                call(uri, {"total_time_ms": 46460}, []),
                 call(uri, {"exposure_time_calibrate_ms": 3000}, []),
                 call(uri, {"delayed_end_time": 78}, []),
-                call(uri, {"total_time_ms": 78860}, []),
-                call(uri, {"user_profile": 1}, []),
-                call(uri, {"total_time_ms": 89860}, []),
+                call(uri, {"total_time_ms": 78460}, []),
+                call(uri, {"delayed_end_time": 80}, []),
+                call(uri, {"total_time_ms": 80460}, []),
                 call(uri, {"delayed_end_time": 0}, []),
             ]
 

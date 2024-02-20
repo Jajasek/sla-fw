@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2021 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2021-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from PySignal import Signal
@@ -12,7 +12,6 @@ class Project:
     def __init__(self):
         self.data = ProjectData(changed = Signal(), path = "/nice/path/file.suffix")
         self.name = "Nice name"
-        self.exposure_profile_by_id = 0
         self.used_material_nl = 45242420
         self.total_layers = 4242
         self.layer_height_nm = 50000

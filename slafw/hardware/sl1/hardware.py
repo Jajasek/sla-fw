@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2019-2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2019-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # TODO: Fix following pylint problems
@@ -20,11 +20,13 @@ from datetime import timedelta
 from math import ceil
 from threading import Thread
 from time import sleep
+from pathlib import Path
 from typing import Optional, Any
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.errors.errors import MotionControllerException
+from slafw.exposure.profiles import EXPOSURE_PROFILES_DEFAULT_NAME, ExposureProfileSL1
 from slafw.functions.decorators import safe_call
 from slafw.hardware.a64.temp_sensor import A64CPUTempSensor
 from slafw.hardware.hardware import BaseHardware
@@ -85,6 +87,14 @@ class HardwareSL1(BaseHardware):
             self.uv_led = SL1SUVLED(self.mcc, self.sl1s_booster, self.uv_led_temp)
         else:
             raise NotImplementedError
+
+        # TODO: this is left here only for printer0.home_tilt() nad wizards
+        #  consider stop using tearing moves outside of the exposure
+        file_name = "fast" + EXPOSURE_PROFILES_DEFAULT_NAME
+        exposure_profiles_path = Path(defines.dataPath) / printer_model.name / file_name  # type: ignore[attr-defined]
+        self.exposure_profile = ExposureProfileSL1(
+                default_file_path=exposure_profiles_path)
+        self.logger.info(str(self.exposure_profile))
 
         self.power_led = PowerLedSL1(self.mcc)
         self.tower = TowerSL1(self.mcc, self.config, self.power_led, printer_model)

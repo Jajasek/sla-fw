@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2021-2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2021-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import hashlib
@@ -73,14 +73,6 @@ from slafw.wizard.wizards.self_test import SelfTestWizard
 from slafw.wizard.wizards.sl1s_upgrade import SL1SUpgradeWizard, SL1DowngradeWizard
 from slafw.wizard.wizards.unboxing import CompleteUnboxingWizard, KitUnboxingWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
-from slafw.exposure.profiles import (
-    LayerProfilesSL1,
-    LAYER_PROFILES_LOCAL,
-    LAYER_PROFILES_DEFAULT_NAME,
-    ExposureProfilesSL1,
-    EXPOSURE_PROFILES_LOCAL,
-    EXPOSURE_PROFILES_DEFAULT_NAME
-)
 from slafw.exposure.persistence import ExposurePickler
 
 
@@ -133,8 +125,6 @@ class Printer:
         self._system_bus = SystemBus()
         self.inet: Optional[Network] = None
         self.exposure_image: Optional[ExposureImage] = None
-        self.exposure_profiles: Optional[ExposureProfilesSL1] = None
-        self.layer_profiles: Optional[LayerProfilesSL1] = None
         self.config0_dbus = None
         self.logs0_dbus = None
         self.hw: Optional[BaseHardware] = None
@@ -233,18 +223,6 @@ class Printer:
         if not self.hw.config.is_factory_read() and not self.hw.isKit and self.hw.printer_model == PrinterModel.SL1:
             self.exception_occurred.emit(NoFactoryUvCalib())
         self._compute_uv_pwm()
-
-        # Load layer and exposure profiles
-        layer_profiles_path = Path(defines.dataPath) / self.hw.printer_model.name / LAYER_PROFILES_DEFAULT_NAME  # type: ignore[attr-defined]
-        self.layer_profiles = LayerProfilesSL1(
-                factory_file_path=LAYER_PROFILES_LOCAL,
-                default_file_path=layer_profiles_path)
-        self.logger.info(str(self.layer_profiles))
-        exposure_profiles_path = Path(defines.dataPath) / self.hw.printer_model.name / EXPOSURE_PROFILES_DEFAULT_NAME  # type: ignore[attr-defined]
-        self.exposure_profiles = ExposureProfilesSL1(
-                factory_file_path=EXPOSURE_PROFILES_LOCAL,
-                default_file_path=exposure_profiles_path)
-        self.logger.info(str(self.exposure_profiles))
 
         # Past exposures
         save_all_remain_wizard_history()

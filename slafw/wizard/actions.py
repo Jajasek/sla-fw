@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2020 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -45,7 +45,6 @@ class UserActionBroker:
 
         self.prepare_calibration_platform_align_done = UserAction()
         self.prepare_calibration_tilt_align_done = UserAction()
-        self.prepare_calibration_finish_done = UserAction()
 
         self.prepare_displaytest_done = UserAction()
         self.prepare_calibration_platform_tank_done = UserAction()

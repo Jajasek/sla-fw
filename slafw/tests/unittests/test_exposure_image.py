@@ -2,7 +2,7 @@
 
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
@@ -17,7 +17,6 @@ from slafw.image.exposure_image import ExposureImage
 from slafw.project.project import Project
 from slafw import defines, test_runtime
 from slafw.tests.mocks.hardware import HardwareMock
-from slafw.exposure.profiles import ExposureProfilesSL1, LayerProfilesSL1
 
 
 class TestScreen(SlafwTestCase, RefCheckTestCase):
@@ -57,14 +56,7 @@ class TestScreen(SlafwTestCase, RefCheckTestCase):
         super().tearDown()
 
     def _create_project(self, project_file):
-        project = Project(
-            self.hw,
-            ExposureProfilesSL1(default_file_path=self.SAMPLES_DIR / "profiles_exposure.json"),
-            LayerProfilesSL1(factory_file_path=self.SLAFW_DIR / "data/SL1/default_layer_change_profiles.json"),
-            project_file
-        )
-
-        return project
+        return Project(self.hw, project_file)
 
     def test_basics(self):
         self.assertTrue(self.exposure_image.is_screen_black, "Test init")

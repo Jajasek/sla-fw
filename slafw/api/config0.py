@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import annotations
@@ -159,6 +159,5 @@ class Config0:
         "screwMm": {"microStepsMM"},
         "raw_calibrated": {"calibrated"},
         "tiltHeight": {"calibrated"},
-        "limit4fast": {"limit4fast"},
         "tankCleaningExposureTime": {"tankCleaningExposureTime"}
     }

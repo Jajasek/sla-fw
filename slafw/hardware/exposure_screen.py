@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import functools
@@ -48,6 +48,7 @@ class ExposureScreenParameters:
     bgr_pixels: bool
     width_px: int = field(init=False)
     height_px: int = field(init=False)
+    pixels_per_percent: int = field(init=False)
     bytes_per_pixel: int = field(init=False)
     apparent_size_px: tuple = field(init=False)
     apparent_width_px: int = field(init=False)
@@ -59,6 +60,7 @@ class ExposureScreenParameters:
     def __post_init__(self):
         self.width_px = self.size_px[0]
         self.height_px = self.size_px[1]
+        self.pixels_per_percent = self.width_px * self.height_px // 100
         self.bytes_per_pixel = 3 if self.monochromatic else 1
         self.apparent_width_px = self.width_px * self.output_factor * self.bytes_per_pixel
         self.apparent_height_px = self.height_px * self.output_factor

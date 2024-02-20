@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import functools
@@ -162,7 +162,6 @@ class ExposureImage:
         self._sl[SLIDX.PROJECT_CALIBRATE_PENETRATION_PX] = self._project.calibrate_penetration_px
         self._sl[SLIDX.PROJECT_CALIBRATE_TEXT_SIZE_PX] = self._project.calibrate_text_size_px
         self._sl[SLIDX.PROJECT_CALIBRATE_PAD_SPACING_PX] = self._project.calibrate_pad_spacing_px
-        self._sl[SLIDX.WHITE_PIXELS_THRESHOLD] = self._hw.white_pixels_threshold
 
     @staticmethod
     def _write_SL(dst, src):

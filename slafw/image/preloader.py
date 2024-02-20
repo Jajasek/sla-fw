@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -46,7 +46,6 @@ class SLIDX(IntEnum):
     PROJECT_CALIBRATE_PENETRATION_PX = 3
     PROJECT_CALIBRATE_TEXT_SIZE_PX = 4
     PROJECT_CALIBRATE_PAD_SPACING_PX = 5
-    WHITE_PIXELS_THRESHOLD = 6
 
 class Preloader(Process):
     # pylint: disable=too-many-instance-attributes, too-many-arguments

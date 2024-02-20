@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2020 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from enum import unique, Enum
@@ -23,7 +23,7 @@ class WizardState(Enum):
     # PREPARE_CALIBRATION_TANK_PLACEMENT = 1012
     PREPARE_CALIBRATION_TILT_ALIGN = 1013
     PREPARE_CALIBRATION_PLATFORM_ALIGN = 1014
-    PREPARE_CALIBRATION_FINISH = 1015
+    # PREPARE_CALIBRATION_FINISH = 1015
     PREPARE_CALIBRATION_INSERT_PLATFORM_TANK = 1016
 
     # User action required states

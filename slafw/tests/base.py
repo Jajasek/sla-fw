@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2022 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import gc
@@ -30,7 +30,6 @@ from slafw.api.exposure0 import Exposure0
 from slafw.api.printer0 import Printer0
 from slafw.api.wizard0 import Wizard0
 from slafw.exposure.exposure import Exposure
-from slafw.exposure.profiles import LAYER_PROFILES_LOCAL, EXPOSURE_PROFILES_LOCAL
 from slafw.exposure.persistence import LAST_PROJECT_DATA
 from slafw.functions.system import set_configured_printer_model
 from slafw.hardware.printer_model import PrinterModel
@@ -117,8 +116,6 @@ class SlafwTestCase(TestCase):
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.TEMP_DIR / TILT_CFG_LOCAL.name),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.TEMP_DIR / TOWER_CFG_LOCAL.name),
             patch("slafw.exposure.persistence.LAST_PROJECT_DATA", self.TEMP_DIR / LAST_PROJECT_DATA.name),
-            patch("slafw.exposure.profiles.LAYER_PROFILES_LOCAL", self.TEMP_DIR / LAYER_PROFILES_LOCAL.name),
-            patch("slafw.exposure.profiles.EXPOSURE_PROFILES_LOCAL", self.TEMP_DIR / EXPOSURE_PROFILES_LOCAL.name),
             patch("slafw.defines.ramdiskPath", str(self.TEMP_DIR)),
             patch("slafw.defines.previousPrints", self.TEMP_DIR),
             patch("slafw.defines.statsData", self.TEMP_DIR / "stats.toml"),

@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2022 Prusa Research a.s - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Research a.s - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
@@ -15,13 +15,14 @@ from PySignal import Signal
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
+from slafw.exposure.profiles import ExposureProfileSL1
 from slafw.hardware.axis import Axis
 from slafw.hardware.exposure_screen import ExposureScreen
 from slafw.hardware.fan import Fan
 from slafw.hardware.temp_sensor import TempSensor
 from slafw.hardware.uv_led import UVLED
 from slafw.hardware.power_led import PowerLed
-from slafw.hardware.printer_model import PrinterModel
+from slafw.hardware.printer_model import PrinterModelBase
 from slafw.hardware.tilt import Tilt
 from slafw.hardware.tower import Tower
 
@@ -41,10 +42,11 @@ class BaseHardware:
     exposure_screen: ExposureScreen
     power_led: PowerLed
 
-    def __init__(self, hw_config: HwConfig, printer_model: PrinterModel):
+    def __init__(self, hw_config: HwConfig, printer_model: PrinterModelBase):
         self.logger = logging.getLogger(__name__)
         self.config = hw_config
         self.printer_model = printer_model
+        self.exposure_profile: ExposureProfileSL1 = None
 
         self.resin_sensor_state_changed = Signal()
         self.cover_state_changed = Signal()
@@ -232,15 +234,6 @@ class BaseHardware:
     @cached_property
     def emmc_serial(self) -> str:  # pylint: disable = no-self-use
         return defines.emmc_serial_path.read_text(encoding="ascii").strip()
-
-    @property
-    def white_pixels_threshold(self) -> int:
-        return (
-            self.exposure_screen.parameters.width_px
-            * self.exposure_screen.parameters.height_px
-            * self.config.limit4fast
-            // 100
-        )
 
     @abstractmethod
     def exit(self):

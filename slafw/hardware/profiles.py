@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2022 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
@@ -7,13 +7,13 @@ from typing import Optional, Callable, List
 from functools import cache # type: ignore
 from abc import abstractmethod
 
-from slafw.configs.value import ValueConfig
+from slafw.configs.common import ValueConfigCommon
 from slafw.configs.json import JsonConfig
 from slafw.configs.writer import ConfigWriter
 from slafw.errors.errors import ConfigException
 
 
-class SingleProfile(ValueConfig):
+class SingleProfile(ValueConfigCommon):
     @property
     @abstractmethod
     def __definition_order__(self) -> tuple:
@@ -56,6 +56,12 @@ class SingleProfile(ValueConfig):
                 return True
         return False
 
+    def _dump_for_save(self, factory: bool = False, nondefault: bool = False) -> str:
+        raise NotImplementedError
+
+    def read_text(self, text: str, factory: bool = False, defaults: bool = False) -> None:
+        raise NotImplementedError
+
 
 class ProfileSet(JsonConfig):
     @property
@@ -75,15 +81,13 @@ class ProfileSet(JsonConfig):
             default_file_path: Optional[Path]=None
     ):
         self._apply_profile: Optional[Callable] = None
+        self._ordered_profiles: List[SingleProfile] = []
         super().__init__(
                 file_path=file_path,
                 factory_file_path=factory_file_path,
-                default_file_path=default_file_path,
-                is_master=True,
-                force_factory=True,
+                default_file_path=default_file_path
         )
-        self._ordered_profiles: List[SingleProfile] = []
-        self.read_file()
+
         idx = 0
         for name in self.__definition_order__:
             if not name.startswith("_"):

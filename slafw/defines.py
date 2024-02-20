@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
@@ -46,6 +46,7 @@ expoPanelLogPath = factoryMountPoint / expoPanelLogFileName
 uvCalibDuration = 60 # 1 minute countdown
 
 configFile = "config.ini"
+config_file_json = "config.json"
 maskFilename = "mask.png"
 previousPrints = persistentStorage / "previous-prints"
 statsData = persistentStorage / "stats.toml"

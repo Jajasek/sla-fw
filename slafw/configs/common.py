@@ -1,9 +1,10 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020-2022 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 from abc import abstractmethod
@@ -138,33 +139,34 @@ class ValueConfigCommon(ValueConfig):
         # pylint: disable=too-many-branches
         self, container, values: list, data: dict, factory: bool = False, defaults: bool = False
     ) -> None:
+        processed_data = deepcopy(data)
         for val in values:
             try:
                 key = None
-                if val.file_key in data:
+                if val.file_key in processed_data:
                     key = val.file_key
-                elif val.file_key.lower() in data:
+                elif val.file_key.lower() in processed_data:
                     key = val.file_key.lower()
                 if key is not None:
                     if isinstance(val, DictOfConfigs):
-                        self._fill_dict_of_configs(container, data, val, key, factory, defaults)
+                        self._fill_dict_of_configs(container, processed_data, val, key, factory, defaults)
                     else:
-                        v = data[key] if val.unit is None else val.unit(data[key])
+                        v = processed_data[key] if val.unit is None else val.unit(processed_data[key])
                         val.value_setter(container, v, write_override=True, factory=factory, defaults=defaults)
-                    del data[key]
+                    del processed_data[key]
             except (KeyError, ConfigException):
                 self._logger.exception("Setting config value %s to %s failed", val.name, val)
-        if data:
+        if processed_data:
             if self._add_dict_type:
-                for key in data:
-                    if isinstance(data[key], dict):
+                for key in processed_data:
+                    if isinstance(processed_data[key], dict):
                         val = self.add_value(key, DictOfConfigs(self._add_dict_type))
-                        config = self._fill_dict_of_configs(container, data, val, key, factory, defaults)
+                        config = self._fill_dict_of_configs(container, processed_data, val, key, factory, defaults)
                         setattr(self, key, config)
                     else:
-                        self._logger.warning("Extra data in configuration source: %s: %s", key, data[key])
+                        self._logger.warning("Extra data in configuration source: %s: %s", key, processed_data[key])
             else:
-                self._logger.warning("Extra data in configuration source: \n %s", data)
+                self._logger.warning("Extra data in configuration source: \n %s", processed_data)
 
     def _fill_dict_of_configs(self, container, data: dict, val: Value, key: str, factory: bool, defaults: bool):
         # pylint: disable=too-many-arguments
@@ -291,3 +293,11 @@ class ValueConfigCommon(ValueConfig):
             for name, value in self.get_values().items()
             if value.get_value(self) != value.get_raw_value(self)
         }
+
+    @property
+    def factory_file_path(self) -> Path:
+        return self._factory_file_path
+
+    @property
+    def default_file_path(self) -> Path:
+        return self._default_file_path

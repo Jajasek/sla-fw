@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import unittest
@@ -38,7 +38,6 @@ class TestIntegrationConfig0(SlaFwIntegrationTestCaseBase):
         self.assertTrue(self.config0.fanCheck)
         self.assertEqual(10, self.config0.up_and_down_wait)
         self.assertEqual(0, self.config0.up_and_down_z_offset_nm)
-        self.assertEqual(1, self.config0.limit4fast)
         self.assertEqual(140, self.config0.uvCalibIntensity)
         self.assertEqual(800, self.config0.microStepsMM)
         self.assertEqual(90, self.config0.uvCalibMinIntEdge)

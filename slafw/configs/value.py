@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020-2021 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # TODO: Fix following pylint problems
@@ -486,23 +486,6 @@ class FloatListValue(ListValue):
     def __init__(self, *args, **kwargs):
         super().__init__([float, int], *args, **kwargs)
 
-
-class DictOfConfigs(Value):
-    """
-    Dict configuration value
-
-    Add recursion to value properties.
-    """
-
-    def __init__(self, value_type: Type, *args, **kwargs):
-        """
-        List configuration value constructor
-
-        :param value_type: acceptable inner value type
-        """
-        super().__init__([value_type], *args, **kwargs)
-
-
 class TextValue(Value):
     """
     Text list configuration value
@@ -528,6 +511,25 @@ class TextValue(Value):
         """
         if not self.regex.fullmatch(val):
             raise ValueError(f'Value {self.name} cannot be set. Value "{val}" does not match "{self.regex}"')
+
+
+class DictOfConfigs(Value):
+    """
+    Dict configuration value
+
+    Add recursion to value properties.
+    """
+
+    def __init__(self, value_type: Type, *args, **kwargs):
+        """
+        List configuration value constructor
+
+        :param value_type: acceptable inner value type
+        """
+        super().__init__([value_type], *args, **kwargs)
+
+
+
 
 
 class ValueConfig(BaseConfig):

@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2021-2022 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2021-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from slafw.admin.control import AdminControl
@@ -19,7 +19,6 @@ from slafw.wizard.wizards.sl1s_upgrade import SL1SUpgradeWizard, SL1DowngradeWiz
 from slafw.wizard.wizards.unboxing import CompleteUnboxingWizard, KitUnboxingWizard
 from slafw.wizard.wizards.uv_calibration import UVCalibrationWizard
 from slafw.wizard.wizards.tank_surface_cleaner import TankSurfaceCleaner
-from slafw.wizard.checks.tilt import TiltTimingTest
 from slafw.wizard.checks.uvfans import UVFansTest
 
 
@@ -46,7 +45,6 @@ class WizardsTestMenu(AdminMenu):
                 AdminAction("SL1S upgrade", self.sl1s_upgrade, "cover_color"),
                 AdminAction("SL1 downgrade", self.sl1_downgrade, "cover_color"),
                 AdminAction("Self-test - UV & fans test only", self.api_selftest_uvfans, "led_set_replacement"),
-                AdminAction("Calibration - tilt times only", self.api_calibration_tilt_times, "tank_reset_color"),
                 AdminAction("Tank Surface Cleaner", self.tank_surface_cleaner, "clean-tank-icon"),
                 AdminAction("New expo panel", self.new_expo_panel, "display_replacement")
             )
@@ -86,13 +84,6 @@ class WizardsTestMenu(AdminMenu):
             UVFansTest(package),
             package,
             show_results=False))
-
-    def api_calibration_tilt_times(self):
-        package = fill_wizard_data_package(self._printer)
-        self._printer.action_manager.start_wizard(SingleCheckWizard(
-            WizardId.CALIBRATION,
-            TiltTimingTest(package),
-            package))
 
     def tank_surface_cleaner(self):
         self._printer.action_manager.start_wizard(TankSurfaceCleaner(fill_wizard_data_package(self._printer)))

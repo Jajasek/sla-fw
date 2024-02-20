@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020-2022 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # TODO: Fix following pylint problems
@@ -323,8 +323,6 @@ class Exposure:
         self.project: Optional[Project] = None
         self.hw = package.hw
         self.exposure_image = package.exposure_image
-        self.exposure_profiles = package.exposure_profiles
-        self.layer_profiles = package.layer_profiles
         self.data = ExposureData(changed = changed_signal if changed_signal else Signal(), instance_id = job_id)
         self.resin_volume = None
         self.tower_position_nm = self.hw.tower.minimal_position
@@ -342,7 +340,7 @@ class Exposure:
         self.hw.blower_fan.error_changed.connect(self._on_blower_fan_error)
         self.hw.rear_fan.error_changed.connect(self._on_rear_fan_error)
         self._checks_task: Optional[Task] = None
-        self.actual_layer_profile: Optional[SingleLayerProfileSL1] = None
+        self.actual_layer_profile: SingleLayerProfileSL1 = None
         # this not working in ExposureData
         self.data.check_results.changed.connect(self._on_check_result_change)
 
@@ -356,8 +354,6 @@ class Exposure:
             # read project
             self.project = Project(
                     self.hw,
-                    self.exposure_profiles,
-                    self.layer_profiles,
                     project_file,
                     self.data.changed)
             self.data.estimated_total_time_ms = self.estimate_total_time_ms()
@@ -425,7 +421,7 @@ class Exposure:
         self.data.resin_count_ml = 0.0
         self.slow_layers_done = 0
         self.exposure_image.new_project(self.project)
-        self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.large_fill_layer_profile]
+        self.actual_layer_profile = self.project.exposure_profile.above_area_fill
 
     def prepare(self):
         self.exposure_image.preload_image(0)
@@ -589,9 +585,10 @@ class Exposure:
             self.logger.info("Delay after exposure [s]: %f", delay_after / 1000)
             sleep(delay_after / 1000)
 
-        large_fill = white_pixels > self.hw.white_pixels_threshold
-        self.logger.debug("large_fill:%s (pixels:%d threshold:%d)",
-                large_fill, white_pixels, self.hw.white_pixels_threshold)
+        current_fill = white_pixels / self.hw.exposure_screen.parameters.pixels_per_percent
+        large_fill = current_fill > self.project.exposure_profile.area_fill
+        self.logger.debug("large_fill:%s (current: %d, threshold: %d)",
+                large_fill, current_fill, self.project.exposure_profile.area_fill)
 
         # Force large fill by height
         if large_fill:
@@ -609,9 +606,9 @@ class Exposure:
 
         if large_fill:
             self.slow_layers_done += 1
-            self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.large_fill_layer_profile]
+            self.actual_layer_profile = self.project.exposure_profile.above_area_fill
         else:
-            self.actual_layer_profile = self.layer_profiles[self.project.exposure_profile.small_fill_layer_profile]
+            self.actual_layer_profile = self.project.exposure_profile.below_area_fill
 
         try:
             self.hw.tilt.layer_peel_moves(self.actual_layer_profile, self.tower_position_nm, last_layer)
@@ -713,8 +710,7 @@ class Exposure:
         try:
             self.logger.info("Started exposure thread")
             self.logger.info("Motion controller tilt profiles: %s", self.hw.tilt.profiles)
-            self.logger.info("Layer profiles: %s", self.layer_profiles)
-            self.logger.info("Exposure profiles: %s", self.exposure_profiles)
+            self.logger.info("Exposure profiles: %s", self.project.exposure_profile)
 
             while not self.done:
                 command = self.commands.get()

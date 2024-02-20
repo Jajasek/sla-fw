@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # TODO: Fix following pylint problems
@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from time import time
-from typing import Optional, Collection, List, Set, Dict, Any
+from typing import Optional, Collection, List, Set, Dict, Any, Union, Tuple
 from enum import unique, IntEnum
 from dataclasses import dataclass, asdict
 
@@ -30,13 +30,14 @@ from slafw.errors.errors import ProjectErrorNotFound, ProjectErrorCantRead, Proj
                                 ProjectErrorCorrupted, ProjectErrorAnalysisFailed, ProjectErrorCalibrationInvalid, \
                                 ProjectErrorWrongPrinterModel
 from slafw.errors.warnings import PrintingDirectlyFromMedia, ProjectSettingsModified, VariantMismatch, PrinterWarning
-from slafw.configs.project import ProjectConfig
+from slafw.configs.project import ProjectConfig, ProjectConfigJson, ExpUserProfile
 from slafw.hardware.hardware import BaseHardware
 from slafw.project.functions import get_white_pixels
 from slafw.project.bounding_box import BBox
 from slafw.api.decorators import range_checked
-from slafw.exposure.profiles import SingleExposureProfileSL1, ExposureProfilesSL1, LayerProfilesSL1
+from slafw.exposure.profiles import ExposureProfileSL1, EXPOSURE_PROFILES_DEFAULT_NAME
 
+LayerProfileTuple = Tuple[int, int, int, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int]
 
 @unique
 class LayerCalibrationType(IntEnum):
@@ -88,34 +89,31 @@ class ProjectData:
     exposure_time_first_ms: int = 0
     calibrate_time_ms: int = 0
     calibrate_regions: int = 0
-    exposure_profile_id: int = 0
+    exposure_profile: Dict = None
     delayed_end_time: int = 0
 
     def __setattr__(self, key: str, value: Any):
         object.__setattr__(self, key, value)
         self.changed.emit(key, value)
 
-def _project_data_filter(data):
-    return dict(x for x in data if isinstance(x[1], (int, str)))
 
+def _project_data_filter(data):
+    return dict(x for x in data if isinstance(x[1], (int, str, Dict)))
 
 class Project:
     # pylint: disable=too-many-arguments
     def __init__(self,
             hw: BaseHardware,
-            exposure_profiles: ExposureProfilesSL1,
-            layer_profiles: LayerProfilesSL1,
             project_file: str,
             changed_signal: Optional[Signal] = None):
         self.logger = logging.getLogger(__name__)
         self.times_changed = Signal()
         self._hw = hw
-        self._exposure_profiles = exposure_profiles
-        self._layer_profiles = layer_profiles
         self.warnings: Set[PrinterWarning] = set()
         # Origin path: `local` or `usb`
         self.origin_path = project_file
-        self._config = ProjectConfig()
+        self._config: Union[ProjectConfig, ProjectConfigJson] = None
+        self._exposure_profile: ExposureProfileSL1 = None
         self.layers: List[ProjectLayer] = []
         self.total_height_nm = 0
         self.layer_height_nm = 0
@@ -133,7 +131,7 @@ class Project:
         self._layers_slow = 0
         self._layers_fast = 0
         self._calibrate_time_ms_exact: List[int] = []
-        namelist = self._read_toml_config()
+        namelist = self._read_config()
         self._parse_config()
         self._build_layers_description(self._check_filenames(namelist))
         self._set_expected_end_time()
@@ -168,14 +166,27 @@ class Project:
         pp = pprint.PrettyPrinter(width=200)
         return "Project:\n" + pp.pformat(items)
 
-    def _read_toml_config(self) -> list:
+    def _read_config(self) -> list:
         self.logger.info("Opening project file '%s'", self.data.path)
         if not Path(self.data.path).is_file():
             self.logger.error("Project lookup exception: file not found: %s", self.data.path)
             raise ProjectErrorNotFound
         try:
             with ZipFile(self.data.path, "r") as zf:
-                self._config.read_text(zf.read(defines.configFile).decode("utf-8"))
+                try:
+                    self._config = ProjectConfigJson()
+                    self._config.read_text(zf.read(defines.config_file_json).decode("utf-8"))
+                    self._exposure_profile = self._config.exposure_profile
+                    del self._config.exposure_profile
+                except Exception as exception:
+                    self.logger.warning("%s. Older project format?", str(exception))
+                    self._config = ProjectConfig()
+                    self._config.read_text(zf.read(defines.configFile).decode("utf-8"))
+                    file_name = ExpUserProfile(self._config.expUserProfile).name + EXPOSURE_PROFILES_DEFAULT_NAME
+                    exposure_profiles_path = Path(defines.dataPath) / self._hw.printer_model.name / file_name
+                    self._exposure_profile = ExposureProfileSL1(
+                        default_file_path=exposure_profiles_path)
+                    self.logger.info(str(self.exposure_profile))
                 namelist = zf.namelist()
         except Exception as exception:
             self.logger.exception("zip read exception")
@@ -213,7 +224,7 @@ class Project:
         self.calibrate_penetration_px = int(self._config.calibratePenetration * 1e6 // pixel_size_nm)
         self.calibrate_compact = self._config.calibrateCompact
         self.used_material_nl = int(self._config.usedMaterial * 1e6)
-        self.exposure_profile_by_id = self._config.expUserProfile
+        self.data.exposure_profile = self._exposure_profile.as_dictionary()
         if self.data.calibrate_regions:
             # labels and pads consumption is ignored
             self.used_material_nl *= self.data.calibrate_regions
@@ -320,7 +331,7 @@ class Project:
                         white_pixels *= self.data.calibrate_regions
                     self.logger.debug("white_pixels: %s", white_pixels)
                     update_consumed = True
-                    if white_pixels > self._hw.white_pixels_threshold:
+                    if white_pixels // self._hw.exposure_screen.parameters.pixels_per_percent > self.exposure_profile.area_fill:
                         new_slow_layers += 1
                     # nm3 -> nl
                     layer.consumed_resin_nl = white_pixels * self._hw.exposure_screen.parameters.pixel_size_nm ** 2 * layer.height_nm // int(1e15)
@@ -390,22 +401,22 @@ class Project:
             self._times_changed()
 
     @property
-    def exposure_profile(self) -> SingleExposureProfileSL1:
-        return self._exposure_profiles[self.data.exposure_profile_id]
+    def exposure_profile(self) -> ExposureProfileSL1:
+        return self._exposure_profile
 
-    @property
-    def exposure_profile_by_id(self) -> int:
-        return self.data.exposure_profile_id
-
-    @exposure_profile_by_id.setter
-    def exposure_profile_by_id(self, value: int) -> None:
-        if 0 <= value < len(self._exposure_profiles):
-            self.data.exposure_profile_id = value
-            self.logger.info("Exposure profile set to '%s'", self.exposure_profile.name)
-            self.count_remain_time.cache_clear()
-            self.times_changed.emit()
+    def exposure_profile_set(self, below: bool, data: LayerProfileTuple) -> None:
+        if below:
+            profile = self._exposure_profile.below_area_fill
         else:
-            raise ValueError(f"Value: {value} out of range")
+            profile = self._exposure_profile.above_area_fill
+        for index, value in enumerate(profile):
+            if value.unit:
+                setattr(profile, value.key, value.unit(data[index]))
+            else:
+                setattr(profile, value.key, data[index])
+
+        self.data.exposure_profile = self._exposure_profile.as_dictionary()
+        self._times_changed()
 
     # FIXME compatibility with api/standard0
     @property
@@ -524,8 +535,8 @@ class Project:
         fast_layers = total_layers - layers_done - slow_layers
 
         # Fast and slow layer times
-        sfp = self._layer_profiles[self.exposure_profile.small_fill_layer_profile]
-        hfp = self._layer_profiles[self.exposure_profile.large_fill_layer_profile]
+        sfp = self.exposure_profile.below_area_fill
+        hfp = self.exposure_profile.above_area_fill
         time_remain_ms += \
             fast_layers * int(sfp.moves_time_ms + sfp.delay_before_exposure_ms + sfp.delay_after_exposure_ms)
         time_remain_ms += \
@@ -546,7 +557,8 @@ class Project:
     @persistent_data.setter
     def persistent_data(self, data: Dict[str, Any]):
         # for inspiration: https://gist.github.com/gatopeich/1efd3e1e4269e1e98fae9983bb914f22
-        self.data = ProjectData(changed = self.data.changed, **data)
+        self.data = ProjectData(changed=self.data.changed, **data)
+        self.exposure_profile.read_dict(data['exposure_profile'], False, False)
         self._times_changed()
 
     @property

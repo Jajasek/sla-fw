@@ -1,0 +1,43 @@
+{
+	"area_fill": 35,
+	"below_area_fill": {
+		"delay_before_exposure_ms": 3000,
+		"delay_after_exposure_ms": 0,
+		"tower_hop_height_nm": 0,
+		"tower_profile": "layer",
+		"use_tilt": true,
+		"tilt_down_initial_profile": "layerMoveFast",
+		"tilt_down_offset_steps": 0,
+		"tilt_down_offset_delay_ms": 0,
+		"tilt_down_finish_profile": "layerMoveSlow",
+		"tilt_down_cycles": 1,
+		"tilt_down_delay_ms": 0,
+		"tilt_up_initial_profile": "moveFast",
+		"tilt_up_offset_steps": 1200,
+		"tilt_up_offset_delay_ms": 0,
+		"tilt_up_finish_profile": "layerMoveFast",
+		"tilt_up_cycles": 1,
+		"tilt_up_delay_ms": 0,
+		"moves_time_ms": 4500
+	},
+	"above_area_fill": {
+		"delay_before_exposure_ms": 3000,
+		"delay_after_exposure_ms": 0,
+		"tower_hop_height_nm": 0,
+		"tower_profile": "layer",
+		"use_tilt": true,
+		"tilt_down_initial_profile": "layerMoveFast",
+		"tilt_down_offset_steps": 0,
+		"tilt_down_offset_delay_ms": 0,
+		"tilt_down_finish_profile": "layerMoveSlow",
+		"tilt_down_cycles": 1,
+		"tilt_down_delay_ms": 0,
+		"tilt_up_initial_profile": "moveFast",
+		"tilt_up_offset_steps": 1200,
+		"tilt_up_offset_delay_ms": 0,
+		"tilt_up_finish_profile": "layerMoveFast",
+		"tilt_up_cycles": 1,
+		"tilt_up_delay_ms": 0,
+		"moves_time_ms": 4500
+	}
+}

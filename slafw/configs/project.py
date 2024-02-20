@@ -1,17 +1,29 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # TODO: Fix following pylint problems
 # pylint: disable=too-many-instance-attributes
 
+from abc import ABC
+from enum import Enum
+
 from slafw.configs.ini import IniConfig
-from slafw.configs.value import FloatValue, IntValue, TextValue, BoolValue, FloatListValue
+from slafw.configs.json import JsonConfig
+from slafw.configs.value import FloatValue, IntValue, TextValue, BoolValue, FloatListValue, DictOfConfigs
 from slafw import defines
+from slafw.exposure.profiles import ExposureProfileSL1
 
 
-class ProjectConfig(IniConfig):
+class ExpUserProfile(Enum):
+    fast = 0
+    slow = 1
+    high_viscosity = 2
+
+
+class ProjectConfigBase(ABC):
+    # pylint: disable = too-few-public-methods
     """
     Project configuration is read from config.ini located in the project zip file. Currently the content is parsed using
     a Toml parser with preprocessor that adjusts older custom configuration format if necessary. Members describe
@@ -22,9 +34,6 @@ class ProjectConfig(IniConfig):
     notation. For details see Toml format specification: https://en.wikipedia.org/wiki/TOML
     """
 
-    def __init__(self):
-        super().__init__(is_master=True)
-
     job_dir = TextValue("no project", key="jobDir", doc="Name of the directory containing layer images.")
 
     expTime = FloatValue(8.0, doc="Exposure time. [s]")
@@ -34,9 +43,9 @@ class ProjectConfig(IniConfig):
         0,
         minimum=0,
         doc="Identifies set of exposure settings. "
-            "0 - DEFAULT (fast), "
-            "1 - SAFE (slow tilt, delay before exposure), "
-            "2 - HIGH_VISCOSITY (very slow, longer delay before exposure), "
+            "0 - fast"
+            "1 - slow - slower tilt, delay before exposure"
+            "2 - high viscosity - very slow, tower z hop, longer delay before exposure"
             "3+ other custom profiles"
     )
     layerHeight = FloatValue(-1, doc="Layer height, if not equal to -1 supersedes stepNum. [mm]")
@@ -112,3 +121,13 @@ class ProjectConfig(IniConfig):
     printerVariant = TextValue("default", doc="Printer variant project is sliced for.")
     printTime = FloatValue(0.0, doc="Project print time, currently discarded (calculated by fw) [seconds]")
     prusaSlicerVersion = TextValue(doc="Slicer used for slicing, currently discarded.")
+
+
+class ProjectConfig(ProjectConfigBase, IniConfig):
+    def __init__(self):
+        super().__init__(is_master=True)
+
+
+class ProjectConfigJson(ProjectConfigBase, JsonConfig):
+    version = IntValue(1, doc="Version of the config file. The version specifies which parameters are expected.")
+    exposure_profile = DictOfConfigs(ExposureProfileSL1)

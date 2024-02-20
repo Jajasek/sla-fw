@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2021 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2021-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from pathlib import Path
@@ -9,6 +9,7 @@ from PySignal import Signal
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
+from slafw.exposure.profiles import EXPOSURE_PROFILES_DEFAULT_NAME, ExposureProfileSL1
 from slafw.hardware.hardware import BaseHardware
 from slafw.hardware.printer_model import PrinterModel
 from slafw.tests.mocks.axis import MockTower, MockTilt
@@ -65,6 +66,14 @@ class HardwareMock(BaseHardware):
         self.sl1s_booster = Mock()
         self.sl1s_booster.board_serial_no = "FAKE BOOSTER SERIAL"
         self.uv_led = MockUVLED()
+
+        # TODO: this is left here only for printer0.home_tilt() nad wizards
+        #  consider stop using tearing moves outside of the exposure
+        file_name = "fast" + EXPOSURE_PROFILES_DEFAULT_NAME
+        exposure_profiles_path = Path(defines.dataPath) / printer_model.name / file_name  # type: ignore[attr-defined]
+        self.exposure_profile = ExposureProfileSL1(
+                default_file_path=exposure_profiles_path)
+        self.logger.info(str(self.exposure_profile))
 
         def update_expo_screen_usage(usage_s: int):
             if isinstance(self.exposure_screen, MockExposureScreen):

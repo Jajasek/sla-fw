@@ -1,5 +1,5 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2020 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from slafw.states.wizard import WizardId
@@ -8,8 +8,7 @@ from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.tilt import (
     TiltHomeTest,
     TiltCalibrationStartTest,
-    TiltAlignTest,
-    TiltTimingTest,
+    TiltAlignTest
 )
 from slafw.wizard.checks.sysinfo import SystemInfoTest
 from slafw.wizard.checks.tower import TowerAlignTest, TowerHomeTest
@@ -70,21 +69,6 @@ class PlatformAlignCheckGroup(CheckGroup):
         )
 
 
-class CalibrationFinishCheckGroup(CheckGroup):
-    def __init__(self, package: WizardDataPackage):
-        super().__init__(
-            Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
-            [TiltTimingTest(package)],
-        )
-
-    async def setup(self, actions: UserActionBroker):
-        await self.wait_for_user(
-            actions,
-            actions.prepare_calibration_finish_done,
-            WizardState.PREPARE_CALIBRATION_FINISH,
-        )
-
-
 class CalibrationWizard(Wizard):
     def __init__(self, package: WizardDataPackage):
         super().__init__(
@@ -93,7 +77,6 @@ class CalibrationWizard(Wizard):
                 PlatformTankInsertCheckGroup(package),
                 TiltAlignCheckGroup(package),
                 PlatformAlignCheckGroup(package),
-                CalibrationFinishCheckGroup(package),
                 ShowResultsGroup(),
             ],
             package,

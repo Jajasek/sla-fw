@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # TODO: Fix following pylint problems
@@ -291,10 +291,10 @@ class Printer0:
         """
         with WarningAction(self.printer.hw.power_led):
             self.printer.hw.tilt.position = self.printer.hw.config.tiltMax
-            self.printer.hw.tilt.layer_down_wait(self.printer.layer_profiles.fast)
+            self.printer.hw.tilt.layer_down_wait(self.printer.hw.exposure_profile.below_area_fill)
             if not self.printer.hw.tilt.synced:
                 self.printer.hw.tilt.sync_ensure()
-            self.printer.hw.tilt.layer_up_wait(self.printer.layer_profiles.fast)
+            self.printer.hw.tilt.layer_up_wait(self.printer.hw.exposure_profile.below_area_fill)
 
     @auto_dbus
     @state_checked(Printer0State.IDLE)

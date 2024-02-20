@@ -1,7 +1,7 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
 # Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
-# Copyright (C) 2020-2023 Prusa Development a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Development a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from slafw import defines
@@ -121,7 +121,6 @@ class HwConfig(IniConfig):
         unit=Ustep,
         doc="Position used to ensure the tilt ends at the bottom. [ustep]"
     )
-    limit4fast = IntValue(35, minimum=0, maximum=100, doc="Fast tearing is used if layer area is under this value. [%]")
     stirring_moves = IntValue(3, minimum=1, maximum=10, doc="Number of stirring moves")
     stirring_delay_ms = IntValue(500, unit=Ms, minimum=0, maximum=300_000, doc="Delay after stirring.")
     measuringMoves = IntValue(3, minimum=1, maximum=10)
@@ -130,7 +129,7 @@ class HwConfig(IniConfig):
         1_000_000,
         minimum=0,
         maximum=10_000_000,
-        doc="Force slow tilt after crossing limit4fast for defined height. [nm]"
+        doc="Force slow tilt after crossing area_fill for defined height. [nm]"
     )
 
 

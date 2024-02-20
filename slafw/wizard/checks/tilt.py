@@ -1,14 +1,13 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2020 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import asyncio
 from abc import ABC
-from time import monotonic
 from typing import Optional, Dict, Any
 
 from slafw import defines
-from slafw.configs.unit import Nm, Ustep, Ms
+from slafw.configs.unit import Ustep
 from slafw.errors.errors import (
     TiltHomeCheckFailed,
     TiltEndstopNotReached,
@@ -112,56 +111,6 @@ class TiltRangeTest(DangerousCheck):
         hw.tilt.move(hw.config.tiltHeight)
         while hw.tilt.moving:
             await asyncio.sleep(0.25)
-
-
-class TiltTimingTest(DangerousCheck):
-    def __init__(self, package: WizardDataPackage):
-        super().__init__(
-            package, WizardCheckType.TILT_TIMING, Configuration(None, None), [Resource.TILT, Resource.TOWER_DOWN],
-        )
-
-    async def async_task_run(self, actions: UserActionBroker):
-        hw = self._package.hw
-        await hw.tower.sync_ensure_async()
-        await hw.tilt.sync_ensure_async()   # FIXME MC cant properly home tilt while tower is moving
-        tower_position = Nm(100_000_000)    # safe position for Z top
-        hw.tower.actual_profile = hw.tower.profiles.moveFast
-        hw.tower.move(tower_position)
-        hw.tilt.actual_profile = hw.tilt.profiles.moveFast
-        hw.tilt.move(hw.tilt.config_height_position)
-        while hw.tower.moving or hw.tilt.moving:
-            await asyncio.sleep(0.25)
-
-        measure_moves = hw.config.measuringMoves
-        progress_total = len(self._package.layer_profiles) * measure_moves
-        p = 0
-        for layer_profile in self._package.layer_profiles:
-            run_time = 0.0
-            for i in range(measure_moves):
-                p += 1
-                await asyncio.sleep(0)
-                start_time = monotonic()
-                await hw.tilt.layer_peel_moves_async(layer_profile, tower_position + Nm(50000), last_layer=False)
-                run_time += monotonic() - start_time
-                await asyncio.sleep(0)
-                await hw.tower.move_ensure_async(tower_position)
-                self._logger.debug("%s moves %d/%d, time mean: %d",
-                        layer_profile.name, i + 1, measure_moves, run_time * 1000 / (i + 1))
-                self.progress = p / progress_total
-            moves_time_ms = Ms(run_time * 1000 / measure_moves)
-            self._logger.info("Moves time for profile '%s': %d ms", layer_profile.name, moves_time_ms)
-            getattr(self._package.config_writers, layer_profile.name).moves_time_ms = moves_time_ms
-
-    def get_result_data(self) -> Dict[str, Any]:
-        tilt_times_dict = {}
-        for ep in self._package.exposure_profiles:
-            sname = self._package.layer_profiles[ep.small_fill_layer_profile].name
-            lname = self._package.layer_profiles[ep.large_fill_layer_profile].name
-            tilt_times_dict[ep.name] = {
-                "small_fill": int(getattr(self._package.config_writers, sname).moves_time_ms),
-                "large_fill": int(getattr(self._package.config_writers, lname).moves_time_ms),
-            }
-        return {"moving_times_ms": tilt_times_dict}
 
 
 class TiltCalibrationStartTest(DangerousCheck):

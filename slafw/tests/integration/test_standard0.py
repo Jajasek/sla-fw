@@ -1,6 +1,6 @@
 # This file is part of the SLA firmware
 # Copyright (C) 2014-2018 Futur3d - www.futur3d.net
-# Copyright (C) 2018-2019 Prusa Research s.r.o. - www.prusa3d.com
+# Copyright (C) 2018-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # pylint: disable=too-few-public-methods
@@ -63,8 +63,7 @@ class TestIntegrationStandard0(SlaFwIntegrationTestCaseBase):
                 'exposure_time_ms': 1000,
                 'calibrate_time_ms': 1000,
                 'calibration_regions': 0,
-                'exposure_time_first_ms': 1000,
-                'exposure_profile_by_id': 0
+                'exposure_time_first_ms': 1000
             },
             self.standard0.project_get_properties(["exposure_times"])
         )
