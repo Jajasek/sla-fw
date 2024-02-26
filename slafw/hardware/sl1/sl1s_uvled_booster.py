@@ -8,7 +8,7 @@
 
 import logging
 from time import sleep
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Sequence
 from smbus2 import SMBus, i2c_msg
 
 from slafw.errors.errors import BoosterError
@@ -34,6 +34,8 @@ class Booster:
 
     EEPROM_PAGE_SIZE = 8
     EEPROM_WRITE_CYCLE_TIME = 0.005 # 5 ms
+
+    I2C_RETRY_COUNT = 3
 
     def __init__(self):
         self._logger = logging.getLogger(__name__)
@@ -91,7 +93,7 @@ class Booster:
         return self.eeprom_read_block(address, 1)[0]
 
     def eeprom_read_block(self, address: int, count: int) -> list:
-        data = self._bus.read_i2c_block_data(self.EEPROM_ADDR, address, count if count < 32 else 32)
+        data = self._i2c_block_read(self.EEPROM_ADDR, address, count if count < 32 else 32)
         count -= 32
         if count > 0:
             msg = i2c_msg.read(self.EEPROM_ADDR, count)
@@ -107,19 +109,19 @@ class Booster:
         size = self.EEPROM_PAGE_SIZE - (address % self.EEPROM_PAGE_SIZE)
         if size:
             self._logger.debug("head %d byte(s)", size)
-            self._bus.write_i2c_block_data(self.EEPROM_ADDR, address, values[:size])
+            self._i2c_block_write(self.EEPROM_ADDR, address, values[:size])
             sleep(self.EEPROM_WRITE_CYCLE_TIME)
             address += size
         while size + self.EEPROM_PAGE_SIZE <= len(values):
             self._logger.debug("body %d byte(s)", self.EEPROM_PAGE_SIZE)
-            self._bus.write_i2c_block_data(self.EEPROM_ADDR, address, values[size:size + self.EEPROM_PAGE_SIZE])
+            self._i2c_block_write(self.EEPROM_ADDR, address, values[size:size + self.EEPROM_PAGE_SIZE])
             sleep(self.EEPROM_WRITE_CYCLE_TIME)
             address += self.EEPROM_PAGE_SIZE
             size += self.EEPROM_PAGE_SIZE
         tail = len(values) - size
         self._logger.debug("tail %d byte(s)", tail)
         if tail:
-            self._bus.write_i2c_block_data(self.EEPROM_ADDR, address, values[size:])
+            self._i2c_block_write(self.EEPROM_ADDR, address, values[size:])
             sleep(self.EEPROM_WRITE_CYCLE_TIME)
 
     def status(self) -> Tuple[bool, List]:
@@ -157,15 +159,37 @@ class Booster:
             raise BoosterError("DAC NVM writing is not finished")
 
     def _dac_read(self, register: int) -> int:
-        msb, lsb = self._bus.read_i2c_block_data(self.DAC_ADDR, register, 2)
+        msb, lsb = self._i2c_block_read(self.DAC_ADDR, register, 2)
         value = msb * 256 + lsb
         self._logger.debug("DAC read 0x%04X <- 0x%02X", value, register)
         return value
 
     def _dac_write(self, register: int, value: int) -> None:
         self._logger.debug("DAC write 0x%04X -> 0x%02X", value, register)
-        self._bus.write_i2c_block_data(self.DAC_ADDR, register, (value // 256, value % 256))
+        self._i2c_block_write(self.DAC_ADDR, register, (value // 256, value % 256))
 
     def _eeprom_read_serial(self) -> None:
-        serial = self._bus.read_i2c_block_data(self.SN_ADDR, 0x80, 16)
+        serial = self._i2c_block_read(self.SN_ADDR, 0x80, 16)
         self._sn = "".join(f"{x:02X}" for x in serial)
+
+    def _i2c_block_read(self, addr: int, register: int, length: int) -> List[int]:
+        ret = []
+        for i in range(self.I2C_RETRY_COUNT):
+            try:
+                ret = self._bus.read_i2c_block_data(addr, register, length)
+                break
+            except Exception as e:
+                self._logger.exception("I2C block read failed. Attempt: %d. %s", i, e)
+                if i > 1:
+                    raise e
+        return ret
+
+    def _i2c_block_write(self, addr: int, register: int, data: Sequence[int]) -> None:
+        for i in range(self.I2C_RETRY_COUNT):
+            try:
+                self._bus.write_i2c_block_data(addr, register, data)
+                return
+            except Exception as e:
+                self._logger.exception("I2C block write failed. Attempt: %d. %s", i, e)
+                if i > 1:
+                    raise e
