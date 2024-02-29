@@ -516,6 +516,7 @@ class Exposure0:
             Exposure0State.CONFIRM,
             Exposure0State.COVER_OPEN,
             Exposure0State.POUR_IN_RESIN,
+            Exposure0State.HOMING_AXIS,
         ]
     )
     def cancel(self) -> None:

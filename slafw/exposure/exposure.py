@@ -386,12 +386,11 @@ class Exposure:
             # Will be terminated by after layer finished
             if self.state == ExposureState.CHECKS and self._checks_task:
                 self.logger.info("Canceling preprint checks")
-                self.state = ExposureState.PENDING_ACTION
                 self._checks_task.cancel()
             else:
                 self.logger.info("Canceling exposure")
-                self.state = ExposureState.PENDING_ACTION
-                self.doExitPrint()
+            self.state = ExposureState.PENDING_ACTION
+            self.doExitPrint()
         else:
             # Exposure thread not yet running (cancel before start)
             self.logger.info("Canceling not started exposure")
@@ -401,9 +400,6 @@ class Exposure:
         self.logger.info("Trying cancel exposure")
         cancelable_states = ExposureState.cancelable_states()
         if self.state in cancelable_states:
-            self.canceled = True
-            self.state = ExposureState.DONE
-        elif self.state == ExposureState.CHECKS:
             self.cancel()
         else:
             raise NotAvailableInState(self.state, cancelable_states)

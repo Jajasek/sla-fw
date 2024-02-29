@@ -39,7 +39,12 @@ class ExposureState(Enum):
     @staticmethod
     def cancelable_states():
         cancelable_states = ExposureState.finished_states()
-        cancelable_states.extend((ExposureState.CONFIRM, ExposureState.POUR_IN_RESIN))
+        cancelable_states.extend((
+            ExposureState.CONFIRM,
+            ExposureState.CHECKS,
+            ExposureState.POUR_IN_RESIN,
+            ExposureState.HOMING_AXIS
+        ))
         return cancelable_states
 
 
