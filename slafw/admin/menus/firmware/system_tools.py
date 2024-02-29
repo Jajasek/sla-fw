@@ -27,7 +27,7 @@ from slafw.functions.system import (
     set_update_channel,
     get_update_channel,
     set_configured_printer_model,
-    shut_down, reset_hostname,
+    shut_down, reset_hostname, compute_uvpwm,
 )
 from slafw.libPrinter import Printer
 from slafw.state_actions.examples import Examples
@@ -144,8 +144,11 @@ class SystemToolsMenu(SafeAdminMenu):
         writer.calibrated = True
         writer.showWizard = False
         writer.showUnboxing = False
-        writer.uvPwm = self._printer.hw.uv_led.parameters.safe_default_pwm
-        self._printer.hw.uv_led.pwm = writer.uvPwm
+        if self._printer.hw.printer_model.options.has_UV_calibration:
+            writer.uvPwm = self._printer.hw.uv_led.parameters.safe_default_pwm
+        else:
+            writer.uvPwm = compute_uvpwm(self._printer.hw)
+        self._printer.hw.config.uvPwm = writer.uvPwm
         writer.commit()
 
         status.set("Saving dummy factory data")
