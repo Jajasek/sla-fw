@@ -349,8 +349,8 @@ class MotionControllerSL1(MotionControllerBase):
         return self.get_fans_bits("?fans", (index,))[index]
 
     @safe_call({0: True, 1: True, 2: True}, (MotionControllerException, ValueError))
-    def get_fans_error(self):
-        state = self.getStateBits(["fans"], check_for_updates=False)
+    def get_fans_error(self, check_for_updates=False):
+        state = self.getStateBits(["fans"], check_for_updates)
         if "fans" not in state:
             raise ValueError(f"'fans' not in state: {state}")
 

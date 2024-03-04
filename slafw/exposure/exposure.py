@@ -194,18 +194,21 @@ class FansCheck(ExposureCheckRunner):
 
         # Check fans
         self.logger.info("Checking fan errors")
-        if not defines.fan_check_override:
-            if self.expo.hw.uv_led_fan.error:
-                self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
-                raise FanFailed(HardwareDeviceId.UV_LED_FAN.value)
-            if self.expo.hw.blower_fan.error:
-                self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
-                raise FanFailed(HardwareDeviceId.BLOWER_FAN.value)
-            if self.expo.hw.rear_fan.error:
-                self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
-                raise FanFailed(HardwareDeviceId.REAR_FAN.value)
-        self.logger.info("Fans OK")
+        self.expo.hw.mcc.get_fans_error(check_for_updates=True)
 
+        if not defines.fan_check_override:
+            fans = {
+                (self.expo.hw.uv_led_fan, HardwareDeviceId.UV_LED_FAN.value),
+                (self.expo.hw.blower_fan, HardwareDeviceId.BLOWER_FAN.value),
+                (self.expo.hw.rear_fan, HardwareDeviceId.REAR_FAN.value),
+            }
+
+            for fan, fan_id in fans:
+                if fan.error:
+                    self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
+                    raise FanFailed(fan_id)
+
+        self.logger.info("Fans OK")
 
 class ResinCheck(ExposureCheckRunner):
     RETRIES = 2
