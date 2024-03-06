@@ -22,7 +22,7 @@ class HardwareSettingsMenu(SettingsMenu):
                 # TODO delayed end time check in touch-ui
                 AdminBoolValue.from_value("Delayed end time check", self._temp, "delayedEnd", "exposure_times_color"),
                 AdminIntValue.from_value("Screw [mm/rot]", self._temp, "screwMm", 1, "calibration_color"),
-                AdminIntValue.from_value("Tilt msteps", self._temp, "tiltHeight", 1, "tank_reset_color"),
+                AdminIntValue.from_value("Tilt height [usteps]", self._temp, "tiltHeight", 1, "tank_reset_color"),
                 AdminIntValue.from_value(
                     "Measuring moves count",
                     self._temp,

@@ -93,37 +93,33 @@ class TiltSL1(Tilt, AxisSL1):
         self.actual_profile = self._profiles[layer_profile.tilt_down_initial_profile]
         if layer_profile.tilt_down_offset_steps > Ustep(0):
             self.move(self.position - layer_profile.tilt_down_offset_steps)
-            while self.moving:
-                await asyncio.sleep(0.1)
-        await asyncio.sleep(int(layer_profile.tilt_down_offset_delay_ms / 1000))
+            await self.wait_to_stop_async()
+        await asyncio.sleep(int(layer_profile.tilt_down_offset_delay_ms) / 1000)
         # next movement may be splited
         self.actual_profile = self._profiles[layer_profile.tilt_down_finish_profile]
         movePerCycle = self.position // layer_profile.tilt_down_cycles
         for _ in range(layer_profile.tilt_down_cycles):
             self.move(self.position - movePerCycle)
-            while self.moving:
-                await asyncio.sleep(0.1)
-            await asyncio.sleep(int(layer_profile.tilt_down_delay_ms / 1000))
+            await self.wait_to_stop_async()
+            await asyncio.sleep(int(layer_profile.tilt_down_delay_ms) / 1000)
         tolerance = Ustep(defines.tiltHomingTolerance)
         # if not already in endstop ensure we end up at defined bottom position
         if not self._mcc.checkState("endstop"):
             self.move(-tolerance)
             # tilt will stop moving on endstop OR by stallguard
-            while self.moving:
-                await asyncio.sleep(0.1)
+            await self.wait_to_stop_async()
         # check if tilt is on endstop and within tolerance
         if self._mcc.checkState("endstop") and -tolerance <= self.position <= tolerance:
             return
         # unstuck
         self._logger.warning("Tilt unstucking")
-        self.actual_profile = self._profiles.layerRelease   # type: ignore
+        self.actual_profile = self._profiles.layer400   # type: ignore
         count = Ustep(0)
         step = Ustep(128)
         while count < self._config.tiltMax and not self._mcc.checkState("endstop"):
             self.position = step
             self.move(self.home_position)
-            while self.moving:
-                await asyncio.sleep(0.1)
+            await self.wait_to_stop_async()
             count += step
         await self.sync_ensure_async(retries=0)
 
@@ -135,18 +131,16 @@ class TiltSL1(Tilt, AxisSL1):
 
         self.actual_profile = self._profiles[layer_profile.tilt_up_initial_profile]
         self.move(_tilt_height - layer_profile.tilt_up_offset_steps)
-        while self.moving:
-            await asyncio.sleep(0.1)
-        await asyncio.sleep(int(layer_profile.tilt_up_offset_delay_ms / 1000))
+        await self.wait_to_stop_async()
+        await asyncio.sleep(int(layer_profile.tilt_up_offset_delay_ms) / 1000)
         self.actual_profile = self._profiles[layer_profile.tilt_up_finish_profile]
 
         # finish move may be also splited in multiple sections
         movePerCycle = (_tilt_height - self.position) // layer_profile.tilt_up_cycles
         for _ in range(layer_profile.tilt_up_cycles):
             self.move(self.position + movePerCycle)
-            while self.moving:
-                await asyncio.sleep(0.1)
-            await asyncio.sleep(int(layer_profile.tilt_up_delay_ms / 1000))
+            await self.wait_to_stop_async()
+            await asyncio.sleep(int(layer_profile.tilt_up_delay_ms) / 1000)
 
     def release(self) -> None:
         axis_enabled = self._mcc.doGetInt("?ena")
@@ -172,10 +166,9 @@ class TiltSL1(Tilt, AxisSL1):
 
     async def verify_async(self) -> None:
         if not self.synced:
-            while self._tower.moving:
-                await asyncio.sleep(0.25)
+            await self._tower.wait_to_stop_async()
             await self.sync_ensure_async()
-        self.actual_profile = self._profiles.moveFast   # type: ignore
+        self.actual_profile = self._profiles.move8000   # type: ignore
         await self.move_ensure_async(self._config.tiltHeight)
 
     @property
@@ -195,7 +188,6 @@ class TiltSL1(Tilt, AxisSL1):
         self._mcc.do("!ticf", *self._actual_profile.dump())
 
     async def layer_peel_moves_async(self, layer_profile: SingleLayerProfileSL1, position_nm: Nm, last_layer: bool) -> None:
-        self._logger.info("layer peel profile: %s", layer_profile.name)
         self._tower.actual_profile = self._tower.profiles[layer_profile.tower_profile]
         if layer_profile.use_tilt:
             await self.layer_down_wait_async(layer_profile)

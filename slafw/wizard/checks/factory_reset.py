@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 from abc import abstractmethod
-from asyncio import sleep, gather
+from asyncio import gather
 from pathlib import Path
 from shutil import rmtree, copyfile
 
@@ -321,8 +321,7 @@ class InitiatePackingMoves(DangerousCheck):
         # move tilt and tower to packing position
         hw.tilt.actual_profile = hw.tilt.profiles.homingFast
         hw.tilt.move(hw.config.tiltHeight)
-        while hw.tilt.moving:
-            await sleep(0.25)
+        await hw.tilt.wait_to_stop_async()
 
         hw.tower.actual_profile = hw.tower.profiles.homingFast
         # TODO: Constant in code !!!

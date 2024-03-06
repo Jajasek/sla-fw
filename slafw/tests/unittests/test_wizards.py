@@ -627,6 +627,8 @@ class TestWizards(TestWizardsBase):
                 wizard.tilt_aligned()
             if state == WizardState.PREPARE_CALIBRATION_PLATFORM_ALIGN:
                 wizard.prepare_calibration_platform_align_done()
+            if state == WizardState.PREPARE_CALIBRATION_FINISH:
+                wizard.prepare_calibration_finish_done()
             if state == WizardState.SHOW_RESULTS:
                 wizard.show_results_done()
 

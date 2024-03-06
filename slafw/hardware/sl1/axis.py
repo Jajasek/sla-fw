@@ -31,7 +31,7 @@ class AxisSL1(Axis):
 
     def _move_api_get_profile(self, speed: int) -> SingleProfileSL1:
         if abs(speed) < 2:
-            return self.profiles.moveSlow  # type: ignore
+            return self.profiles.homingSlow  # type: ignore
         return self.profiles.homingFast    # type: ignore
 
     def apply_profile(self, profile: SingleProfileSL1):
@@ -61,15 +61,17 @@ class AxisSL1(Axis):
 
     @actual_profile.setter
     def actual_profile(self, profile: SingleProfileSL1):
-        if self._actual_profile != profile:
-            if self.moving:
-                raise MotionControllerException(f"Cannot change profiles while {self.name} is moving.", None)
-            self._write_profile_id(profile.idx)
-            self._actual_profile = profile
-            self._logger.debug("Profile set to %s<%d>", self._actual_profile.name, self._actual_profile.idx)
-            if profile.idx == -1:
-                self._logger.debug("Temporary profile, forcing profile data write")
-                self._write_profile_data()
+        """
+        Write profile always to MC to prevent misconfigurations.
+        """
+        if self.moving:
+            raise MotionControllerException(f"Cannot change profiles while {self.name} is moving.", None)
+        self._write_profile_id(profile.idx)
+        self._actual_profile = profile
+        self._logger.debug("Profile set to %s<%d>", self._actual_profile.name, self._actual_profile.idx)
+        if profile.idx == -1:
+            self._logger.debug("Temporary profile, forcing profile data write")
+            self._write_profile_data()
 
     @abstractmethod
     def _read_profile_id(self) -> int:

@@ -2,7 +2,6 @@
 # Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import asyncio
 from asyncio import sleep
 from time import time
 from enum import Enum, unique
@@ -23,15 +22,15 @@ class GentlyUpProfile(Enum):
     available profiles for "GentlyUp" operation.
     """
 
-    SPEED0 = 0 # moveSlow
-    SPEED1 = 1 # superSlow
-    SPEED2 = 2 # homingSlow
-    SPEED3 = 3 # resinSensor
+    SPEED0 = 0  # moveSlow (moveSlow)
+    SPEED1 = 1  # layer2 (superSlow)
+    SPEED2 = 2  # homingSlow
+    SPEED3 = 3  # resinSensor (resinSensor)
 
     def map_to_tower_profile(self, profiles: MovingProfilesTower) -> SingleProfile:
         """Transform the value passed from the frontend via configuration into a name of an actual tower profile"""
         if self == GentlyUpProfile.SPEED1:
-            return profiles.superSlow
+            return profiles.layer2
         if self == GentlyUpProfile.SPEED2:
             return profiles.homingSlow
         if self == GentlyUpProfile.SPEED3:
@@ -92,7 +91,9 @@ class TiltUp(DangerousCheck):
         self._package = package
 
     async def async_task_run(self, actions: UserActionBroker):
-        await self._package.hw.tilt.layer_up_wait_async(self._package.hw.exposure_profile.below_area_fill)
+        tilt = self._package.hw.tilt
+        tilt.actual_profile = tilt.profiles.layer1750  # use profile with higher current
+        await tilt.move_ensure_async(tilt.config_height_position)
 
 
 class TowerSafeDistance(DangerousCheck):
@@ -102,9 +103,9 @@ class TowerSafeDistance(DangerousCheck):
         super().__init__(package, WizardCheckType.TOWER_SAFE_DISTANCE, Configuration(None, None), [Resource.TOWER])
 
     async def async_task_run(self, actions: UserActionBroker):
-        hw = self._package.hw
-        hw.tower.actual_profile = hw.tower.profiles.homingFast
-        await hw.tower.move_ensure_async(hw.tower.resin_start_pos_nm)
+        tower = self._package.hw.tower
+        tower.actual_profile = tower.profiles.homingFast
+        await tower.move_ensure_async(tower.resin_start_pos_nm)
 
 
 class TouchDown(DangerousCheck):
@@ -121,8 +122,7 @@ class TouchDown(DangerousCheck):
 
         target_position_nm = hw.config.tankCleaningAdaptorHeight_nm - Nm(3_000_000)
         hw.tower.move(target_position_nm)
-        while hw.tower.moving:
-            await sleep(0.25)
+        await hw.tower.wait_to_stop_async()
         if target_position_nm == hw.tower.position:
             # Did you forget to put a cleaning adapter pin on corner of the platform?
             hw.tower.actual_profile = hw.tower.profiles.homingFast
@@ -136,8 +136,7 @@ class TouchDown(DangerousCheck):
                 hw.config.tankCleaningMinDistance_nm)
         lifted_position = hw.tower.position + hw.config.tankCleaningMinDistance_nm
         hw.tower.move(lifted_position)
-        while hw.tower.moving:
-            await sleep(0.25)
+        await hw.tower.wait_to_stop_async()
         if lifted_position == hw.tower.position:
             self._logger.info("Garbage collector successfully lifted to the initial position.")
         else:
@@ -184,14 +183,15 @@ class GentlyUp(Check):
         self._logger.info("GentlyUp with %s -> %s", up_profile.name, tower_profile.idx)
         self._package.hw.tower.actual_profile = tower_profile
 
-        await self._package.hw.tilt.layer_down_wait_async(
-            self._package.hw.exposure_profile.above_area_fill
-        )
+        tilt = self._package.hw.tilt
+        tilt.actual_profile = tilt.profiles.layer1750  # use profile with higher current
+        tilt.move(tilt.home_position)
+        await tilt.wait_to_stop_async()
+
         # TODO: constant in code !!!
         target_position = Nm(50_000_000)
         for _ in range(3):
             self._package.hw.tower.move(target_position)
-            while self._package.hw.tower.moving:
-                await asyncio.sleep(0.25)
+            await self._package.hw.tower.wait_to_stop_async()
             if abs(target_position - self._package.hw.tower.position) < Nm(10):
                 break

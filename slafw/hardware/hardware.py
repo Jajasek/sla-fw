@@ -15,7 +15,8 @@ from PySignal import Signal
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
-from slafw.exposure.profiles import ExposureProfileSL1
+from slafw.configs.unit import Ms, Ustep
+from slafw.exposure.profiles import SingleLayerProfileSL1
 from slafw.hardware.axis import Axis
 from slafw.hardware.exposure_screen import ExposureScreen
 from slafw.hardware.fan import Fan
@@ -46,7 +47,6 @@ class BaseHardware:
         self.logger = logging.getLogger(__name__)
         self.config = hw_config
         self.printer_model = printer_model
-        self.exposure_profile: ExposureProfileSL1 = None
 
         self.resin_sensor_state_changed = Signal()
         self.cover_state_changed = Signal()
@@ -234,6 +234,95 @@ class BaseHardware:
     @cached_property
     def emmc_serial(self) -> str:  # pylint: disable = no-self-use
         return defines.emmc_serial_path.read_text(encoding="ascii").strip()
+
+    @staticmethod
+    def _count_move_time(axis: Axis, length: Ustep, steprate: int) -> Ms:
+        # sla-fw checks every 0.1 s if axis is still moving. See: Axis._wait_to_stop_delay. Additional 0.021 s is
+        # measured average delay of the system. Thus, the axis movement time is always quantized by this value.
+        delay = 0.121
+
+        # Both axes use linear ramp movements. This factor compensates the tilt acceleration and deceleration time.
+        tilt_comp_factor = 0.1
+
+        # Both axes use linear ramp movements. This factor compensates the tower acceleration and deceleration time.
+        tower_comp_factor = 20000
+
+        if length and steprate:
+            l = int(length)
+            result = Ms((int(l / (steprate * delay) + tilt_comp_factor) + 1) * (delay * 1000))
+            if axis.name == "tower":
+                result = Ms((int(l / (steprate * delay) + (steprate + l) / tower_comp_factor) + 1) * (delay * 1000))
+            return result
+        return Ms(0)
+
+    def layer_peel_move_time(self, layer_height_nm: int, p: SingleLayerProfileSL1) -> int:
+        profile_change_delay = Ms(20) # propagation delay of sending profile change command to MC
+        sleep_delay = Ms(2) # average delay of the Linux system sleep function
+        tilt = Ms(0)
+        if p.use_tilt:
+            tilt += profile_change_delay
+            # initial down movement
+            tilt += self._count_move_time(
+                self.tilt,
+                p.tilt_down_offset_steps,
+                self.tilt.profiles[p.tilt_down_initial_profile].maximum_steprate
+            )
+            # initial down delay
+            tilt += p.tilt_down_offset_delay_ms + sleep_delay
+            # profile change delay if down finish profile is different from down initial
+            tilt += profile_change_delay
+            # cycle down movement
+            tilt += p.tilt_down_cycles * self._count_move_time(
+                self.tilt,
+                (self.config.tiltHeight - p.tilt_down_offset_steps) // p.tilt_down_cycles,
+                self.tilt.profiles[p.tilt_down_finish_profile].maximum_steprate
+            )
+            # cycle down delay
+            tilt += p.tilt_down_cycles * (p.tilt_down_delay_ms + sleep_delay)
+
+            # profile change delay if up initial profile is different from down finish
+            tilt += profile_change_delay
+            # initial up movement
+            tilt += self._count_move_time(
+                self.tilt,
+                self.config.tiltHeight - p.tilt_up_offset_steps,
+                self.tilt.profiles[p.tilt_up_initial_profile].maximum_steprate
+            )
+            # initial up delay
+            tilt += p.tilt_up_offset_delay_ms + sleep_delay
+            # profile change delay if up initial profile is different from down finish
+            tilt += profile_change_delay
+            # finish up movement
+            tilt += p.tilt_up_cycles * self._count_move_time(
+                self.tilt,
+                p.tilt_up_offset_steps // p.tilt_up_cycles,
+                self.tilt.profiles[p.tilt_up_finish_profile].maximum_steprate
+            )
+            # cycle down delay
+            tilt += p.tilt_up_cycles * (p.tilt_up_delay_ms + sleep_delay)
+
+        tower = Ms(0)
+        if p.tower_hop_height_nm:
+            tower += self._count_move_time(
+                self.tower,
+                self.config.nm_to_tower_microsteps(int(p.tower_hop_height_nm) + layer_height_nm),
+                self.tower.profiles[p.tower_profile].maximum_steprate
+            )
+            tower += self._count_move_time(
+                self.tower,
+                self.config.nm_to_tower_microsteps(int(p.tower_hop_height_nm)),
+                self.tower.profiles[p.tower_profile].maximum_steprate
+            )
+            tower += profile_change_delay
+        else:
+            tower += self._count_move_time(
+                self.tower,
+                self.config.nm_to_tower_microsteps(layer_height_nm),
+                self.tower.profiles[p.tower_profile].maximum_steprate
+            )
+            tower += profile_change_delay
+        self.logger.debug("layer peel time: %f", tilt + tower)
+        return int(tilt + tower)
 
     @abstractmethod
     def exit(self):

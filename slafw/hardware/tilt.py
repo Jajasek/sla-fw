@@ -26,33 +26,107 @@ class MovingProfilesTilt(ProfileSet):
 
     @property
     @abstractmethod
-    def moveFast(self) -> SingleProfile:
-        pass
+    def move120(self) -> SingleProfile:
+        """
+        Former moveSlow for SL1
+        """
 
     @property
     @abstractmethod
-    def moveSlow(self) -> SingleProfile:
-        pass
+    def layer200(self) -> SingleProfile:
+        """
+        New profile used for printing. Max steprate 200 usteps/s
+        """
 
     @property
     @abstractmethod
-    def layerMoveSlow(self) -> SingleProfile:
-        pass
+    def move300(self) -> SingleProfile:
+        """
+        Former moveSlow for SL1S/M1
+        """
 
     @property
     @abstractmethod
-    def layerRelease(self) -> SingleProfile:
-        pass
+    def layer400(self) -> SingleProfile:
+        """
+        Former layerRelease for both SL1 and SL1S/M1
+        Max steprate 400 usteps/s
+        """
 
     @property
     @abstractmethod
-    def layerMoveFast(self) -> SingleProfile:
-        pass
+    def layer600(self) -> SingleProfile:
+        """
+        Former superSlow for SL1
+        Max steprate 600 usteps/s
+        """
 
     @property
     @abstractmethod
-    def superSlow(self) -> SingleProfile:
-        pass
+    def layer800(self) -> SingleProfile:
+        """
+        Former superSlow for both SL1S/M1
+        Max steprate 800 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def layer1000(self) -> SingleProfile:
+        """
+        New profile used for printing. Max steprate 1000 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def layer1250(self) -> SingleProfile:
+        """
+        New profile used for printing. Max steprate 1250 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def layer1500(self) -> SingleProfile:
+        """
+        Former layerMoveSlow for SL1
+        Max steprate 1500 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def layer1750(self) -> SingleProfile:
+        """
+        Former layerMoveFast for SL1
+        Former layerMoveSlow and layerMoveFast for SL1S/M1
+        Max steprate 1750 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def layer2000(self) -> SingleProfile:
+        """
+        New profile used for printing. Max steprate 2000 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def layer2250(self) -> SingleProfile:
+        """
+        New profile used for printing. Max steprate 2250 usteps/s
+        """
+
+    @property
+    @abstractmethod
+    def move5120(self) -> SingleProfile:
+        """
+        Former moveFast for SL1
+        """
+
+    @property
+    @abstractmethod
+    def move8000(self) -> SingleProfile:
+        """
+        Former moveFast for SL1S/M1
+        """
 
 
 class Tilt(Axis):

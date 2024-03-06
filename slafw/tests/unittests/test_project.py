@@ -132,8 +132,8 @@ class TestProject(SlafwTestCase):
 
         self.assertEqual(project.total_layers, 20, "Check total layers count")
         self.assertEqual(project.total_height_nm, 1e6, "Total height calculation")
-        self.assertEqual(394650, project.count_remain_time(), "Total time calculation")
-        self.assertEqual(project.count_remain_time(layers_done = 10), 176700, "Half time calculation")
+        self.assertEqual(396434, project.count_remain_time(), "Total time calculation")
+        self.assertEqual(project.count_remain_time(layers_done = 10), 182044, "Half time calculation")
 
         result = _layer_generator('sl1_linear_calibration_pattern',
                 20,
@@ -169,41 +169,39 @@ class TestProject(SlafwTestCase):
                 "delay_before_exposure_ms": Ms(1),
                 "delay_after_exposure_ms": Ms(2),
                 "tower_hop_height_nm": Nm(1000000),
-                "tower_profile": 4,
+                "tower_profile": 14,  # layer22
                 "use_tilt": True,
-                "tilt_down_initial_profile": 6,
+                "tilt_down_initial_profile": 11,  # layer1750
                 "tilt_down_offset_steps": Ustep(3),
                 "tilt_down_offset_delay_ms": Ms(4),
-                "tilt_down_finish_profile": 2,
+                "tilt_down_finish_profile": 15,  # layer8000
                 "tilt_down_cycles": 2,
                 "tilt_down_delay_ms": Ms(10),
-                "tilt_up_initial_profile": 2,
+                "tilt_up_initial_profile": 15,  # layer8000
                 "tilt_up_offset_steps": Ustep(600),
                 "tilt_up_offset_delay_ms": Ms(20),
-                "tilt_up_finish_profile": 6,
+                "tilt_up_finish_profile": 11,  # layer1750
                 "tilt_up_cycles": 3,
-                "tilt_up_delay_ms": Ms(30),
-                "moves_time_ms": Ms(2100)
+                "tilt_up_delay_ms": Ms(30)
             },
             "above_area_fill": {
                 "delay_before_exposure_ms": Ms(1000),
                 "delay_after_exposure_ms": Ms(2000),
                 "tower_hop_height_nm": Nm(500000),
-                "tower_profile": 4,
+                "tower_profile": 14,  # layer22
                 "use_tilt": False,
-                "tilt_down_initial_profile": 6,
+                "tilt_down_initial_profile": 11,  # layer1750
                 "tilt_down_offset_steps": Ustep(2),
                 "tilt_down_offset_delay_ms": Ms(3),
-                "tilt_down_finish_profile": 4,
+                "tilt_down_finish_profile": 11,  # layer1750
                 "tilt_down_cycles": 4,
                 "tilt_down_delay_ms": Ms(5),
-                "tilt_up_initial_profile": 2,
+                "tilt_up_initial_profile": 15,  # layer8000
                 "tilt_up_offset_steps": Ustep(601),
                 "tilt_up_offset_delay_ms": Ms(6),
-                "tilt_up_finish_profile": 6,
+                "tilt_up_finish_profile": 11,  # layer1750
                 "tilt_up_cycles": 5,
-                "tilt_up_delay_ms": Ms(22),
-                "moves_time_ms": Ms(4300)
+                "tilt_up_delay_ms": Ms(22)
             }
         }
         self.assertEqual(profile["area_fill"], project.exposure_profile.area_fill)
@@ -214,11 +212,15 @@ class TestProject(SlafwTestCase):
 
     def test_project_remaining_time_estimate(self):
         project = Project(self.hw, str(self.SAMPLES_DIR / "numbers.sl1"))
+        # First numFade + 3 layer are forced to be slow. Therefore, this project
+        # is printed with above_area_fill exposure profile.
+
         # 2 * 1000 ms - exposure_time
-        # 2 * 5300 ms - layers of fast tilt time (SL1)
-        # 2 * 370 ms - layers of tower move and magic computational delay constant
-        # SUM: 13340 ms
-        self.assertEqual(13340, project.count_remain_time(0, 0))
+        # 2 * 1000 ms - fast.above_area_fill.delay_before_exposure_ms
+        # 2 * 5674 ms - tilt time of fast.above_area_fill (SL1)
+        # 2 * 124 ms - layers of tower move and magic computational delay constant
+        # SUM: 15596 ms
+        self.assertEqual(15596, project.count_remain_time(0, 0))
 
     def test_project_exposure_profile(self):
         project = Project(self.hw, str(self.SAMPLES_DIR / "layer_change.sl1"))

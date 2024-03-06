@@ -35,7 +35,7 @@ class MotionControllerSL1(MotionControllerBase):
     TEMP_UPDATE_INTERVAL_S = 3
     FAN_UPDATE_INTERVAL_S = 3
     PORT = "/dev/ttyS2"
-    REQUIRED_VERSION = "1.1.9"
+    REQUIRED_VERSION = "1.2.0"
 
     commOKStr = re.compile("^(.*)ok$")
     commErrStr = re.compile("^e(.)$")

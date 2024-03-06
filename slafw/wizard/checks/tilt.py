@@ -71,7 +71,7 @@ class TiltLevelTest(DangerousCheck):
         hw.tilt.position = Ustep(0)
 
         # Set tilt to leveled position
-        hw.tilt.actual_profile = hw.tilt.profiles.moveFast
+        hw.tilt.actual_profile = hw.tilt.profiles.move8000
         await hw.tilt.move_ensure_async(hw.config.tiltHeight)
 
 
@@ -83,22 +83,19 @@ class TiltRangeTest(DangerousCheck):
 
     async def async_task_run(self, actions: UserActionBroker):
         hw = self._package.hw
-        hw.tilt.actual_profile = hw.tilt.profiles.moveFast
+        hw.tilt.actual_profile = hw.tilt.profiles.move8000
         hw.tilt.move(hw.config.tiltMax)
-        while hw.tilt.moving:
-            await asyncio.sleep(0.25)
+        await hw.tilt.wait_to_stop_async()
         self.progress = 0.25
 
         hw.tilt.move(Ustep(512))  # go down fast before endstop
-        while hw.tilt.moving:
-            await asyncio.sleep(0.25)
+        await hw.tilt.wait_to_stop_async()
         self.progress = 0.5
 
         # finish measurement with slow profile (more accurate)
         hw.tilt.actual_profile = hw.tilt.profiles.homingSlow
         hw.tilt.move(hw.config.tiltMin)
-        while hw.tilt.moving:
-            await asyncio.sleep(0.25)
+        await hw.tilt.wait_to_stop_async()
         self.progress = 0.75
 
         # TODO make MC homing more accurate
@@ -107,10 +104,9 @@ class TiltRangeTest(DangerousCheck):
             or hw.tilt.position > Ustep(defines.tiltHomingTolerance)
         ) and not test_runtime.testing:
             raise TiltAxisCheckFailed(hw.tilt.position)
-        hw.tilt.actual_profile = hw.tilt.profiles.moveFast
+        hw.tilt.actual_profile = hw.tilt.profiles.move8000
         hw.tilt.move(hw.config.tiltHeight)
-        while hw.tilt.moving:
-            await asyncio.sleep(0.25)
+        await hw.tilt.wait_to_stop_async()
 
 
 class TiltCalibrationStartTest(DangerousCheck):
@@ -126,8 +122,7 @@ class TiltCalibrationStartTest(DangerousCheck):
         hw = self._package.hw
         hw.tilt.actual_profile = hw.tilt.profiles.homingFast
         hw.tilt.move(Ustep(defines.tiltCalibrationStart))
-        while hw.tilt.moving:
-            await asyncio.sleep(0.25)
+        await hw.tilt.wait_to_stop_async()
 
 
 class TiltAlignTest(Check):

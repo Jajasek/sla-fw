@@ -16,42 +16,126 @@ class MovingProfilesTower(ProfileSet):
     @property
     @abstractmethod
     def homingFast(self) -> SingleProfile:
-        pass
+        """
+        Profile with tuned stallGuard. Used for homing and printer0 move_tower.
+        """
 
     @property
     @abstractmethod
     def homingSlow(self) -> SingleProfile:
-        pass
+        """
+        Profile with tuned stallGuard. Used for homing and printer0 move_tower.
+        """
 
     @property
     @abstractmethod
     def moveFast(self) -> SingleProfile:
-        pass
+        """
+        Former moveFast for all SL1,SL1S and M1
+        """
 
     @property
     @abstractmethod
     def moveSlow(self) -> SingleProfile:
-        pass
-
-    @property
-    @abstractmethod
-    def layer(self) -> SingleProfile:
-        pass
-
-    @property
-    @abstractmethod
-    def layerMove(self) -> SingleProfile:
-        pass
-
-    @property
-    @abstractmethod
-    def superSlow(self) -> SingleProfile:
-        pass
+        """
+        Former moveSlow for all SL1,SL1S and M1
+        """
 
     @property
     @abstractmethod
     def resinSensor(self) -> SingleProfile:
-        pass
+        """
+        Profile with tuned stallGuard. Used for resin measurements
+        and cleaning wizard touch down phase. Using all printer models.
+        """
+
+    @property
+    @abstractmethod
+    def layer1(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 1 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer2(self) -> SingleProfile:
+        """
+        Former superSlow for all SL1,SL1S and M1
+        Max speed 2 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer3(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 3 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer4(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 4 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer5(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 5 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer8(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 8 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer11(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 11 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer14(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 14 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer18(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 18 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer22(self) -> SingleProfile:
+        """
+        Former layer and layerMove for all SL1,SL1S and M1
+        Max speed 22 mm/s.
+        """
+
+    @property
+    @abstractmethod
+    def layer24(self) -> SingleProfile:
+        """
+        New profile for all printer models
+        Max speed 24 mm/s.
+        """
 
 
 class Tower(Axis):

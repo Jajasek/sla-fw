@@ -1,9 +1,8 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2020-2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2020-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import asyncio
-from asyncio import sleep, gather
+from asyncio import gather
 from typing import Dict, Any
 
 from slafw.configs.unit import Nm
@@ -67,8 +66,7 @@ class TowerRangeTest(DangerousCheck):
 
             hw.tower.actual_profile = hw.tower.profiles.homingSlow
             hw.tower.move(hw.tower.max_nm)
-            while hw.tower.moving:
-                await asyncio.sleep(0.25)
+            await hw.tower.wait_to_stop_async()
 
         position_nm = hw.tower.position
         # MC moves tower by 1024 steps forward in last step of !twho
@@ -93,14 +91,13 @@ class TowerAlignTest(DangerousCheck):
         hw = self._package.hw
         await self.wait_cover_closed()
         self._logger.info("Starting platform calibration")
-        hw.tilt.actual_profile = hw.tilt.profiles.layerMoveSlow # set higher current
+        hw.tilt.actual_profile = hw.tilt.profiles.layer1500 # set higher current
         hw.tower.position = Nm(0)
         hw.tower.actual_profile = hw.tower.profiles.homingFast
 
         self._logger.info("Moving platform to above position")
         hw.tower.move(hw.tower.above_surface_nm)
-        while hw.tower.moving:
-            await sleep(0.25)
+        await hw.tower.wait_to_stop_async()
 
         self._logger.info("tower position above: %d nm", hw.tower.position)
         if hw.tower.position != hw.tower.above_surface_nm:
@@ -116,8 +113,7 @@ class TowerAlignTest(DangerousCheck):
         self._logger.info("Moving platform to min position")
         hw.tower.actual_profile = hw.tower.profiles.homingSlow
         hw.tower.move(hw.tower.min_nm)
-        while hw.tower.moving:
-            await asyncio.sleep(0.25)
+        await hw.tower.wait_to_stop_async()
         self._logger.info("tower position min: %d nm", hw.tower.position)
         if hw.tower.position <= hw.tower.min_nm:
             self._logger.error(
@@ -136,8 +132,7 @@ class TowerAlignTest(DangerousCheck):
         self._logger.debug("Moving tower to min")
         # do not ensure position here. We expect tower to stop on stallguard
         hw.tower.move(hw.tower.position + hw.tower.min_nm)
-        while hw.tower.moving:
-            await asyncio.sleep(0.25)
+        await hw.tower.wait_to_stop_async()
 
         self._logger.debug("Moving tower to calib position")
         await hw.tower.move_ensure_async(

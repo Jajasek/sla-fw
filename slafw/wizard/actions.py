@@ -45,6 +45,7 @@ class UserActionBroker:
 
         self.prepare_calibration_platform_align_done = UserAction()
         self.prepare_calibration_tilt_align_done = UserAction()
+        self.prepare_calibration_finish_done = UserAction()
 
         self.prepare_displaytest_done = UserAction()
         self.prepare_calibration_platform_tank_done = UserAction()

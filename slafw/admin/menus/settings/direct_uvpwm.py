@@ -106,7 +106,7 @@ class DirectPwmSetMenu(SafeAdminMenu):
             status.set("<b>Tilt is going to level<b>")
             self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.homingFast
             self._printer.hw.tilt.sync_ensure()
-            self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.moveFast
+            self._printer.hw.tilt.actual_profile = self._printer.hw.tilt.profiles.move8000
             self._printer.hw.tilt.move_ensure(self._printer.hw.config.tiltHeight)  # move to level
 
         status.set("<b>Tilt leveled<b>")

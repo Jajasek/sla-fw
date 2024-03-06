@@ -18,6 +18,7 @@ requests
 aiohttp
 pywayland
 smbus2
-gpiod
+gpiod==1.5.4
 time-machine
+pyyaml
 git+https://github.com/prusa3d/Prusa-Error-Codes@master#egg=prusa-errors

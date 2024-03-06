@@ -60,6 +60,7 @@ class Axis(ABC):
     _target_position: Unit = Unit(0)
     _last_position: Unit = Unit(0)  # used by move_api
     _sensitivity: Dict[str, List[List[int]]]
+    _wait_to_stop_delay: float = 0.1
 
     def __init__(self, config: HwConfig, power_led: PowerLed):
         super().__init__()
@@ -136,8 +137,7 @@ class Axis(ABC):
         :param: number os subsequent rehoming
         :return: None, otherwise raises Exception
         """
-        while self.moving:
-            await asyncio.sleep(0.25)
+        await self.wait_to_stop_async()
 
         while self._target_position != self.position:
             if retries:
@@ -152,8 +152,7 @@ class Axis(ABC):
                 await self.sync_ensure_async()
                 self.actual_profile = profile_backup
                 self.move(self._target_position)
-                while self.moving:
-                    await asyncio.sleep(0.1)
+                await self.wait_to_stop_async()
             else:
                 self._logger.error("Position max tries reached!")
                 self._raise_move_failed()
@@ -167,6 +166,16 @@ class Axis(ABC):
     @abstractmethod
     def moving(self) -> bool:
         """determine if axis is moving at the moment"""
+
+    def wait_to_stop(self) -> None:
+        """blocking method to wait for axis to stop"""
+        asyncio.run(self.wait_to_stop_async())
+
+    async def wait_to_stop_async(self) -> None:
+        """blocking method to wait for axis to stop"""
+        while self.moving:
+            # WARNING: do not change this 0.1 sleep, since time calculations will be off.
+            await asyncio.sleep(self._wait_to_stop_delay)
 
     @abstractmethod
     def move(self, position: Unit) -> None:
@@ -266,8 +275,7 @@ class Axis(ABC):
         with WarningAction(self._power_led):
             while True:
                 self.sync()
-                while self.moving:
-                    await asyncio.sleep(0.25)
+                await self.wait_to_stop_async()
                 while True:
                     homing_status = self.homing_status
                     if homing_status.value == HomingStatus.SYNCED.value:
@@ -281,7 +289,7 @@ class Axis(ABC):
                             self._raise_home_failed()
                         retries -= 1
                         break
-                    await asyncio.sleep(0.25)
+                    await asyncio.sleep(self._wait_to_stop_delay)
 
     @staticmethod
     @abstractmethod

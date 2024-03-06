@@ -63,6 +63,7 @@ class SlafwTestCase(TestCase):
 
     SLAFW_DIR = Path(slafw.__file__).parent
     SAMPLES_DIR = Path(samples.__file__).parent
+    DATA_DIR = Path(defines.dataPath)
     EEPROM_FILE = Path.cwd() / "EEPROM.dat"
 
     def setUp(self) -> None:
@@ -115,6 +116,8 @@ class SlafwTestCase(TestCase):
             patch("slafw.hardware.sl1.hardware.Booster", slafw.tests.mocks.sl1s_uvled_booster.BoosterMock),
             patch("slafw.hardware.sl1.tilt.TILT_CFG_LOCAL", self.TEMP_DIR / TILT_CFG_LOCAL.name),
             patch("slafw.hardware.sl1.tower.TOWER_CFG_LOCAL", self.TEMP_DIR / TOWER_CFG_LOCAL.name),
+            patch("slafw.tests.mocks.axis.TILT_CFG_LOCAL", self.TEMP_DIR / TILT_CFG_LOCAL.name),
+            patch("slafw.tests.mocks.axis.TOWER_CFG_LOCAL", self.TEMP_DIR / TOWER_CFG_LOCAL.name),
             patch("slafw.exposure.persistence.LAST_PROJECT_DATA", self.TEMP_DIR / LAST_PROJECT_DATA.name),
             patch("slafw.defines.ramdiskPath", str(self.TEMP_DIR)),
             patch("slafw.defines.previousPrints", self.TEMP_DIR),

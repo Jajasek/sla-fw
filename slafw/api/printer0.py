@@ -290,11 +290,14 @@ class Printer0:
         :return: None
         """
         with WarningAction(self.printer.hw.power_led):
-            self.printer.hw.tilt.position = self.printer.hw.config.tiltMax
-            self.printer.hw.tilt.layer_down_wait(self.printer.hw.exposure_profile.below_area_fill)
-            if not self.printer.hw.tilt.synced:
-                self.printer.hw.tilt.sync_ensure()
-            self.printer.hw.tilt.layer_up_wait(self.printer.hw.exposure_profile.below_area_fill)
+            tilt = self.printer.hw.tilt
+            tilt.position = self.printer.hw.config.tiltMax
+            tilt.actual_profile = tilt.profiles.layer1750
+            tilt.move_ensure(tilt.home_position)
+            if not tilt.synced:
+                tilt.sync_ensure()
+            tilt.actual_profile = tilt.profiles.homingFast
+            tilt.move_ensure(tilt.config_height_position)
 
     @auto_dbus
     @state_checked(Printer0State.IDLE)

@@ -69,6 +69,21 @@ class PlatformAlignCheckGroup(CheckGroup):
         )
 
 
+class CalibrationFinishCheckGroup(CheckGroup):
+    def __init__(self):
+        super().__init__(
+            Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
+            [],
+        )
+
+    async def setup(self, actions: UserActionBroker):
+        await self.wait_for_user(
+            actions,
+            actions.prepare_calibration_finish_done,
+            WizardState.PREPARE_CALIBRATION_FINISH,
+        )
+
+
 class CalibrationWizard(Wizard):
     def __init__(self, package: WizardDataPackage):
         super().__init__(
@@ -77,6 +92,7 @@ class CalibrationWizard(Wizard):
                 PlatformTankInsertCheckGroup(package),
                 TiltAlignCheckGroup(package),
                 PlatformAlignCheckGroup(package),
+                CalibrationFinishCheckGroup(),
                 ShowResultsGroup(),
             ],
             package,

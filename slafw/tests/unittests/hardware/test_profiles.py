@@ -144,31 +144,57 @@ class TestProfileSet(SlafwTestCase):
 
 class TestMovingProfilesSL1(SlafwTestCase):
     def test_tilt_profiles(self):
-        profiles = MovingProfilesTiltSL1(factory_file_path=self.SAMPLES_DIR / "profiles_tilt.json")
-        self.assertEqual(2560, profiles.homingFast.starting_steprate)
-        self.assertEqual(1500, profiles.homingSlow.maximum_steprate)
-        self.assertEqual(0, profiles.moveFast.acceleration)
-        self.assertEqual(80, profiles.moveSlow.deceleration)
-        self.assertEqual(44, profiles.layerMoveSlow.current)
-        self.assertEqual(63, profiles.layerRelease.stallguard_threshold)
-        self.assertEqual(2000, profiles.layerMoveFast.coolstep_threshold)
-        self.assertEqual(100, profiles.superSlow.starting_steprate)
+        profiles = MovingProfilesTiltSL1(factory_file_path=self.DATA_DIR / "SL1" / "default_tilt_moving_profiles.json")
+        # (start_steprate, max_steprate, accel, decel, current, stallguard_thr, coolstep_thr)
+        assert_values = [
+            (2560, 5120, 240, 240, 20, 7, 700),
+            (1200, 1500, 160, 160, 16, 7, 1100),
+            (100, 120, 10, 10, 11, 0, 1500),
+            (200, 200, 0, 0, 44, 63, 0),
+            (100, 300, 80, 80, 20, 0, 1500),
+            (400, 400, 0, 0, 44, 63, 0),
+            (300, 600, 150, 150, 20, 0, 1500),
+            (400, 800, 150, 150, 20, 0, 1500),
+            (500, 1000, 150, 150, 20, 0, 1500),
+            (500, 1250, 150, 150, 20, 0, 1500),
+            (1500, 1500, 0, 0, 44, 40, 2100),
+            (1750, 1750, 0, 0, 44, 40, 2000),
+            (1750, 2000, 150, 150, 44, 40, 2000),
+            (1750, 2250, 150, 150, 44, 40, 2000),
+            (3840, 5120, 80, 80, 16, 6, 1500),
+            (8000, 8000, 0, 0, 26, 9, 700)
+        ]
+        for profile in profiles:
+            self.assertEqual(assert_values[profile.idx], tuple(profile.dump()))
 
     def test_tower_profiles(self):
-        profiles = MovingProfilesTowerSL1(factory_file_path=self.SAMPLES_DIR / "profiles_tower.json")
-        self.assertEqual(2500, profiles.homingFast.starting_steprate)
-        self.assertEqual(7500, profiles.homingSlow.maximum_steprate)
-        self.assertEqual(250, profiles.moveFast.acceleration)
-        self.assertEqual(50, profiles.moveSlow.deceleration)
-        self.assertEqual(34, profiles.layer.current)
-        self.assertEqual(6, profiles.layerMove.stallguard_threshold)
-        self.assertEqual(500, profiles.superSlow.coolstep_threshold)
-        self.assertEqual(2500, profiles.resinSensor.starting_steprate)
+        profiles = MovingProfilesTowerSL1(factory_file_path=self.DATA_DIR / "SL1" / "default_tower_moving_profiles.json")
+        # (start_steprate, max_steprate, accel, decel, current, stallguard_thr, coolstep_thr)
+        assert_values = [
+            (2500, 15000, 250, 150, 22, 4, 100),
+            (2500, 7500, 250, 150, 16, 1, 500),
+            (3200, 15000, 250, 250, 10, 3, 2200),
+            (100, 150, 50, 50, 15, 0, 1500),
+            (2500, 7500, 350, 350, 12, 2, 1400),
+            (600, 800, 200, 200, 34, 20, 500),
+            (600, 1600, 200, 200, 34, 12, 500),
+            (2000, 2400, 200, 200, 34, 20, 500),
+            (2800, 3200, 200, 200, 34, 20, 500),
+            (3000, 4000, 200, 200, 34, 20, 500),
+            (3200, 6400, 200, 200, 34, 20, 500),
+            (3200, 8800, 200, 200, 34, 20, 500),
+            (3200, 11200, 200, 200, 34, 20, 500),
+            (3200, 14400, 200, 200, 34, 20, 500),
+            (3200, 17600, 250, 250, 34, 20, 500),
+            (3200, 19200, 250, 250, 34, 20, 500)
+        ]
+        for profile in profiles:
+            self.assertEqual(assert_values[profile.idx], tuple(profile.dump()))
 
     def test_profile_overlay(self):
         profiles = MovingProfilesTowerSL1(
                 factory_file_path=self.SAMPLES_DIR / "profiles_tower_overlay.json",
-                default_file_path=self.SAMPLES_DIR / "profiles_tower.json")
+                default_file_path=self.DATA_DIR / "SL1" / "default_tower_moving_profiles.json")
         self.assertEqual(2499, profiles.homingFast.starting_steprate)
         self.assertEqual(7500, profiles.homingSlow.maximum_steprate)
 

@@ -278,8 +278,7 @@ class StartPositionsCheck(ExposureCheckRunner):
             self.expo.hw.tower.actual_profile = self.expo.hw.tower.profiles.homingFast
             await self.expo.hw.tower.move_ensure_async(self.expo.hw.config.tower_height_nm)
             raise TowerMoveFailed from exception
-        while self.expo.hw.tilt.moving:
-            await asyncio.sleep(0.25)
+        await self.expo.hw.tilt.wait_to_stop_async()
         self.logger.debug("Tilt on print start position")
 
 
@@ -648,7 +647,7 @@ class Exposure:
             position_nm = self.hw.config.up_and_down_z_offset_nm
             position_nm = max(position_nm, 0)
             self.hw.tower.move_ensure(position_nm)
-            self.hw.tower.actual_profile = self.hw.tower.profiles.layer
+            self.hw.tower.actual_profile = self.hw.tower.profiles.layer22
 
             self.state = ExposureState.PRINTING
 

@@ -1,9 +1,30 @@
 # Tilt/Tower moving profiles
 
 - set of all tilt/tower profiles
-- values are copied to MC
+- these profiles are shared between all printer models SL1, SL1S and M1.
+- values are copied to motion controller
+
+## Tilt
+- Profiles `homingFast` and `homingSlow` are used only for FW internal use. User
+is not able to use there profiles in the exposure profile because, they are
+sensitive for stallguard detection.
+- Profiles `move120`, `move300`, `move5120`, and `move8000` are used in default
+exposure profiles. User can use them in exposure profile, but since they have
+lower torque (lower current fed to stepper motors), it's recommended to use them
+only as tilt down finish profile or tilt up initial profile.
+- Profiles `layer200`, `layer400`, `layer600`, etc. has higher torque (higher
+current fed to stepper motors), so they may be used for any tilt up/down phase.
+- The number in profile name describes the speed in usteps/s.
 - see `slafw/hardware/sl1/tilt_profiles.py:MovingProfilesTiltSL1` to get the
 names of Tilt profiles
+
+## Tower
+- Profiles `homingFast`, `homingSlow`, `moveFast`, `moveSlow` and `resinSensor`
+are used only for FW internal use. User is not able to use there profiles in the 
+exposure profile because, they are sensitive for stallguard detection.
+- Profiles `layer1`, `layer2`, `layer3`, etc. has higher torque (higher
+current fed to stepper motors), so they may be used for any tilt up/down phase.
+- The number in profile name describes the speed in mm/s.
 - see `slafw/hardware/sl1/tower_profiles.py:MovingProfilesTowerSL1` to get the
 names of Tower profiles
 
@@ -11,6 +32,7 @@ names of Tower profiles
 # Exposure profile
 
 - Is a set of tilt and tower parameters to manage layer peel movement.
+- SL1S and M1 share the same exposure profiles. SL1 has its own set of profiles.
 - The values are stored in A64 for legacy reasons. Old projects are using
 `expUserProfile` in `config.ini` file which defines one of the legacy exposure
 profile (fast, slow or high viscosity). The new projects have all exposure

@@ -136,19 +136,19 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
             signal_list = [
                 call(uri, {"project_file": "/nice/path/file.suffix"}, []),
                 call(uri, {"exposure_time_ms": 2080}, []),
-                call(uri, {"delayed_end_time": 13}, []),
-                call(uri, {"total_time_ms": 13460}, []),
+                call(uri, {"delayed_end_time": 15}, []),
+                call(uri, {"total_time_ms": 15716}, []),
                 call(uri, {"exposure_time_first_ms": 10000}, []),
-                call(uri, {"delayed_end_time": 30}, []),
-                call(uri, {"total_time_ms": 30460}, []),
+                call(uri, {"delayed_end_time": 32}, []),
+                call(uri, {"total_time_ms": 32716}, []),
                 call(uri, {"calibration_regions": 9}, []),
-                call(uri, {"delayed_end_time": 46}, []),
-                call(uri, {"total_time_ms": 46460}, []),
+                call(uri, {"delayed_end_time": 48}, []),
+                call(uri, {"total_time_ms": 48716}, []),
                 call(uri, {"exposure_time_calibrate_ms": 3000}, []),
-                call(uri, {"delayed_end_time": 78}, []),
-                call(uri, {"total_time_ms": 78460}, []),
                 call(uri, {"delayed_end_time": 80}, []),
-                call(uri, {"total_time_ms": 80460}, []),
+                call(uri, {"total_time_ms": 80716}, []),
+                call(uri, {"delayed_end_time": 80}, []),
+                call(uri, {"total_time_ms": 80716}, []),
                 call(uri, {"delayed_end_time": 0}, []),
             ]
 
@@ -196,7 +196,7 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
                "current_layer": 2,
                "progress": 50.0,
                "position_nm": 0,
-               "time_remain_ms": 0,
+               "time_remain_ms": 968,
                }
         args = receiver.receive.call_args.args[1]
         args.pop("expected_finish_timestamp")

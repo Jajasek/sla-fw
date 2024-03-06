@@ -69,7 +69,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(4600)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.moveFast), call(self.tilt.profiles.layerRelease)],
+            "profile": [call(self.tilt.profiles.move5120), call(self.tilt.profiles.layer400)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.below_area_fill, positions, expected_results)
@@ -78,7 +78,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(5000), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.layerRelease), call(self.tilt.profiles.layerMoveFast)],
+            "profile": [call(self.tilt.profiles.layer400), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.below_area_fill, positions, expected_results)
@@ -87,7 +87,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(4600)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.moveFast), call(self.tilt.profiles.layerRelease)],
+            "profile": [call(self.tilt.profiles.move5120), call(self.tilt.profiles.layer400)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.above_area_fill, positions, expected_results)
@@ -96,7 +96,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(5000), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.layerRelease), call(self.tilt.profiles.layerMoveSlow)],
+            "profile": [call(self.tilt.profiles.layer400), call(self.tilt.profiles.layer1500)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.above_area_fill, positions, expected_results)
@@ -109,7 +109,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(4600)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.moveFast), call(self.tilt.profiles.layerRelease)],
+            "profile": [call(self.tilt.profiles.move5120), call(self.tilt.profiles.layer400)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.below_area_fill, positions, expected_results)
@@ -119,7 +119,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(4350), Ustep(4350), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(4350)), call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.layerRelease), call(self.tilt.profiles.layerMoveSlow)],
+            "profile": [call(self.tilt.profiles.layer400), call(self.tilt.profiles.layer1500)],
             "asleep": [call(1.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.below_area_fill, positions, expected_results)
@@ -133,7 +133,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(2800)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.layerMoveSlow), call(self.tilt.profiles.superSlow)],
+            "profile": [call(self.tilt.profiles.layer1500), call(self.tilt.profiles.layer600)],
             "asleep": [call(1.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.below_area_fill, positions, expected_results)
@@ -143,7 +143,7 @@ class TestExposureProfilesSL1(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(2800), Ustep(2800), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(2800)), call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.superSlow), call(self.tilt.profiles.layerMoveSlow)],
+            "profile": [call(self.tilt.profiles.layer600), call(self.tilt.profiles.layer1500)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.below_area_fill, positions, expected_results)
@@ -167,7 +167,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(4400)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.moveFast), call(self.tilt.profiles.layerMoveFast)],
+            "profile": [call(self.tilt.profiles.move8000), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.below_area_fill, positions, expected_results)
@@ -176,7 +176,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(5000), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.layerMoveFast), call(self.tilt.profiles.moveFast)],
+            "profile": [call(self.tilt.profiles.layer1750), call(self.tilt.profiles.move8000)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.below_area_fill, positions, expected_results)
@@ -185,7 +185,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(4400)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.moveFast), call(self.tilt.profiles.layerMoveFast)],
+            "profile": [call(self.tilt.profiles.move8000), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.above_area_fill, positions, expected_results)
@@ -194,7 +194,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(5000), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.layerMoveFast), call(self.tilt.profiles.layerMoveSlow)],
+            "profile": [call(self.tilt.profiles.layer1750), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.above_area_fill, positions, expected_results)
@@ -207,7 +207,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(3800)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.moveFast), call(self.tilt.profiles.layerMoveFast)],
+            "profile": [call(self.tilt.profiles.move8000), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.below_area_fill, positions, expected_results)
@@ -217,7 +217,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(5000), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.layerMoveFast), call(self.tilt.profiles.layerMoveSlow)],
+            "profile": [call(self.tilt.profiles.layer1750), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.below_area_fill, positions, expected_results)
@@ -231,7 +231,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(0), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(2800)), call(Ustep(5000))],
-            "profile": [call(self.tilt.profiles.layerMoveSlow), call(self.tilt.profiles.superSlow)],
+            "profile": [call(self.tilt.profiles.layer1750), call(self.tilt.profiles.layer800)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_up_wait, profile.below_area_fill, positions, expected_results)
@@ -241,7 +241,7 @@ class TestExposureProfilesSL1S(ExposureProfilesBase):
         positions = [Ustep(5000), Ustep(2800), Ustep(2800), Ustep(0)]
         expected_results = {
             "move": [call(Ustep(2800)), call(Ustep(0))],
-            "profile": [call(self.tilt.profiles.superSlow), call(self.tilt.profiles.layerMoveSlow)],
+            "profile": [call(self.tilt.profiles.layer800), call(self.tilt.profiles.layer1750)],
             "asleep": [call(0.0), call(0.0)],
         }
         self._check_tilt_method(self.tilt.layer_down_wait, profile.below_area_fill, positions, expected_results)

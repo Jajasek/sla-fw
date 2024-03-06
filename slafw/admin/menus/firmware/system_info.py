@@ -84,14 +84,6 @@ class SystemInfoMenu(AdminMenu):
         self.expo_panel_transmittance.set(f"Exposure panel transmittance: {self._printer.hw.exposure_screen.transmittance} %")
         self.printer_model.set(f"Printer model: {self._printer.hw.printer_model.name}")
         self.api_key.set(f"API key: {get_octoprint_auth(self.logger)}")
-        tilt_times_list = []
-        lp = self._printer.layer_profiles
-        for ep in self._printer.exposure_profiles:
-            tilt_times_list.append(f"<li><ul>{ep.name}:"
-                f"<li>small fill: {lp[ep.small_fill_layer_profile].moves_time_ms / 1000} s</li>"
-                f"<li>large fill: {lp[ep.large_fill_layer_profile].moves_time_ms / 1000} s</li>"
-                "</ul></li>")
-        self.tilt_times.set(f"Tilt times: <ul>{''.join(tilt_times_list)}</ul>")
         self.uv_counter.set(f"UV LED counter: {timedelta(seconds=self._printer.hw.uv_led.usage_s)}")
         self.display_counter.set(f"Display counter: {timedelta(seconds=self._printer.hw.exposure_screen.usage_s)}")
         sys_stats = TomlConfigStats(defines.statsData, self._printer.hw)

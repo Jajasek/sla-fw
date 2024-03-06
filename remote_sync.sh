@@ -13,11 +13,9 @@ if [ -z ${SLA} ]; then
 fi;
 
 rsync -av systemd/slafw.service root@${SLA}:/lib/systemd/system/slafw.service &&
-rsync -av systemd/model-detect.service root@${SLA}:/lib/systemd/system/model-detect.service &&
-rsync -av systemd/model-detect.path root@${SLA}:/lib/systemd/system/model-detect.path &&
 rsync -av systemd/slafw-tmpfiles.conf root@${SLA}:/lib/tmpfiles.d/slafw-tmpfiles.conf &&
 rsync -av slafw/scripts/ root@${SLA}:/usr/share/slafw/scripts/ &&
-rsync -av --exclude scripts slafw/ root@${SLA}:/usr/lib/python3.9/site-packages/slafw/
+rsync -av --exclude scripts --exclude __pycache__ slafw/ root@${SLA}:/usr/lib/python3.9/site-packages/slafw/
 
 ssh root@${SLA} "
 set -o xtrace; \

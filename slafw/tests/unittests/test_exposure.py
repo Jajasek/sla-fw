@@ -79,8 +79,6 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         exposure = Exposure(0, self.pickler.package)
         exposure.read_project(TestExposure.PROJECT)
         adjusted_profile = list(exposure.project.exposure_profile.above_area_fill.dump())
-        # set above_area_fill.delay_after_exposure_ms. This value is not taken
-        # into account when calculating times, because there is only 2 fast layers
         adjusted_profile[1] = 23755
         exposure.project.exposure_profile_set(0, tuple(adjusted_profile))
         exposure.project.exposure_time_first_ms = 2000
@@ -96,10 +94,12 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
     def _check_serialize(self, exposure: Exposure):
         # 2000 ms - exposure_time_first_ms
         # 1888 ms - 2nd layer exposure with 10 fade layers
-        # 2 * 5300 ms - layers of fast tilt time (SL1)
-        # 2 * 370 ms - layers of tower move and magic computational delay constant
-        # SUM: 15228 ms
-        self.assertEqual(15228, exposure.estimate_remain_time_ms())
+        # 2 * 1000 ms - fast.above_area_fill.delay_before_exposure_ms (SL1)
+        # 2 * 23755 ms - overwritten fast.above_area_fill.delay_after_exposure_ms (SL1)
+        # 2 * 5674 ms - tilt time of fast.above_area_fill  (SL1)
+        # 2 * 124 ms - layers of tower move and magic computational delay constant
+        # SUM: 64994 ms
+        self.assertEqual(64994, exposure.estimate_remain_time_ms())
         self.assertEqual(2000, exposure.project.exposure_time_first_ms)
         self.assertEqual(2000, exposure.project.layers[0].times_ms[0])
 
@@ -263,7 +263,7 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
 
     def test_exposure_profile(self):
         exposure = self._start_exposure(self.hw, TestExposure.PROJECT_LAYER_CHANGE)
-        exposure.project.exposure_profile.area_fill = 100
+        exposure.project.exposure_profile.area_fill = 100 # all layers will be below area fill (fast profile)
         self._wait_exposure(exposure)
         self.assertEqual(exposure.state, ExposureState.FINISHED)
         # 10 self._config.fadeLayers + 3 defines.first_extra_slow_layers
@@ -273,11 +273,11 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         #
         # 32 * 100 ms - exposure_time
         # 13 * 1000 ms - delay_before_exposure slow (SL1)
-        # 13 * 5800 ms - layers of slow tilt time (SL1)
-        # 19 * 5300 ms - layers of fast tilt time (SL1)
-        # 32 * 370 ms - layers of tower move and magic computational delay constant
-        # SUM: 19640 ms
-        self.assertEqual(190640, exposure.estimate_total_time_ms())
+        # 13 * 5674 ms - tilt time of fast.above_area_fill (SL1)
+        # 19 * 5190 ms - tilt time of fast.below_area_fill (SL1)
+        # 32 * 124 ms - magic computational delay constant
+        # SUM: 192540 ms
+        self.assertEqual(192540, exposure.estimate_total_time_ms())
 
         delay = 10  # 0.01 s
 
@@ -288,14 +288,15 @@ class TestExposure(SlafwTestCaseDBus, RefCheckTestCase):
         self.assertEqual(exposure.state, ExposureState.FINISHED)
 
         # Project PROJECT_LAYER_CHANGE_SAFE uses slow exposure profile where
-        # profile below and above is the same.
+        # below and above area fill is the same.
         #
         # 32 * 100 ms - exposure_time
         # 32 * 10 ms - overwritten delay_before_exposure_ms
-        # 32 * 8000 ms - layers of slow tilt time (SL1)
-        # 32 * 370 ms - layers of tower move and magic computational delay constant
-        # SUM: 271360 ms
-        self.assertEqual(271360, exposure.estimate_total_time_ms())
+        # 13 * 7884 ms - tilt time of slow.above_area_fill (SL1)
+        # 19 * 7884 ms - tilt time of slow.below_area_fill (SL1)
+        # 32 * 124 ms - magic computational delay constant
+        # SUM: 259776 ms
+        self.assertEqual(259776, exposure.estimate_total_time_ms())
 
     def _start_exposure(self, hw, project = None, expo_img = None) -> Exposure:
         if project is None:

@@ -103,13 +103,7 @@ class SingleLayerProfileSL1(SingleProfile):
             unit=Ms,
             factory=True,
             doc="Waiting time after every part.")
-    # this should be measured by printer
-    moves_time_ms = IntValue(
-            minimum=0,
-            maximum=600_000,
-            unit=Ms,
-            factory=True,
-            doc="Time necessary to perform all layer change moves.")
+
     __definition_order__ = tuple(locals())
 
 

@@ -120,12 +120,14 @@ class DoNotRunTestDirectlyFromBaseClass:
             self.assertEqual(actual_profile, self.axis.actual_profile)
 
         def _test_move_api_up_down(self, speed: int):
-            self.axis.actual_profile = self.axis.profiles.homingSlow
-            self.axis.position = self.pos
+            # set some profile which is not used for moving axis
+            self.axis.actual_profile = self.axis.profiles[10]
             actual_profile = self.axis.actual_profile
+            self.axis.position = self.pos
             self.axis.move_api(speed)
             self.assertTrue(self.axis.moving)
             self.assertLess(self.pos, self.axis.position)
+            # check that profile has changed from the initial
             self.assertNotEqual(actual_profile, self.axis.actual_profile)
             actual_profile = self.axis.actual_profile
             self.axis.stop()
@@ -305,7 +307,7 @@ class TestTilt(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
         self.assertEqual(self.axis._target_position, self.config.tiltMax)
 
     def test_move_api_get_profile(self):
-        self.assertEqual(self.axis._move_api_get_profile(1), self.axis.profiles.moveSlow)
+        self.assertEqual(self.axis._move_api_get_profile(1), self.axis.profiles.homingSlow)
         self.assertEqual(self.axis._move_api_get_profile(2), self.axis.profiles.homingFast)
 
     def test_sensitivity(self):
@@ -372,7 +374,7 @@ class TestTower(DoNotRunTestDirectlyFromBaseClass.BaseSL1AxisTest):
         self.assertEqual(self.axis._target_position, self.config.tower_height_nm)
 
     def test_move_api_get_profile(self):
-        self.assertEqual(self.axis._move_api_get_profile(1), self.axis.profiles.moveSlow)
+        self.assertEqual(self.axis._move_api_get_profile(1), self.axis.profiles.homingSlow)
         self.assertEqual(self.axis._move_api_get_profile(2), self.axis.profiles.homingFast)
 
     def test_sensitivity(self):

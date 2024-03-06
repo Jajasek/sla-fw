@@ -20,13 +20,11 @@ from datetime import timedelta
 from math import ceil
 from threading import Thread
 from time import sleep
-from pathlib import Path
 from typing import Optional, Any
 
 from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.errors.errors import MotionControllerException
-from slafw.exposure.profiles import EXPOSURE_PROFILES_DEFAULT_NAME, ExposureProfileSL1
 from slafw.functions.decorators import safe_call
 from slafw.hardware.a64.temp_sensor import A64CPUTempSensor
 from slafw.hardware.hardware import BaseHardware
@@ -87,14 +85,6 @@ class HardwareSL1(BaseHardware):
             self.uv_led = SL1SUVLED(self.mcc, self.sl1s_booster, self.uv_led_temp)
         else:
             raise NotImplementedError
-
-        # TODO: this is left here only for printer0.home_tilt() nad wizards
-        #  consider stop using tearing moves outside of the exposure
-        file_name = "fast" + EXPOSURE_PROFILES_DEFAULT_NAME
-        exposure_profiles_path = Path(defines.dataPath) / printer_model.name / file_name  # type: ignore[attr-defined]
-        self.exposure_profile = ExposureProfileSL1(
-                default_file_path=exposure_profiles_path)
-        self.logger.info(str(self.exposure_profile))
 
         self.power_led = PowerLedSL1(self.mcc)
         self.tower = TowerSL1(self.mcc, self.config, self.power_led, printer_model)
@@ -352,8 +342,7 @@ class HardwareSL1(BaseHardware):
             self.tower.actual_profile = self.tower.profiles.resinSensor
             relative_move_nm = self.tower.resin_start_pos_nm - self.tower.resin_end_pos_nm
             self.mcc.do("!rsme", self.config.nm_to_tower_microsteps(relative_move_nm))
-            while self.tower.moving:
-                await asyncio.sleep(0.1)
+            await self.tower.wait_to_stop_async()
             if not self.getResinSensorState():
                 self.logger.error("Resin sensor was not triggered")
                 return 0.0

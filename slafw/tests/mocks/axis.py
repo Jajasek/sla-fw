@@ -1,19 +1,20 @@
 # This file is part of the SLA firmware
-# Copyright (C) 2022 Prusa Research a.s. - www.prusa3d.com
+# Copyright (C) 2022-2024 Prusa Research a.s. - www.prusa3d.com
 # SPDX-License-Identifier: GPL-3.0-or-later
-
+from pathlib import Path
 from typing import Optional
-from unittest.mock import MagicMock
 
+from slafw import defines
 from slafw.configs.hw import HwConfig
 from slafw.configs.unit import Unit, Nm
 from slafw.hardware.axis import Axis, HomingStatus
 from slafw.hardware.power_led import PowerLed
+from slafw.hardware.printer_model import PrinterModelBase
+from slafw.hardware.sl1.tilt_profiles import MovingProfilesTiltSL1, TILT_CFG_LOCAL
+from slafw.hardware.sl1.tower_profiles import MovingProfilesTowerSL1, TOWER_CFG_LOCAL
 from slafw.hardware.tilt import Tilt
 from slafw.hardware.tower import Tower
-from slafw.hardware.profiles import SingleProfile, ProfileSet
-from slafw.hardware.tilt import MovingProfilesTilt
-from slafw.hardware.tower import MovingProfilesTower
+from slafw.hardware.profiles import SingleProfile
 from slafw.motion_controller.sl1_controller import MotionControllerSL1
 
 
@@ -65,10 +66,6 @@ class MockAxis(Axis):
         self.sync()
 
     @property
-    def profiles(self) -> ProfileSet:
-        pass
-
-    @property
     def actual_profile(self) -> SingleProfile:
         return self._actual_profile
 
@@ -97,12 +94,30 @@ class MockAxis(Axis):
 
 
 class MockTower(Tower, MockAxis):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig,
+                 power_led: PowerLed, printer_model: PrinterModelBase):
+        super().__init__(mcc, config, power_led)
+        default_profiles = (Path(defines.dataPath)
+                            / printer_model.name
+                            / f"default_{self.name}_moving_profiles.json")  # type: ignore[attr-defined]
+        self._profiles = MovingProfilesTowerSL1(factory_file_path=TOWER_CFG_LOCAL, default_file_path=default_profiles)
+        self._profiles.apply_profile = self.apply_profile
+
     @property
-    def profiles(self) -> MovingProfilesTower:
-        return MagicMock()
+    def profiles(self) -> MovingProfilesTowerSL1:
+        return self._profiles
 
 
 class MockTilt(Tilt, MockAxis):
+    def __init__(self, mcc: MotionControllerSL1, config: HwConfig,
+                 power_led: PowerLed, printer_model: PrinterModelBase):
+        super().__init__(mcc, config, power_led)
+        default_profiles = (Path(defines.dataPath)
+                            / printer_model.name
+                            / f"default_{self.name}_moving_profiles.json") # type: ignore[attr-defined]
+        self._profiles = MovingProfilesTiltSL1(factory_file_path=TILT_CFG_LOCAL, default_file_path=default_profiles)
+        self._profiles.apply_profile = self.apply_profile
+
     async def layer_up_wait_async(self, layer_profile: SingleProfile, tilt_height: int=0) -> None:
         self.move(self._config.tiltHeight)
 
@@ -113,5 +128,5 @@ class MockTilt(Tilt, MockAxis):
         pass
 
     @property
-    def profiles(self) -> MovingProfilesTilt:
-        return MagicMock()
+    def profiles(self) -> MovingProfilesTiltSL1:
+        return self._profiles

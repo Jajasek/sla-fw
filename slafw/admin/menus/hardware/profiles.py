@@ -182,7 +182,7 @@ class EditProfileItems(SafeAdminMenu):
                 tower_position = Nm(100_000_000)
                 hw.tower.actual_profile = hw.tower.profiles.moveFast
                 hw.tower.move(tower_position)
-                hw.tilt.actual_profile = hw.tilt.profiles.moveFast
+                hw.tilt.actual_profile = hw.tilt.profiles.move8000
                 hw.tilt.move(hw.tilt.config_height_position)
                 while hw.tower.moving or hw.tilt.moving:
                     sleep(0.25)

@@ -37,7 +37,7 @@ from slafw.project.bounding_box import BBox
 from slafw.api.decorators import range_checked
 from slafw.exposure.profiles import ExposureProfileSL1, EXPOSURE_PROFILES_DEFAULT_NAME
 
-LayerProfileTuple = Tuple[int, int, int, int, bool, int, int, int, int, int, int, int, int, int, int, int, int, int]
+LayerProfileTuple = Tuple[int, int, int, int, bool, int, int, int, int, int, int, int, int, int, int, int, int]
 
 @unique
 class LayerCalibrationType(IntEnum):
@@ -224,7 +224,11 @@ class Project:
         self.calibrate_penetration_px = int(self._config.calibratePenetration * 1e6 // pixel_size_nm)
         self.calibrate_compact = self._config.calibrateCompact
         self.used_material_nl = int(self._config.usedMaterial * 1e6)
-        self.data.exposure_profile = self._exposure_profile.as_dictionary()
+        try:
+            self.data.exposure_profile = self._exposure_profile.as_dictionary()
+        except Exception as e:
+            self.logger.exception("Cannot parse exposure profile: %s", str(e))
+            raise ProjectErrorCantRead from e
         if self.data.calibrate_regions:
             # labels and pads consumption is ignored
             self.used_material_nl *= self.data.calibrate_regions
@@ -449,8 +453,7 @@ class Project:
     def used_material(self):
         return self.used_material_nl / 1e6
 
-    @property
-    @functools.lru_cache()
+    @functools.cached_property
     def first_slow_layers(self) -> int:
         return self._config.fadeLayers + defines.first_extra_slow_layers
 
@@ -529,23 +532,30 @@ class Project:
     def count_remain_time(self, layers_done: int = 0, slow_layers_done: int = 0) -> int:
         time_remain_ms = sum(sum(x.times_ms) for x in self.layers[layers_done:])
         total_layers = len(self.layers)
-        # TODO count forced slow layers at the beginning and forced slow layers after slow layer
+
         slow_layers = self._layers_slow - slow_layers_done
-        slow_layers = max(slow_layers, 0)
+        slow_layers = min(max(slow_layers, self.first_slow_layers), total_layers)
         fast_layers = total_layers - layers_done - slow_layers
 
-        # Fast and slow layer times
-        sfp = self.exposure_profile.below_area_fill
-        hfp = self.exposure_profile.above_area_fill
-        time_remain_ms += \
-            fast_layers * int(sfp.moves_time_ms + sfp.delay_before_exposure_ms + sfp.delay_after_exposure_ms)
-        time_remain_ms += \
-            slow_layers * int(hfp.moves_time_ms + hfp.delay_before_exposure_ms + hfp.delay_after_exposure_ms)
+        below = self.exposure_profile.below_area_fill
+        above = self.exposure_profile.above_area_fill
 
-        time_remain_ms += (total_layers - layers_done) * (
-                self.layer_height_nm * 5000 // 1000 // 1000  # tower move
+        # Fast and slow peel times
+        time_remain_ms += fast_layers * self._hw.layer_peel_move_time(self.layer_height_nm, below)
+        time_remain_ms += slow_layers * self._hw.layer_peel_move_time(self.layer_height_nm, above)
+
+        # Fast and slow delays
+        time_remain_ms += fast_layers * (
+                int(below.delay_before_exposure_ms)
+                + int(below.delay_after_exposure_ms)
                 + self._hw.exposure_screen.parameters.refresh_delay_ms * 5  # ~ 5x frame display wait
-                + 120  # Magical constant to compensate remaining computation delay in exposure thread
+                + 124  # Magical constant to compensate remaining computation delay in exposure thread
+        )
+        time_remain_ms += slow_layers * (
+                int(above.delay_before_exposure_ms)
+                + int(above.delay_after_exposure_ms)
+                + self._hw.exposure_screen.parameters.refresh_delay_ms * 5  # ~ 5x frame display wait
+                + 124  # Magical constant to compensate remaining computation delay in exposure thread
         )
         self.logger.debug("time_remain_ms: %d", time_remain_ms)
         return time_remain_ms
