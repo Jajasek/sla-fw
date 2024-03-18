@@ -14,7 +14,7 @@ from slafw.wizard.data_package import WizardDataPackage
 from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.base import WizardCheckType, DangerousCheck, Check
 from slafw.wizard.setup import Configuration, Resource
-from slafw.errors.errors import CleaningAdaptorMissing
+from slafw.errors.errors import CleaningAdaptorMissing, NotMechanicallyCalibrated
 
 @unique
 class GentlyUpProfile(Enum):
@@ -38,6 +38,17 @@ class GentlyUpProfile(Enum):
             return profiles.resinSensor
         return profiles.moveSlow    # default and SPEED0
 
+
+class Calibrated(Check):
+    """ Check printer is calibrated """
+
+    def __init__(self, package: WizardDataPackage):
+        super().__init__(WizardCheckType.CALIBRATION, Configuration(None, None), [])
+        self.calibrated = package.hw.config.calibrated
+
+    async def async_task_run(self, actions: UserActionBroker):
+        if not self.calibrated:
+            raise NotMechanicallyCalibrated()
 
 class HomeTower(DangerousCheck):
     """ Home tower and request the user to attach the cleaning adaptor to the platform """

@@ -805,6 +805,7 @@ class TankSurfaceCleanerTest(TestWizardsBase):
     # pylint: disable=too-many-instance-attributes
     def setUp(self) -> None:
         super().setUp()
+        self.hw.config.calibrated = True
         self.wizard = TankSurfaceCleaner(self.package)
         self.wizard.state_changed.connect(self.on_state_changed)
 
@@ -864,6 +865,12 @@ class TankSurfaceCleanerTest(TestWizardsBase):
         self.wizard.check_states_changed.connect(on_check_states_changed)
         self._run_wizard(self.wizard, limit_s=60)
 
+    def test_tank_surface_cleaner_without_calibration(self):
+        self.hw.config.calibrated = False
+        self.wizard = TankSurfaceCleaner(self.package)
+        self.wizard.state_changed.connect(self.on_state_changed)
+
+        self._run_wizard(self.wizard, limit_s=60, expected_state=WizardState.FAILED)
 
 if __name__ == "__main__":
     unittest.main()

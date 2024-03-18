@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from slafw.wizard.checks.tank_surface_cleaner import HomeTower, TiltHome, TiltUp, TowerSafeDistance, TouchDown, \
-    GentlyUp, ExposeDebris, HomeTowerFinish, Check
+    GentlyUp, ExposeDebris, HomeTowerFinish, Check, Calibrated
 from slafw.wizard.group import SingleCheckGroup, CheckGroup
 from slafw.wizard.wizard import WizardId, Wizard, WizardState
 from slafw.wizard.data_package import WizardDataPackage
@@ -54,6 +54,7 @@ class TankSurfaceCleaner(Wizard):
         super().__init__(
             WizardId.TANK_SURFACE_CLEANER,
             [
+                SingleCheckGroup(Calibrated(package)),
                 InitGroup(HomeTower(package)),
                 SingleCheckGroup(TiltHome(package)),
                 SingleCheckGroup(TiltUp(package)),
