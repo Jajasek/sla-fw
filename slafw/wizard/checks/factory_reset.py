@@ -4,7 +4,6 @@
 
 import json
 import os
-import subprocess
 import time
 from abc import abstractmethod
 from asyncio import gather
@@ -76,16 +75,15 @@ class ResetHostname(ResetCheck):
         reset_hostname()
 
 
-class ResetAPIKey(ResetCheck):
+class ResetHttpDigestPassword(ResetCheck):
     def __init__(self, *args, **kwargs):
-        super().__init__(WizardCheckType.RESET_API_KEY, *args, **kwargs)
+        super().__init__(WizardCheckType.RESET_HTTP_DIGEST_PASSWORD, *args, **kwargs)
 
     def reset_task_run(self, actions: UserActionBroker):
         """
-        Reset apikey (will be regenerated on next boot)
+        Reset HTTP digest password (will be regenerated on next boot)
         """
-
-        Path(defines.apikeyFile).unlink(missing_ok=True)
+        Path(defines.http_digest_password_file).unlink(missing_ok=True)
 
 
 class ResetRemoteConfig(ResetCheck):
@@ -98,17 +96,6 @@ class ResetRemoteConfig(ResetCheck):
         """
         if os.path.exists(defines.remoteConfig):
             os.remove(defines.remoteConfig)
-
-
-class ResetHttpDigest(ResetCheck):
-    def __init__(self, *args, **kwargs):
-        super().__init__(WizardCheckType.RESET_HTTP_DIGEST, *args, **kwargs)
-
-    def reset_task_run(self, actions: UserActionBroker):
-        try:
-            defines.nginx_http_digest.touch()
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            self._logger.exception("Failed to reset http digest config")
 
 
 class ResetNetwork(ResetCheck):

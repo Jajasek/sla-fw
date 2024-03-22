@@ -36,9 +36,7 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
         print(f"<<<<<===== {self.id()} =====>>>>>")
         copyfile(self.SAMPLES_DIR / "hardware.cfg", self.hardware_file)
         copyfile(self.SAMPLES_DIR / "hardware.toml", self.hardware_factory_file)
-
-        Path(self.api_key_file).touch()
-        defines.nginx_http_digest.touch()
+        copyfile(self.SAMPLES_DIR / "api.key", defines.http_digest_password_file)
         shutil.copy(self.SAMPLES_DIR / "self_test_data.json", Path(defines.factoryMountPoint))
 
         os.environ["SDL_AUDIODRIVER"] = "disk"
@@ -60,7 +58,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
         self.hardware_file = self.TEMP_DIR / "slafw.hardware.cfg"
         self.temp_dir_wizard_history = TemporaryDirectory()  # pylint: disable = consider-using-with
         self.sdl_audio_file = self.TEMP_DIR / "slafw.sdl_audio.raw"
-        self.api_key_file = self.TEMP_DIR / "api.key"
         self.counter_log = self.TEMP_DIR / defines.counterLogFilename
 
         return super().patches() + [
@@ -69,7 +66,7 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             patch("slafw.defines.hwConfigPathFactory", self.hardware_factory_file),
             patch("slafw.defines.hwConfigPath", self.hardware_file),
             patch("slafw.defines.internalProjectPath", str(self.SAMPLES_DIR)),
-            patch("slafw.defines.octoprintAuthFile", self.SAMPLES_DIR / "slicer-upload-api.key"),
+            patch("slafw.defines.http_digest_password_file", self.TEMP_DIR / "api.key"),
             patch("slafw.defines.livePreviewImage", str(self.TEMP_DIR / "live.png")),
             patch("slafw.defines.displayUsageData", str(self.TEMP_DIR / "display_usage.npz")),
             patch("slafw.defines.serviceData", str(self.TEMP_DIR / "service.toml")),
@@ -77,7 +74,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             patch("slafw.defines.loggingConfig", self.TEMP_DIR / "logger_config.json"),
             patch("slafw.defines.last_log_token", self.TEMP_DIR / "last_log_token"),
             patch("slafw.defines.counterLog", self.counter_log),
-            patch("slafw.defines.nginx_http_digest", self.TEMP_DIR / "http_digest_enabled"),
         ]
 
     def try_start_printer(self):
@@ -108,7 +104,6 @@ class SlaFwIntegrationTestCaseBase(SlafwTestCaseDBus, RefCheckTestCase):
             self.EEPROM_FILE,
             self.hardware_file,
             self.sdl_audio_file,
-            self.api_key_file,
         ]
 
         for file in files:

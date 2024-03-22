@@ -13,8 +13,7 @@ class Printer:
     # pylint: disable = too-many-instance-attributes
     def __init__(self, hw, action_manager):
         self.state_changed = Signal()
-        self.http_digest_changed = Signal()
-        self.api_key_changed = Signal()
+        self.http_digest_password_changed = Signal()
         self.data_privacy_changed = Signal()
         self.exception_changed = Signal()
         self.hw = hw
@@ -31,8 +30,7 @@ class Printer:
         self.state = PrinterState.PRINTING
         self.exception = None
 
-        self.http_digest = True
-        self.api_key = "developer"
+        self.http_digest_password = "developer"
         self.data_privacy = "data privacy"
         self.help_page_url = "hpu"
         self.unboxed = True

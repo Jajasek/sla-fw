@@ -46,7 +46,6 @@ from slafw.errors.errors import (
 from slafw.functions.files import save_all_remain_wizard_history, get_all_supported_files
 from slafw.functions.miscellaneous import toBase32hex
 from slafw.functions.system import (
-    get_octoprint_auth,
     get_configured_printer_model,
     set_configured_printer_model,
     set_factory_uvpwm,
@@ -91,8 +90,7 @@ class Printer:
         self.slicer_profile: Optional[SlicerProfile] = None
         self.slicer_profile_updater: Optional[SlicerProfileUpdater] = None
         self.state_changed = Signal()
-        self.http_digest_changed = Signal()
-        self.api_key_changed = Signal()
+        self.http_digest_password_changed = Signal()
         self.data_privacy_changed = Signal()
         self.action_manager: ActionManager = ActionManager()
         self.action_manager.exposure_changed.connect(self._on_exposure_changed)
@@ -403,36 +401,21 @@ class Printer:
         return self._printer_identifier
 
     @property
-    def http_digest(self) -> bool:
-        return defines.nginx_http_digest.exists()
-
-    @http_digest.setter
-    def http_digest(self, enabled: bool) -> None:
-        is_enabled = self.http_digest
-        if enabled:
-            if not is_enabled:
-                defines.nginx_http_digest.touch()
-        else:
-            if is_enabled:
-                defines.nginx_http_digest.unlink()
-        systemd1 = SystemBus().get("org.freedesktop.systemd1", "/org/freedesktop/systemd1")
-        systemd1.RestartUnit("nginx.service", "replace")
-        self.http_digest_changed.emit()
-
-    @property
-    def api_key(self) -> str:
+    def http_digest_password(self) -> str:
         """
-        Get current API key
+        Get current HTTP digest password in plaintext
 
-        :return: Current api key string
+        :return: Current HTTP digest password string
         """
-        return get_octoprint_auth(self.logger)
+        try:
+            return defines.http_digest_password_file.read_text(encoding="utf-8")
+        except IOError as e:
+            raise ConfigException("Digest auth file read failed") from e
 
-    @api_key.setter
-    def api_key(self, apikey: str) -> None:
-        if apikey != get_octoprint_auth(self.logger):
-            subprocess.check_call(["/bin/api-keygen.sh", apikey])
-            self.api_key_changed.emit()
+    @http_digest_password.setter
+    def http_digest_password(self, password: str) -> None:
+        subprocess.check_call(["/bin/htdigest-keygen.sh", password])
+        self.http_digest_password_changed.emit()
 
     @property
     def data_privacy(self) -> bool:

@@ -125,18 +125,10 @@ class Standard0:
         self._printer.exception_occurred.connect(self._on_exception_changed)
         self._printer.state_changed.connect(self._on_state_update)
         self._printer.action_manager.exposure_data_changed.connect(self._on_exposure_values_changed)
-        self._printer.http_digest_changed.connect(self._on_http_digest_changed)
-        self._printer.api_key_changed.connect(self._on_api_key_changed)
 
     @auto_dbus_signal
     def LastErrorOrWarn(self, value: Dict[str, Any]):
         pass
-
-    def _on_http_digest_changed(self):
-        self.PropertiesChanged(self.__INTERFACE__, {"net_authorization": self.net_authorization}, [])
-
-    def _on_api_key_changed(self):
-        self.PropertiesChanged(self.__INTERFACE__, {"net_authorization": self.net_authorization}, [])
 
     def _on_state_update(self, *args):  # pylint: disable=unused-argument
         self._logger.debug("on_state_update: %s", args)
@@ -585,27 +577,6 @@ class Standard0:
     def net_ip(self) -> str:
         ip = self._printer.inet.ip
         return ip if ip else ""
-
-    @auto_dbus
-    @property
-    def net_authorization(self) -> Dict[str, Any]:
-        """
-        type: one of ["digest","api_key","tls", ...]
-        options: Optional extra info
-
-        .. code-block:: python
-
-            sl1
-            {
-                "type": "digest",
-                "options": { "api_key": "samebigstring" }
-            }
-        """
-        if self._printer.http_digest:
-            data = {"type": "digest", "password": self._printer.api_key}
-        else:
-            data = {"type": "api_key", "api_key": self._printer.api_key}
-        return wrap_dict_data(data)
 
     ## SYSTEM ##
 

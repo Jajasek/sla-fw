@@ -92,8 +92,7 @@ class Printer0:
         self._calibration = None
 
         self.printer.state_changed.connect(self._on_state_changed)
-        self.printer.http_digest_changed.connect(self._on_http_digest_changed)
-        self.printer.api_key_changed.connect(self._on_api_key_changed)
+        self.printer.http_digest_password_changed.connect(self._on_http_digest_password_changed)
         self.printer.data_privacy_changed.connect(self._on_data_privacy_changed)
         self.printer.action_manager.exposure_changed.connect(self._on_exposure_changed)
         self.printer.runtime_config.factory_mode_changed.connect(self._on_factory_mode_changed)
@@ -139,11 +138,8 @@ class Printer0:
             self.__INTERFACE__, {"failure_reason": wrap_dict_data(PrinterException.as_dict(exception))}, []
         )
 
-    def _on_http_digest_changed(self):
-        self.PropertiesChanged(self.__INTERFACE__, {"http_digest": self.http_digest}, [])
-
-    def _on_api_key_changed(self):
-        self.PropertiesChanged(self.__INTERFACE__, {"api_key": self.api_key}, [])
+    def _on_http_digest_password_changed(self):
+        self.PropertiesChanged(self.__INTERFACE__, {"http_digest_password": self.http_digest_password}, [])
 
     def _on_data_privacy_changed(self):
         self.PropertiesChanged(
@@ -235,16 +231,6 @@ class Printer0:
     @auto_dbus_signal
     def exception(self, value: Dict[str, Any]):
         pass
-
-    @auto_dbus
-    @property
-    def http_digest(self) -> bool:
-        return self.printer.http_digest
-
-    @auto_dbus
-    @http_digest.setter
-    def http_digest(self, enabled: bool) -> None:
-        self.printer.http_digest = enabled
 
     @auto_dbus
     def beep(self, frequency_hz: int, length_ms: int) -> None:
@@ -534,18 +520,18 @@ class Printer0:
     @auto_dbus
     @property
     @cached(validity_s=5)
-    def api_key(self) -> str:
+    def http_digest_password(self) -> str:
         """
-        Get current API key
+        Get current HTTP digest password in plaintext
 
-        :return: Current api key string
+        :return: Current HTTP digest password string
         """
-        return self.printer.api_key
+        return self.printer.http_digest_password
 
     @auto_dbus
-    @api_key.setter
-    def api_key(self, apikey: str) -> None:
-        self.printer.api_key = apikey
+    @http_digest_password.setter
+    def http_digest_password(self, password: str) -> None:
+        self.printer.http_digest_password = password
 
     @auto_dbus
     def enable_resin_sensor(self, value: bool) -> None:

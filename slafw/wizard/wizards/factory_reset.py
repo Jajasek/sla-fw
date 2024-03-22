@@ -8,9 +8,8 @@ from slafw.wizard.actions import UserActionBroker
 from slafw.wizard.checks.factory_reset import (
     DisableFactory,
     ResetHostname,
-    ResetAPIKey,
+    ResetHttpDigestPassword,
     ResetRemoteConfig,
-    ResetHttpDigest,
     ResetNetwork,
     ResetTimezone,
     ResetNTP,
@@ -44,9 +43,8 @@ class ResetSettingsGroup(CheckGroup):
     ):
         checks = [
             ResetHostname(hard_errors=hard_errors),
-            ResetAPIKey(hard_errors=hard_errors),
+            ResetHttpDigestPassword(hard_errors=hard_errors),
             ResetRemoteConfig(hard_errors=hard_errors),
-            ResetHttpDigest(hard_errors=hard_errors),
             ResetNetwork(hard_errors=hard_errors),
             ResetTimezone(hard_errors=hard_errors),
             ResetNTP(hard_errors=hard_errors),

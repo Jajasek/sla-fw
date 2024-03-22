@@ -296,8 +296,8 @@ class TestWizards(TestWizardsBase):
         copyfile(self.SAMPLES_DIR / defines.expoPanelLogFileName, defines.expoPanelLogPath)
 
         # Setup files that are touched by packing wizard
-        defines.apikeyFile = self.TEMP_DIR / "apikey"
-        defines.apikeyFile.touch()
+        defines.http_digest_password_file = self.TEMP_DIR / "api.key"
+        defines.http_digest_password_file.touch()
         defines.local_time_path = self.TEMP_DIR / "localtime"
         defines.local_time_path.touch()
         defines.slicerProfilesFile = self.TEMP_DIR / "slicer_profiles"
@@ -313,8 +313,6 @@ class TestWizards(TestWizardsBase):
         defines.serial_service_enabled.touch()
         defines.ssh_service_enabled = self.TEMP_DIR / "ssh"
         defines.ssh_service_enabled.touch()
-        defines.nginx_http_digest = self.TEMP_DIR / "nginx_http_digest"
-        defines.nginx_http_digest.touch()
 
         # Mock changed settings
         self.time_date.SetNTP(not self.time_date.DEFAULT_NTP, False)
@@ -330,15 +328,17 @@ class TestWizards(TestWizardsBase):
         super().tearDown()
 
     def _run_wizard(self, wizard: Wizard, limit_s: int = 5, expected_state=WizardState.DONE):
-        with patch("slafw.wizard.checks.factory_reset.copyfile"), patch(
-            "slafw.wizard.checks.factory_reset.subprocess"
-        ), patch("slafw.wizard.checks.factory_reset.ch_mode_owner"), patch(
-            "slafw.wizard.checks.factory_reset.ResetTouchUI.BACKLIGHT_STATE", self.backlight_state
-        ), patch(
-            "slafw.wizard.checks.factory_reset.ResetTouchUI._restart_backlight_service", self.backlight_state.touch
-        ), patch(
-            "slafw.wizard.checks.factory_reset.ResetTouchUI.TOUCH_UI_CONFIG", self.touch_ui_config
-        ), patch("slafw.wizard.checks.factory_reset.set_update_channel"):
+        with (
+            patch("slafw.wizard.checks.factory_reset.copyfile"),
+            patch("slafw.wizard.checks.factory_reset.ch_mode_owner"),
+            patch("slafw.wizard.checks.factory_reset.ResetTouchUI.BACKLIGHT_STATE", self.backlight_state),
+            patch(
+                "slafw.wizard.checks.factory_reset.ResetTouchUI._restart_backlight_service",
+                self.backlight_state.touch
+            ),
+            patch("slafw.wizard.checks.factory_reset.ResetTouchUI.TOUCH_UI_CONFIG", self.touch_ui_config),
+            patch("slafw.wizard.checks.factory_reset.set_update_channel")
+        ):
             super()._run_wizard(wizard, limit_s, expected_state)
 
     def _run_self_test(self, expected_state=WizardState.DONE) -> dict:
@@ -569,7 +569,7 @@ class TestWizards(TestWizardsBase):
     def _check_factory_reset(self, hw, unboxing: bool, factory_mode: bool):
         # Assert factory reset was performed
         self.assertEqual(unboxing, hw.config.showUnboxing)
-        self.assertFalse(defines.apikeyFile.exists(), "API-Key file deleted")
+        self.assertFalse(defines.http_digest_password_file.exists(), "Digest file deleted")
 
         self.assertFalse(defines.slicerProfilesFile.exists(), "Slicer profiles removed")
 

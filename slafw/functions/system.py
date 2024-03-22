@@ -16,7 +16,9 @@ from slafw.configs.hw import HwConfig
 from slafw.errors.errors import (
     FailedUpdateChannelSet,
     FailedUpdateChannelGet,
-    ConfigException, PrinterException, DisplayTransmittanceNotValid, CalculatedUVPWMNotInRange
+    PrinterException,
+    DisplayTransmittanceNotValid,
+    CalculatedUVPWMNotInRange
 )
 from slafw.hardware.hardware import BaseHardware
 from slafw.hardware.printer_model import PrinterModel
@@ -46,14 +48,6 @@ def set_update_channel(channel: str):
         subprocess.check_call([set_update_channel_bin, channel])
     except Exception as e:
         raise FailedUpdateChannelSet() from e
-
-
-def get_octoprint_auth(logger: logging.Logger) -> str:
-    try:
-        return defines.octoprintAuthFile.read_text(encoding="utf-8")
-    except IOError as e:
-        logger.exception("Octoprint auth file read failed")
-        raise ConfigException("Octoprint auth file read failed") from e
 
 
 class FactoryMountedRW:

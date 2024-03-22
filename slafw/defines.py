@@ -80,8 +80,6 @@ uv_meter_device = "/dev/uvmeter"
 
 wifiSetupFile = "/etc/hostapd.secrets.json"
 
-octoprintAuthFile = configDir / "slicer-upload-api.key"
-
 # all resin* in ml
 resinMinVolume = 68.5
 resinMaxVolume = 200.0
@@ -116,7 +114,7 @@ internalProjectMode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP 
 internalProjectDirMode = stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH
 examplesURL = "https://sl1.prusa3d.com/examples-cleaning-adaptor-{PRINTER_MODEL}.tar.gz"
 bootFailedStamp = persistentStorage / "failedboot"
-apikeyFile = configDir / "api.key"
+http_digest_password_file = configDir / "api.key"  # file with plain password
 uvLedMeterMaxWait_s = 10
 
 logsBase = "/var/log/journal"
@@ -138,8 +136,6 @@ update_channel = Path("/etc/update_channel")
 emmc_serial_path = Path("/sys/block/mmcblk2/device/cid")
 local_time_path = Path("/etc/localtime")
 exposure_panel_of_node = Path("/sys/bus/i2c/devices/1-000f/of_node")
-
-nginx_http_digest = Path("/etc/nginx/http_digest_enabled")
 
 printer_model_run = Path("/run/model")
 printer_model = configDir / "model"

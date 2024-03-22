@@ -12,7 +12,6 @@ from slafw import defines
 from slafw.admin.control import AdminControl
 from slafw.admin.items import AdminAction
 from slafw.admin.menu import AdminMenu
-from slafw.functions.system import get_octoprint_auth
 from slafw.configs.stats import TomlConfigStats
 from slafw.libPrinter import Printer
 
@@ -41,7 +40,7 @@ class SystemInfoMenu(AdminMenu):
         self.printer_model = self.add_label(None, "cover_color")
         self.net_state = self.add_label(None, "lan_color")
         self.net_dev = self.add_label(None, "lan_color")
-        self.api_key = self.add_label(None, "key_color")
+        self.http_digest_password = self.add_label(None, "key_color")
         self.tilt_times = self.add_label(None, "tank_reset_color")
         self.resin_sensor = self.add_label(None, "refill_color")
         self.cover = self.add_label(None, "cover_color")
@@ -83,7 +82,7 @@ class SystemInfoMenu(AdminMenu):
         self.expo_panel_resolution.set(f"Exposure panel resolution: {self._printer.hw.exposure_screen.parameters.width_px}x{self._printer.hw.exposure_screen.parameters.height_px} px")
         self.expo_panel_transmittance.set(f"Exposure panel transmittance: {self._printer.hw.exposure_screen.transmittance} %")
         self.printer_model.set(f"Printer model: {self._printer.hw.printer_model.name}")
-        self.api_key.set(f"API key: {get_octoprint_auth(self.logger)}")
+        self.http_digest_password.set(f"HTTP digest password: {self._printer.http_digest_password}")
         self.uv_counter.set(f"UV LED counter: {timedelta(seconds=self._printer.hw.uv_led.usage_s)}")
         self.display_counter.set(f"Display counter: {timedelta(seconds=self._printer.hw.exposure_screen.usage_s)}")
         sys_stats = TomlConfigStats(defines.statsData, self._printer.hw)
