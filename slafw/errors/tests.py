@@ -62,7 +62,7 @@ FAKE_ARGS = {
     "allowed: float": 250,
     "intensity: float": 150,
     "threshold: float": 125,
-    "code: int": 42,
+    "nonprusa_code: int": 42,
     "temperature: float": 36.8,
     "sensor: str": "Ambient temperature",
     "message: str = ''": "Exception message string",

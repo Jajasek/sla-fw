@@ -512,7 +512,7 @@ class UnexpectedUVIntensity(PrinterError):
 @with_code(Sl1Codes.UNKNOWN_UV_MEASUREMENT_ERROR)
 @dataclass(frozen=True)
 class UnknownUVMeasurementFailure(PrinterError):
-    code: int
+    nonprusa_code: int
 
 
 class UVCalibrationError(PrinterError):
