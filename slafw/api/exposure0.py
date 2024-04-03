@@ -623,6 +623,7 @@ class Exposure0:
     @area_fill.setter
     def area_fill(self, value: int) -> None:
         self.exposure.project.exposure_profile.area_fill = value
+        self.PropertiesChanged(self.__INTERFACE__, {"area_fill": self.area_fill}, [])
 
     @property
     def exposure_time_first_ms(self) -> int:
