@@ -74,7 +74,8 @@ class BackupConfigMenu(AdminMenu):
 
     def reset_to_defaults(self):
         self._control.enter(
-            Confirm(self._control, self._do_reset_to_defaults, text="Restore configuration from factory defaults?")
+            Confirm(self._control, self._do_reset_to_defaults, text="Restore configuration from factory defaults?\n"
+                                                                    "Printer will reboot after this operation.")
         )
 
     def _do_reset_to_defaults(self) -> None:
@@ -90,7 +91,7 @@ class BackupConfigMenu(AdminMenu):
         except ConfigException:
             self._control.enter(Error(self._control, text="Save configuration failed", pop=1))
             return
-        self._control.enter(Info(self._control, "Configuration restored to default values"))
+        shut_down(self._printer.hw, reboot=True)
 
     def save_as_defaults(self):
         self._control.enter(
