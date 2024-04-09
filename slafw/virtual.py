@@ -82,6 +82,7 @@ class Virtual:
         hardware_file = self.temp / "slafw.hardware.cfg"
         hardware_file_factory = self.temp / "slafw.hardware.cfg.factory"
         prev_prints = self.temp / "previous_prints"
+        http_digest_password_file = self.temp / "api.key"
 
         patches: List[patch] = [
             patch("slafw.motion_controller.base_controller.serial", slafw.tests.mocks.mc_port),
@@ -130,6 +131,7 @@ class Virtual:
             patch("slafw.defines.factory_enable", self.temp / "factory_mode_enabled"),
             patch("slafw.defines.exposure_panel_of_node", SAMPLES_DIR / "of_node" / printer_model.name.lower()),
             patch("slafw.defines.expoPanelLogPath", self.temp / defines.expoPanelLogFileName),
+            patch("slafw.defines.http_digest_password_file", http_digest_password_file),
             patch("slafw.wizard.checks.factory_reset.ResetTimezone.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetTouchUI.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetUpdateChannel.reset_task_run", Mock()),
@@ -143,6 +145,7 @@ class Virtual:
         copyfile(SAMPLES_DIR / "hardware-virtual.cfg", hardware_file)
         copyfile(SAMPLES_DIR / "hardware.toml", hardware_file_factory)
         copyfile(SAMPLES_DIR / "self_test_data.json", self.temp / SelfTestWizard.get_data_filename())
+        copyfile(SAMPLES_DIR / "api.key", http_digest_password_file)
 
         for p in patches:
             p.start()
