@@ -68,10 +68,14 @@ class MotionControllerSL1(MotionControllerBase):
         )
 
     def open(self):
-        self._port.open()
+        if not self.is_open:
+            self._port.open()
 
-        self._reader_thread = Thread(target=self._port_read_thread, daemon=True)
-        self._reader_thread.start()
+            if not self._reader_thread or not self._reader_thread.is_alive():
+                self._reader_thread = Thread(target=self._port_read_thread, daemon=True)
+                self._reader_thread.start()
+        else:
+            self._read_garbage()
 
     def connect(self, mc_version_check: bool = True) -> None:
         self.open()
@@ -121,7 +125,9 @@ class MotionControllerSL1(MotionControllerBase):
 
         # Value refresh thread
         self.temps_changed.emit(self._get_temperatures())  # Initial values for MC temperatures
-        self._value_refresh_thread.start()
+
+        if self._value_refresh_thread and not self._value_refresh_thread.is_alive():
+            self._value_refresh_thread.start()
 
     def doGetInt(self, *args):
         return self.do(*args, return_process=int)

@@ -24,8 +24,10 @@ class Serial:
         self.pwm_re = re.compile(b"!upwm ([0-9][0-9]*)\n")
         self.uled_re = re.compile(b"!uled ([01]) ([0-9][0-9]*)\n")
         self.process: Optional[Popen] = None
+        self._is_open = False
 
     def open(self):
+        self._is_open = True
         self.process = Popen(  # pylint: disable = consider-using-with
             ["SLA-control-01.elf"], stdin=PIPE, stdout=PIPE, stderr=STDOUT
         )
@@ -40,7 +42,7 @@ class Serial:
 
     @property
     def is_open(self) -> bool:
-        return not (self.process and self.process.returncode)
+        return self._is_open
 
     def close(self):
         """
@@ -60,6 +62,8 @@ class Serial:
                 self.process.stdout.close()
             except BrokenPipeError:
                 self.logger.exception("Failed to close stderr")
+
+            self._is_open = False
 
     def write(self, data: bytes):
         """
