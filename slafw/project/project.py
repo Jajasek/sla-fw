@@ -464,11 +464,11 @@ class Project:
         new_source = str(defines.previousPrints / filename)
         if origin_path == new_source:
             self.logger.debug("Reprint of project '%s'", origin_path)
-        elif origin_path.startswith(str(defines.internalProjectPath)):
+        elif origin_path.startswith(str(defines.internalProjectPath)):  # internal storage
             self.logger.debug("Internal storage project, creating symlink '%s' -> '%s'", origin_path, new_source)
             os.symlink(origin_path, new_source)
             self.data.path = new_source
-        else:
+        else:  # USB
             statvfs = os.statvfs(defines.previousPrints.parent)
             size_available = statvfs.f_frsize * statvfs.f_bavail - defines.internalReservedSpace
             self.logger.debug("Internal storage available space: %d bytes", size_available)
@@ -484,14 +484,14 @@ class Project:
             else:
                 try:
                     self.logger.debug("Copying project to internal storage '%s' -> '%s'", origin_path, new_source)
-                    shutil.copyfile(origin_path, new_source + "~")
+                    with open(origin_path, "rb") as src, open(new_source + "~", "wb") as dst:
+                        shutil.copyfileobj(src, dst)
                     shutil.move(new_source + "~", new_source)
                     self.logger.debug("Done copying project")
                     self.data.path = new_source
                 except Exception as e:
                     self.logger.exception("copyfile exception: %s", str(e))
-                    self.logger.warning("Can't copy the project, printing directly from USB.")
-                    self.warnings.add(PrintingDirectlyFromMedia())
+                    raise ProjectErrorCantRead from e
         try:
             self.logger.debug("Testing project file integrity")
             with ZipFile(self.data.path, "r") as zf:

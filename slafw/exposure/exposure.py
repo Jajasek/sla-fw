@@ -420,6 +420,8 @@ class Exposure:
         if self.state in cancelable_states:
             self.canceled = True
             self.state = ExposureState.DONE
+        elif self.state == ExposureState.CHECKS:
+            self.cancel()
         else:
             raise NotAvailableInState(self.state, cancelable_states)
         return True
