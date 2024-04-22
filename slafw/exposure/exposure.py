@@ -185,6 +185,16 @@ class FansCheck(ExposureCheckRunner):
     async def run(self):
         # Warm-up fans
         self.logger.info("Warming up fans")
+
+        fans = {
+            (self.expo.hw.uv_led_fan, HardwareDeviceId.UV_LED_FAN.value),
+            (self.expo.hw.blower_fan, HardwareDeviceId.BLOWER_FAN.value),
+            (self.expo.hw.rear_fan, HardwareDeviceId.REAR_FAN.value),
+        }
+
+        for fan, fan_id in fans:
+            fan.auto_control = False
+
         self.expo.hw.start_fans()
         if not test_runtime.testing:
             self.logger.debug("Waiting %.2f secs for fans", defines.fanStartStopTime)
@@ -197,16 +207,12 @@ class FansCheck(ExposureCheckRunner):
         self.expo.hw.mcc.get_fans_error(check_for_updates=True)
 
         if not defines.fan_check_override:
-            fans = {
-                (self.expo.hw.uv_led_fan, HardwareDeviceId.UV_LED_FAN.value),
-                (self.expo.hw.blower_fan, HardwareDeviceId.BLOWER_FAN.value),
-                (self.expo.hw.rear_fan, HardwareDeviceId.REAR_FAN.value),
-            }
-
             for fan, fan_id in fans:
                 if fan.error:
                     self.expo.data.check_results[ExposureCheck.FAN] = ExposureCheckResult.FAILURE
                     raise FanFailed(fan_id)
+
+        self.expo.hw.uv_led_fan.auto_control = True
 
         self.logger.info("Fans OK")
 
