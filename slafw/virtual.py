@@ -137,6 +137,10 @@ class Virtual:
             patch("slafw.wizard.checks.factory_reset.ResetUpdateChannel.reset_task_run", Mock()),
             patch("slafw.wizard.checks.factory_reset.ResetNetwork.reset_task_run", Mock()),
             patch("slafw.functions.system.os", Mock()),
+            patch("slafw.api.standard0.Standard0._info_eth_mac", "00:00:00:00:00:00"),
+            patch("slafw.api.standard0.Standard0._info_wlan_mac", "00:00:00:00:00:00"),
+            patch("slafw.api.standard0.Standard0._info_uuid", "00000"),
+            patch("distro.os_release_attr", Mock(return_value="1.8.0 blah")),
         ]
 
         if not os.environ.get("WAYLAND_DISPLAY") or printer_model != PrinterModel.VIRTUAL:
