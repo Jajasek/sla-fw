@@ -8,9 +8,6 @@ import weakref
 from time import sleep
 from unittest.mock import Mock, call
 from datetime import datetime, timedelta, timezone
-
-import time_machine
-
 from pydbus import SystemBus
 
 from slafw.api.printer0 import Printer0
@@ -119,40 +116,32 @@ class TestExposureSignals(SlafwTestCaseDBus, RefCheckTestCase):
         exposure0.onPropertiesChanged = receiver.receive
 
         # project changes
-        with time_machine.travel(datetime.fromtimestamp(0)):
-            self.manager.exposure.project.data.path = "/nice/path/file.suffix"
-            self.manager.exposure.project.exposure_time_ms = 2080
-            self.manager.exposure.project.exposure_time_first_ms = 10000
-            self.manager.exposure.project.calibrate_regions = 9
-            self.manager.exposure.project.calibrate_time_ms = 3000
-            profile = self.manager.exposure.project.exposure_profile
-            profile.below_area_fill.delay_before_exposure_ms = Ms(1000)
-            self.manager.exposure.project.exposure_profile_set(
-                1,
-                tuple(profile.below_area_fill.dump())
-            )
-            self.manager.exposure.project.delayed_end_time = datetime.now().timestamp()
-            sleep(.1)
-            signal_list = [
-                call(uri, {"project_file": "/nice/path/file.suffix"}, []),
-                call(uri, {"exposure_time_ms": 2080}, []),
-                call(uri, {"delayed_end_time": 15}, []),
-                call(uri, {"total_time_ms": 15716}, []),
-                call(uri, {"exposure_time_first_ms": 10000}, []),
-                call(uri, {"delayed_end_time": 32}, []),
-                call(uri, {"total_time_ms": 32716}, []),
-                call(uri, {"calibration_regions": 9}, []),
-                call(uri, {"delayed_end_time": 48}, []),
-                call(uri, {"total_time_ms": 48716}, []),
-                call(uri, {"exposure_time_calibrate_ms": 3000}, []),
-                call(uri, {"delayed_end_time": 80}, []),
-                call(uri, {"total_time_ms": 80716}, []),
-                call(uri, {"delayed_end_time": 80}, []),
-                call(uri, {"total_time_ms": 80716}, []),
-                call(uri, {"delayed_end_time": 0}, []),
-            ]
+        self.manager.exposure.project.data.path = "/nice/path/file.suffix"
+        self.manager.exposure.project.exposure_time_ms = 2080
+        self.manager.exposure.project.exposure_time_first_ms = 10000
+        self.manager.exposure.project.calibrate_regions = 9
+        self.manager.exposure.project.calibrate_time_ms = 3000
+        profile = self.manager.exposure.project.exposure_profile
+        profile.below_area_fill.delay_before_exposure_ms = Ms(1000)
+        self.manager.exposure.project.exposure_profile_set(
+            1,
+            tuple(profile.below_area_fill.dump())
+        )
+        sleep(.1)
+        signal_list = [
+            call(uri, {"project_file": "/nice/path/file.suffix"}, []),
+            call(uri, {"exposure_time_ms": 2080}, []),
+            call(uri, {"total_time_ms": 15716}, []),
+            call(uri, {"exposure_time_first_ms": 10000}, []),
+            call(uri, {"total_time_ms": 32716}, []),
+            call(uri, {"calibration_regions": 9}, []),
+            call(uri, {"total_time_ms": 48716}, []),
+            call(uri, {"exposure_time_calibrate_ms": 3000}, []),
+            call(uri, {"total_time_ms": 80716}, []),
+            call(uri, {"total_time_ms": 80716}, []),
+        ]
 
-            receiver.receive.assert_has_calls(signal_list)
+        receiver.receive.assert_has_calls(signal_list)
 
         # exposure changes
         now = datetime.now(tz=timezone.utc)

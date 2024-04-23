@@ -90,7 +90,6 @@ class ProjectData:
     calibrate_time_ms: int = 0
     calibrate_regions: int = 0
     exposure_profile: Dict = None
-    delayed_end_time: int = 0
 
     def __setattr__(self, key: str, value: Any):
         object.__setattr__(self, key, value)
@@ -134,7 +133,6 @@ class Project:
         namelist = self._read_config()
         self._parse_config()
         self._build_layers_description(self._check_filenames(namelist))
-        self._set_expected_end_time()
 
     def __del__(self):
         self.data_close()
@@ -161,7 +159,6 @@ class Project:
             'calibrate_time_ms_exact': self._calibrate_time_ms_exact,
             'calibrate_regions': self.data.calibrate_regions,
             'exposure_profile': self.exposure_profile,
-            'delayed_end_time': self.data.delayed_end_time,
             }
         pp = pprint.PrettyPrinter(width=200)
         return "Project:\n" + pp.pformat(items)
@@ -276,9 +273,6 @@ class Project:
             raise ProjectErrorNotEnoughLayers
         self._fill_layers_times()
 
-    def _set_expected_end_time(self):
-        self.data.delayed_end_time = datetime.now(tz=timezone.utc).timestamp() + self.count_remain_time() // 1000
-
     def _fill_layers_times(self):
         """
         Compatible with implementation in Slicer (2.6.0-beta2)
@@ -383,15 +377,6 @@ class Project:
         if self.data.exposure_time_first_ms != value:
             self.data.exposure_time_first_ms = value
             self._times_changed()
-
-    @property
-    def delayed_end_time(self) -> int:
-        return self.data.delayed_end_time
-
-    @delayed_end_time.setter
-    def delayed_end_time(self, value: int) -> None:
-        if self.data.delayed_end_time != value:
-            self.data.delayed_end_time = value
 
     @property
     def calibrate_time_ms(self) -> int:
@@ -578,6 +563,5 @@ class Project:
     def _times_changed(self):
         self.logger.debug("For the times they are a-changin'")
         self._fill_layers_times()
-        self._set_expected_end_time()
         self.count_remain_time.cache_clear()
         self.times_changed.emit()

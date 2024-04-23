@@ -10,9 +10,6 @@ import logging
 import weakref
 from queue import Queue
 from typing import Optional, Any
-
-from datetime import datetime, timezone
-
 from PySignal import Signal
 from pydbus import SystemBus
 
@@ -72,8 +69,6 @@ class ActionManager:
         exposure = Exposure(self._get_job_id(), exposure_pickler.package)
         exposure.read_project(reference.project.data.path)
         exposure.project.persistent_data = reference.project.persistent_data
-        expected_end_time = int( datetime.now(tz=timezone.utc).timestamp() ) + exposure.data.estimated_total_time_ms // 1000
-        exposure.project.delayed_end_time = expected_end_time
 
         self.logger.info("Created reprint exposure id: %s", exposure.data.instance_id)
         self._handle_new_exposure(exposure)

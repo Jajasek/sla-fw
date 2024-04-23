@@ -274,19 +274,6 @@ class Exposure0:
 
     @auto_dbus
     @property
-    def delayed_end_time(self) -> int:
-        """
-        Timestamp of print end
-        """
-        return self.exposure.project.delayed_end_time
-
-    @auto_dbus
-    @delayed_end_time.setter
-    def delayed_end_time(self, value: int):
-        self.exposure.project.delayed_end_time = value
-
-    @auto_dbus
-    @property
     def expected_finish_timestamp(self) -> float:
         """
         Get timestamp of expected print end
@@ -694,7 +681,6 @@ class Exposure0:
         "calibrate_time_ms": {"exposure_time_calibrate_ms"},
         "calibrate_regions": {"calibration_regions"},
         "exposure_profile_id": {"user_profile"},
-        "delayed_end_time": {"delayed_end_time"},
     }
 
     _SIGNAL_MAP = {

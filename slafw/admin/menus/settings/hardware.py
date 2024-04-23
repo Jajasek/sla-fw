@@ -19,8 +19,6 @@ class HardwareSettingsMenu(SettingsMenu):
                 AdminBoolValue.from_value("Use resin sensor", self._temp, "resinSensor", "refill_color"),
                 AdminBoolValue.from_value("Auto power off", self._temp, "autoOff", "turn_off_color"),
                 AdminBoolValue.from_value("Mute (no beeps)", self._temp, "mute", "wifi_strength_0"),
-                # TODO delayed end time check in touch-ui
-                AdminBoolValue.from_value("Delayed end time check", self._temp, "delayedEnd", "exposure_times_color"),
                 AdminIntValue.from_value("Screw [mm/rot]", self._temp, "screwMm", 1, "calibration_color"),
                 AdminIntValue.from_value("Tilt height [usteps]", self._temp, "tiltHeight", 1, "tank_reset_color"),
                 AdminIntValue.from_value(
