@@ -135,8 +135,11 @@ class TowerAlignTest(DangerousCheck):
         await hw.tower.wait_to_stop_async()
 
         self._logger.debug("Moving tower to calib position")
+        # use less sensitive profile to prevent false stalguard detection
+        hw.tower.actual_profile = hw.tower.profiles.homingFast
+        # raise exception if the movement fails
         await hw.tower.move_ensure_async(
-            hw.tower.position + hw.tower.calib_pos_nm)
+            hw.tower.position + hw.tower.calib_pos_nm, retries=0)
 
         tower_position_nm = hw.tower.position
         self._logger.info("tower position: %d nm", tower_position_nm)
