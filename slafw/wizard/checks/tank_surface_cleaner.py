@@ -49,6 +49,7 @@ class Calibrated(Check):
         if not self.calibrated:
             raise NotMechanicallyCalibrated()
 
+
 class HomeTower(DangerousCheck):
     """ Home tower and request the user to attach the cleaning adaptor to the platform """
 
@@ -66,9 +67,7 @@ class HomeTowerFinish(DangerousCheck):
         super().__init__(package, WizardCheckType.TOWER_HOME_FINISH, Configuration(None, None), [Resource.TOWER])
 
     async def async_task_run(self, actions: UserActionBroker):
-        hw = self._package.hw
-        hw.tower.actual_profile = hw.tower.profiles.homingFast
-        await hw.tower.move_ensure_async(hw.tower.home_position)
+        await self._package.hw.tower.sync_ensure_async(retries=3)
 
 
 class TiltHome(DangerousCheck):

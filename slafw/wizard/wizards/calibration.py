@@ -5,6 +5,7 @@
 from slafw.states.wizard import WizardId
 from slafw.states.wizard import WizardState
 from slafw.wizard.actions import UserActionBroker
+from slafw.wizard.checks.tank_surface_cleaner import HomeTowerFinish
 from slafw.wizard.checks.tilt import (
     TiltHomeTest,
     TiltCalibrationStartTest,
@@ -70,10 +71,10 @@ class PlatformAlignCheckGroup(CheckGroup):
 
 
 class CalibrationFinishCheckGroup(CheckGroup):
-    def __init__(self):
+    def __init__(self, package: WizardDataPackage):
         super().__init__(
             Configuration(TankSetup.PRINT, PlatformSetup.PRINT),
-            [],
+            [HomeTowerFinish(package)],
         )
 
     async def setup(self, actions: UserActionBroker):
@@ -92,7 +93,7 @@ class CalibrationWizard(Wizard):
                 PlatformTankInsertCheckGroup(package),
                 TiltAlignCheckGroup(package),
                 PlatformAlignCheckGroup(package),
-                CalibrationFinishCheckGroup(),
+                CalibrationFinishCheckGroup(package),
                 ShowResultsGroup(),
             ],
             package,
