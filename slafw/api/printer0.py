@@ -587,6 +587,14 @@ class Printer0:
         return self.printer.runtime_config.factory_mode
 
     @auto_dbus
+    @property
+    def m1_modern_dental_enabled(self) -> bool:
+        """
+        Return if current config is M1 Modern dental
+        """
+        return defines.printer_m1_modern_dental_enabled.exists()
+
+    @auto_dbus
     @state_checked([Printer0State.IDLE])
     def download_examples(self) -> DBusObjectPath:
         """

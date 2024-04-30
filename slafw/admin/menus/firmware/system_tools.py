@@ -60,6 +60,7 @@ class SystemToolsMenu(SafeAdminMenu):
         )
         if self._printer.hw.printer_model == PrinterModel.SL1S:
             self.add_item(AdminAction("Switch to M1", self._switch_m1, "cover_color"))
+            self.add_item(AdminAction("Switch to M1ModernDental", self._switch_m1_modern_dental, "cover_color"))
         if self._printer.hw.printer_model == PrinterModel.M1:
             self.add_item(AdminAction("Switch to SL1S", self._switch_sl1s, "cover_color"))
 
@@ -179,6 +180,16 @@ class SystemToolsMenu(SafeAdminMenu):
             defines.printer_m1_enabled.touch()
         self._switch_sl1s_m1(status, PrinterModel.M1, "medic")
 
+    def _switch_m1_modern_dental(self):
+        self.enter(Wait(self._control, self._do_switch_m1_modern_dental))
+
+    @SafeAdminMenu.safe_call
+    def _do_switch_m1_modern_dental(self, status: AdminLabel):
+        with FactoryMountedRW():
+            defines.printer_m1_modern_dental_enabled.touch()
+
+        self._do_switch_m1(status)
+
     def _switch_sl1s(self):
         self.enter(Wait(self._control, self._do_switch_sl1s))
 
@@ -186,6 +197,8 @@ class SystemToolsMenu(SafeAdminMenu):
     def _do_switch_sl1s(self, status: AdminLabel):
         with FactoryMountedRW():
             defines.printer_m1_enabled.unlink(missing_ok=True)
+            defines.printer_m1_modern_dental_enabled.unlink(missing_ok=True)
+
         self._switch_sl1s_m1(status, PrinterModel.SL1S, "stable")
 
     def _switch_sl1s_m1(self, status: AdminLabel, printer_model: PrinterModel, channel: str):

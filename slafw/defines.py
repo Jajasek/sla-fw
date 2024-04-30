@@ -39,6 +39,7 @@ serial_service_service = "serial-getty@ttyS0.service"
 ssh_service_enabled = factoryMountPoint / "ssh_enabled"
 ssh_service_service = "sshd.socket"
 printer_m1_enabled = factoryMountPoint / "printer_m1_enabled"
+printer_m1_modern_dental_enabled = factoryMountPoint / "printer_m1_modern_dental_enabled"
 
 expoPanelLogFileName = "expo_panel_log.json"
 expoPanelLogPath = factoryMountPoint / expoPanelLogFileName
