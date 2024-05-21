@@ -1,0 +1,14 @@
+Since the visibility of each item should be independent of each other, it makes
+sence to add an attribute 'models' to AdminItem which contains the names of
+models that support the item. When an item is added to a menu using
+AdminMenu.add_item(), there should be a check which determines whether the item
+is supported - if not, the item is ignored. To do this, the AdminMenu needs to
+know which printer we are using, so I added an optional parameter to its
+constructor. If the parameter isn't provided, the menu doesn't ignore any
+items.
+
+The changes had to be propagated to all subclasses of AdminMenu and AdminItem.
+
+Possible improvements: the strings in AdminItem.models could be regular
+expressions, which would add huge versatility.
+
