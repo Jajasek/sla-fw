@@ -50,8 +50,7 @@ config_api_url = "http://cucek.prusa/api/"
 
 class BackupConfigMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
         self.add_back()
         self.add_items(
             (

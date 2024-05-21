@@ -24,8 +24,7 @@ class NetUpdate(AdminMenu):
     FIRMWARE_LIST_URL = "https://sl1.prusa3d.com/check-update"
 
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
         self._status = "Downloading list of updates"
 
         self.add_back()
@@ -81,9 +80,8 @@ class NetUpdate(AdminMenu):
 
 class FwInstall(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer, firmware):
-        super().__init__(control)
+        super().__init__(control, printer)
         self._logger = logging.getLogger(__name__)
-        self._printer = printer
         self._firmware = firmware
         self._status = "Downloading firmware"
 

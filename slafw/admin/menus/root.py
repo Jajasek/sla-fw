@@ -9,11 +9,12 @@ from slafw.admin.menu import AdminMenu
 from slafw.admin.menus.settings.root import SettingsRoot
 from slafw.admin.menus.hardware.root import HardwareRoot
 from slafw.admin.menus.firmware.root import FirmwareRoot
+from slafw.admin.menus.only_m1.root import OnlyM1Root
 
 
 class RootMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
+        super().__init__(control, printer)
 
         self.add_items(
             (
@@ -21,5 +22,6 @@ class RootMenu(AdminMenu):
                 AdminAction("Settings", lambda: self.enter(SettingsRoot(self._control, printer)), "settings_color"),
                 AdminAction("Hardware", lambda: self.enter(HardwareRoot(self._control, printer)), "usb_color"),
                 AdminAction("Firmware", lambda: self.enter(FirmwareRoot(self._control, printer)), "firmware-icon"),
+                AdminAction("Only M1 feature", lambda: self.enter(OnlyM1Root(self._control, printer)), models=("M1",))
             ),
         )

@@ -86,7 +86,7 @@ class Profiles(SafeAdminMenu):
 
 class EditProfiles(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer, pset: ProfileSet, axis: Optional[Axis] = None):
-        super().__init__(control)
+        super().__init__(control, printer)
         self.add_back()
         self.add_items(self._get_items(printer, pset, axis))
 

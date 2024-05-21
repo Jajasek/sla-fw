@@ -10,7 +10,11 @@ from functools import partial, wraps
 from typing import Callable, Any, Optional, List
 from PySignal import Signal
 
+from slafw.libPrinter import Printer
 from slafw.configs.unit import Unit, Nm, Ms
+
+
+ALL = object()
 
 
 class AdminItem:
@@ -19,10 +23,12 @@ class AdminItem:
             self,
             name: str,
             icon: str="",
-            enabled: bool=True):
+            enabled: bool=True,
+            models: tuple[str]=ALL):
         self.name = name
         self.icon = icon
         self._enabled = enabled
+        self._models = models
         self.changed = Signal()
 
     @property
@@ -34,6 +40,9 @@ class AdminItem:
         self._enabled = enabled
         self.changed.emit()
 
+    def is_supported_by(self, printer: Printer) -> bool:
+        return self._models is ALL or printer.hw.printer_model.name in self._models
+
 
 class AdminAction(AdminItem):
     # pylint: disable=too-few-public-methods
@@ -42,8 +51,9 @@ class AdminAction(AdminItem):
             name: str,
             action: Callable,
             icon: str="",
-            enabled: bool=True):
-        super().__init__(name, icon, enabled)
+            enabled: bool=True,
+            models: tuple[str]=ALL):
+        super().__init__(name, icon, enabled, models)
         self._action = action
 
     def execute(self):
@@ -57,8 +67,9 @@ class AdminValue(AdminItem):
             getter: Callable,
             setter: Callable,
             icon: str="",
-            enabled: bool=True):
-        super().__init__(name, icon, enabled)
+            enabled: bool=True,
+            models: tuple[str]=ALL):
+        super().__init__(name, icon, enabled, models)
         self._getter = getter
         self._setter = setter
 
@@ -103,8 +114,9 @@ class AdminMinMaxValue(AdminValue):
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
-            maximum: int=None):
-        super().__init__(name, getter, setter, icon, enabled)
+            maximum: int=None,
+            models: tuple[str]=ALL):
+        super().__init__(name, getter, setter, icon, enabled, models)
         self._minimum = -0x7fffffff if minimum is None else minimum
         self._maximum = 0x7fffffff if maximum is None else maximum
 
@@ -134,8 +146,9 @@ class AdminIntValue(AdminMinMaxValue):
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
-            maximum: int=None):
-        super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
+            maximum: int=None,
+            models: tuple[str]=ALL):
+        super().__init__(name, getter, setter, icon, enabled, minimum, maximum, models)
         self._step = step
 
     @classmethod
@@ -146,7 +159,8 @@ class AdminIntValue(AdminMinMaxValue):
             prop: str,
             step: int,
             icon: str="",
-            enabled: bool=True) -> AdminIntValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminIntValue:
         unit, minimum, maximum = cls._get_params_from_value(obj, prop)
 
         def g():
@@ -157,7 +171,7 @@ class AdminIntValue(AdminMinMaxValue):
                 value = unit(value)
             setattr(obj, prop, value)
 
-        return AdminIntValue(name, g, s, step, icon, enabled, minimum, maximum)
+        return AdminIntValue(name, g, s, step, icon, enabled, minimum, maximum, models)
 
     @classmethod
     def from_property(
@@ -168,7 +182,8 @@ class AdminIntValue(AdminMinMaxValue):
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
-            maximum: int=None) -> AdminIntValue:
+            maximum: int=None,
+            models: tuple[str]=ALL) -> AdminIntValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminIntValue(
                 prop_name,
@@ -178,7 +193,8 @@ class AdminIntValue(AdminMinMaxValue):
                 icon,
                 enabled,
                 minimum,
-                maximum)
+                maximum,
+                models)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -200,8 +216,9 @@ class AdminFixedValue(AdminMinMaxValue):
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
-            maximum: int=None):
-        super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
+            maximum: int=None,
+            models: tuple[str]=ALL):
+        super().__init__(name, getter, setter, icon, enabled, minimum, maximum, models)
         if step is None:
             if issubclass(unit, Nm):
                 step = 10000
@@ -237,7 +254,8 @@ class AdminFixedValue(AdminMinMaxValue):
             fractions: int=None,
             decimal_places: int=None,
             icon: str="",
-            enabled: bool=True) -> AdminFixedValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminFixedValue:
         unit, minimum, maximum = cls._get_params_from_value(obj, prop)
 
         def g():
@@ -248,7 +266,7 @@ class AdminFixedValue(AdminMinMaxValue):
                 value = unit(value)
             setattr(obj, prop, value)
 
-        return AdminFixedValue(name, g, s, unit, step, fractions, decimal_places, icon, enabled, minimum, maximum)
+        return AdminFixedValue(name, g, s, unit, step, fractions, decimal_places, icon, enabled, minimum, maximum, models)
 
     @classmethod
     def from_property(
@@ -259,7 +277,8 @@ class AdminFixedValue(AdminMinMaxValue):
             fractions: int=None,
             decimal_places: int=None,
             icon: str="",
-            enabled: bool=True) -> AdminFixedValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminFixedValue:
         prop_name = cls._get_prop_name(obj, prop)
         unit, minimum, maximum = cls._get_params_from_value(obj, prop)
         value = AdminFixedValue(
@@ -273,7 +292,8 @@ class AdminFixedValue(AdminMinMaxValue):
                 icon,
                 enabled,
                 minimum,
-                maximum)
+                maximum,
+                models)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -300,8 +320,9 @@ class AdminFloatValue(AdminMinMaxValue):
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
-            maximum: int=None):
-        super().__init__(name, getter, setter, icon, enabled, minimum, maximum)
+            maximum: int=None,
+            models: tuple[str]=ALL):
+        super().__init__(name, getter, setter, icon, enabled, minimum, maximum, models)
         self._step = step
 
     @classmethod
@@ -312,7 +333,8 @@ class AdminFloatValue(AdminMinMaxValue):
             prop: str,
             step: float,
             icon: str="",
-            enabled: bool=True) -> AdminFloatValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminFloatValue:
         _, minimum, maximum = cls._get_params_from_value(obj, prop)
 
         def g():
@@ -321,7 +343,7 @@ class AdminFloatValue(AdminMinMaxValue):
         def s(value):
             setattr(obj, prop, value)
 
-        return AdminFloatValue(name, g, s, step, icon, enabled, minimum, maximum)
+        return AdminFloatValue(name, g, s, step, icon, enabled, minimum, maximum, models)
 
     @classmethod
     def from_property(
@@ -332,7 +354,8 @@ class AdminFloatValue(AdminMinMaxValue):
             icon: str="",
             enabled: bool=True,
             minimum: int=None,
-            maximum: int=None) -> AdminFloatValue:
+            maximum: int=None,
+            models: tuple[str]=ALL) -> AdminFloatValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminFloatValue(
                 prop_name,
@@ -342,7 +365,8 @@ class AdminFloatValue(AdminMinMaxValue):
                 icon,
                 enabled,
                 minimum,
-                maximum)
+                maximum,
+                models)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -359,13 +383,15 @@ class AdminBoolValue(AdminValue):
             obj: object,
             prop: str,
             icon: str="",
-            enabled: bool=True) -> AdminBoolValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminBoolValue:
         return AdminBoolValue(
                 name,
                 partial(getattr, obj, prop),
                 partial(setattr, obj, prop),
                 icon,
-                enabled)
+                enabled,
+                models)
 
     @classmethod
     def from_property(
@@ -373,14 +399,16 @@ class AdminBoolValue(AdminValue):
             obj: object,
             prop: property,
             icon: str="",
-            enabled: bool=True) -> AdminBoolValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminBoolValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminBoolValue(
                 prop_name,
                 partial(prop.fget, obj),
                 partial(prop.fset, obj),
                 icon,
-                enabled)
+                enabled,
+                models)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -393,13 +421,15 @@ class AdminTextValue(AdminValue):
             obj: object,
             prop: str,
             icon: str="",
-            enabled: bool=True):
+            enabled: bool=True,
+            models: tuple[str]=ALL):
         return AdminTextValue(
                 name,
                 partial(getattr, obj, prop),
                 partial(setattr, obj, prop),
                 icon,
-                enabled)
+                enabled,
+                models)
 
     @classmethod
     def from_property(
@@ -407,14 +437,16 @@ class AdminTextValue(AdminValue):
             obj: object,
             prop: property,
             icon: str="",
-            enabled: bool=True):
+            enabled: bool=True,
+            models: tuple[str]=ALL):
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminTextValue(
                 prop_name,
                 partial(prop.fget, obj),
                 partial(prop.fset, obj),
                 icon,
-                enabled)
+                enabled,
+                models)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 
@@ -426,13 +458,15 @@ class AdminLabel(AdminTextValue):
             self,
             initial_text: Optional[str]=None,
             icon: str="",
-            enabled: bool=True):
+            enabled: bool=True,
+            models: tuple[str]=ALL):
         super().__init__(
                 f"Admin label {AdminLabel.INSTANCE_COUNTER}",
                 self.label_get_value,
                 self.set,
                 icon,
-                enabled)
+                enabled,
+                models)
         AdminLabel.INSTANCE_COUNTER += 1
         self._label_value = initial_text if initial_text is not None else self.name
 
@@ -454,8 +488,9 @@ class AdminSelectionValue(AdminValue):
             selection: List[str],
             wrap_around: bool=False,
             icon: str="",
-            enabled: bool=True):
-        super().__init__(name, getter, setter, icon, enabled)
+            enabled: bool=True,
+            models: tuple[str]=ALL):
+        super().__init__(name, getter, setter, icon, enabled, models)
         self._selection = selection
         self._wrap_around = wrap_around
 
@@ -468,14 +503,15 @@ class AdminSelectionValue(AdminValue):
             selection: List[str],
             wrap_around: bool=False,
             icon: str="",
-            enabled: bool=True) -> AdminSelectionValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminSelectionValue:
         def g():
             return getattr(obj, prop)
 
         def s(value):
             setattr(obj, prop, value)
 
-        return AdminSelectionValue(name, g, s, selection, wrap_around, icon, enabled)
+        return AdminSelectionValue(name, g, s, selection, wrap_around, icon, enabled, models)
 
     @classmethod
     def from_property(
@@ -485,7 +521,8 @@ class AdminSelectionValue(AdminValue):
             selection: List[str],
             wrap_around: bool=False,
             icon: str="",
-            enabled: bool=True) -> AdminSelectionValue:
+            enabled: bool=True,
+            models: tuple[str]=ALL) -> AdminSelectionValue:
         prop_name = cls._get_prop_name(obj, prop)
         value = AdminSelectionValue(
                 prop_name,
@@ -494,7 +531,8 @@ class AdminSelectionValue(AdminValue):
                 selection,
                 wrap_around,
                 icon,
-                enabled)
+                enabled,
+                models)
         cls._map_prop(obj, prop, value, prop_name)
         return value
 

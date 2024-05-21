@@ -15,7 +15,7 @@ from slafw.admin.menus.firmware.tests import FirmwareTestMenu
 
 class FirmwareRoot(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
+        super().__init__(control, printer)
 
         self.add_back()
         self.add_items(

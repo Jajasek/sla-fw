@@ -11,6 +11,7 @@ from glob import iglob
 
 from PySignal import Signal
 
+from slafw.libPrinter import Printer
 from slafw.admin.base_menu import AdminMenuBase
 from slafw.admin.control import AdminControl
 from slafw.admin.items import (
@@ -22,9 +23,10 @@ from slafw.admin.items import (
 
 
 class AdminMenu(AdminMenuBase):
-    def __init__(self, control: AdminControl):
+    def __init__(self, control: AdminControl, printer: Printer=None):
         self.logger = logging.getLogger(__name__)
         self._control = control
+        self._printer = printer
         self.items_changed = Signal()
         self.value_changed = Signal()
         self._items: Dict[str, AdminItem] = OrderedDict()
@@ -40,6 +42,8 @@ class AdminMenu(AdminMenuBase):
         self._control.exit()
 
     def add_item(self, item: AdminItem, emit_changed=True):
+        if self._printer and not item.is_supported_by(self._printer):
+            return
         if isinstance(item, AdminValue):
             item.changed.connect(self.value_changed.emit)
         self._items[item.name] = item

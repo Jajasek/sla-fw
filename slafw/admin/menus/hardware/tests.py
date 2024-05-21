@@ -25,8 +25,7 @@ from slafw.image.cairo import draw_chess
 
 class HardwareTestMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
 
         self.add_back()
         self.add_items(
@@ -163,9 +162,8 @@ class InfiniteUVCalibratorMenu(AdminMenu):
 
 class ResinSensorTestMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
+        super().__init__(control, printer)
 
-        self._printer = printer
         self._status = "Initializing"
         self.add_item(AdminTextValue.from_property(self, ResinSensorTestMenu.status, "sandclock_color"))
         self._thread = Thread(target=self._runner)
@@ -216,7 +214,7 @@ class InfiniteTestMenu(AdminMenu):
     # pylint: disable = too-many-instance-attributes
     # pylint: disable = too-many-statements
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
+        super().__init__(control, printer)
 
         self.add_items(
             (
@@ -226,7 +224,6 @@ class InfiniteTestMenu(AdminMenu):
                 AdminAction("Stop", self.stop, "cancel_color"),
             )
         )
-        self._printer = printer
         self._tower_cycles = 0
         self._tilt_cycles = 0
         self._run = True
@@ -311,7 +308,7 @@ class AxisTimingTest(AdminMenu):
     # pylint: disable = too-many-instance-attributes
     # pylint: disable = too-many-statements
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
+        super().__init__(control, printer)
 
         self.add_back()
         for profile in printer.hw.tilt.profiles:
@@ -391,8 +388,7 @@ class AxisTimingTest(AdminMenu):
 
 class ExposureProfilesMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
         self.profiles = {}
         self.names = {}
 

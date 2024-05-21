@@ -15,8 +15,7 @@ from slafw.admin.menus.hardware.axis import AxisMenu
 
 class HardwareRoot(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
         items = [
                 AdminAction(
                     "Exposure display",

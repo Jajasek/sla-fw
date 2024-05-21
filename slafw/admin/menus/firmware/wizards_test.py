@@ -24,29 +24,29 @@ from slafw.wizard.checks.uvfans import UVFansTest
 
 class WizardsTestMenu(AdminMenu):
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
 
         self.add_back()
         self.add_items(
             (
                 AdminAction("Display test", self.api_display_test, "display_test_color"),
-                AdminAction("Unpacking (C)", self.api_unpacking_c, "cover_color"),
-                AdminAction("Unpacking (K)", self.api_unpacking_k, "cover_color"),
-                AdminAction("Self test", self.api_self_test, "wizard_color"),
-                AdminAction("Calibration", self.api_calibration, "calibration_color"),
-                AdminAction("Factory reset", self.api_factory_reset, "factory_color"),
-                AdminAction("Packing (Factory factory reset)", self.api_packing, "factory_color"),
+                AdminAction("Unpacking (C)", self.api_unpacking_c, "cover_color", models=("SL1S",)),
+                AdminAction("Unpacking (K)", self.api_unpacking_k, "cover_color", models=("SL1S",)),
+                AdminAction("Self test", self.api_self_test, "wizard_color", models=("SL1S",)),
+                AdminAction("Calibration", self.api_calibration, "calibration_color", models=("SL1S",)),
+                AdminAction("Factory reset", self.api_factory_reset, "factory_color", models=("SL1S",)),
+                AdminAction("Packing (Factory factory reset)", self.api_packing, "factory_color", models=("SL1S",)),
                 AdminAction(
                     "API UV Calibration wizard",
                     lambda: self._control.enter(TestUVCalibrationWizardMenu(self._control, self._printer)),
-                    "uv_calibration"
+                    "uv_calibration",
+                    models=("SL1S",)
                 ),
-                AdminAction("SL1S upgrade", self.sl1s_upgrade, "cover_color"),
-                AdminAction("SL1 downgrade", self.sl1_downgrade, "cover_color"),
-                AdminAction("Self-test - UV & fans test only", self.api_selftest_uvfans, "led_set_replacement"),
-                AdminAction("Tank Surface Cleaner", self.tank_surface_cleaner, "clean-tank-icon"),
-                AdminAction("New expo panel", self.new_expo_panel, "display_replacement")
+                AdminAction("SL1S upgrade", self.sl1s_upgrade, "cover_color", models=("SL1S",)),
+                AdminAction("SL1 downgrade", self.sl1_downgrade, "cover_color", models=("SL1S",)),
+                AdminAction("Self-test - UV & fans test only", self.api_selftest_uvfans, "led_set_replacement", models=("SL1S",)),
+                AdminAction("Tank Surface Cleaner", self.tank_surface_cleaner, "clean-tank-icon", models=("SL1S",)),
+                AdminAction("New expo panel", self.new_expo_panel, "display_replacement", models=("SL1S",))
             )
         )
 

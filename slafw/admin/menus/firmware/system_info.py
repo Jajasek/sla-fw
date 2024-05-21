@@ -19,8 +19,7 @@ from slafw.libPrinter import Printer
 class SystemInfoMenu(AdminMenu):
     # pylint: disable = too-many-instance-attributes
     def __init__(self, control: AdminControl, printer: Printer):
-        super().__init__(control)
-        self._printer = printer
+        super().__init__(control, printer)
         self._fans = {}
 
         self.add_back()
